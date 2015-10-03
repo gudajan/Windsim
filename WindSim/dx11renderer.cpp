@@ -2,6 +2,9 @@
 
 #include <iostream>
 #include <cassert>
+#include <sstream>
+
+#include <QDebug>
 
 DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	: m_windowHandle(hwnd),
@@ -167,6 +170,8 @@ void DX11Renderer::onResize(int width, int height)
 	// Bind to pipeline
 	m_context->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
 
+	qDebug() << "TEST RESIZE";
+
 }
 
 void DX11Renderer::onDestroy()
@@ -199,8 +204,10 @@ void DX11Renderer::onDestroy()
 		UINT references = m_device->Release();
 		if (references > 0)
 		{
-			// TODO ERROR WINDOW
-			OutputDebugStringA("ERROR: UNRELEASED OBJECTS\n");
+			// TODO: MAYBE ERROR WINDOW
+			std::stringstream s;
+			s << "ERROR: " << references << " UNRELEASED REFERENCES!\n";
+			OutputDebugStringA(s.str().c_str());
 		}
 	}
 }

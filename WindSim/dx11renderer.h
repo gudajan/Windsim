@@ -10,9 +10,6 @@
 // DirectX
 #include <d3d11.h>
 
-// std
-#include <memory>
-
 class DX11Renderer
 {
 public:
