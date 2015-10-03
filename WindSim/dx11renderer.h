@@ -9,6 +9,7 @@
 
 // DirectX
 #include <d3d11.h>
+#include <d3dx11effect.h>
 
 class DX11Renderer
 {

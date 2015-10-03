@@ -1,6 +1,7 @@
 #include "dx11widget.h"
 
 #include <QResizeEvent>
+#include <QDebug>
 
 DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	: QWidget(parent, flags),
@@ -11,7 +12,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	setAttribute(Qt::WA_PaintOnScreen, true);
 	setAttribute(Qt::WA_NativeWindow, true);
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
-
+	setUpdatesEnabled(true);
 
 	setFocus();
 }
@@ -25,6 +26,8 @@ void DX11Widget::paintEvent(QPaintEvent* event)
 {
 	m_renderer.onUpdate();
 	m_renderer.onRender();
+
+	qDebug() << "REPAINT";
 }
 
 void DX11Widget::resizeEvent(QResizeEvent* event)

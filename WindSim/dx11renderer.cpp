@@ -6,6 +6,11 @@
 
 #include <QDebug>
 
+#include <DirectXMath.h>
+#include <DirectXColors.h>
+
+static bool color = true;
+
 DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	: m_windowHandle(hwnd),
 	m_device(nullptr),
@@ -106,10 +111,13 @@ void DX11Renderer::onUpdate()
 
 void DX11Renderer::onRender()
 {
-	float bgColor[] = { 0.75f, 0.75f, 0.75f, 1.0f };
-	m_context->ClearRenderTargetView(m_renderTargetView, bgColor);
+	if (color) m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Azure);
+	else m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Chocolate);
+	color = !color;
 
 	m_swapChain->Present(0, 0);
+
+	qDebug() << "TEST RENDER";
 }
 
 void DX11Renderer::onResize(int width, int height)
@@ -169,8 +177,6 @@ void DX11Renderer::onResize(int width, int height)
 
 	// Bind to pipeline
 	m_context->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
-
-	qDebug() << "TEST RESIZE";
 
 }
 
