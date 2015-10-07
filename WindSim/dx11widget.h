@@ -2,7 +2,7 @@
 #define DX11_WIDGET_H
 
 #include <QWidget>
-#include "dx11renderer.h"
+#include <QThread>
 
 class DX11Widget : public QWidget
 {
@@ -13,6 +13,9 @@ public:
 	virtual ~DX11Widget();
 
 	inline virtual QPaintEngine* paintEngine() const { return nullptr; }
+
+public slots:
+	virtual void logit(const QString& str);
 
 protected:
 	//virtual void keyPressEvent(QKeyEvent * event);
@@ -27,9 +30,12 @@ protected:
 	virtual void resizeEvent(QResizeEvent * event);
 	//virtual void wheelEvent(QWheelEvent * event);
 
-private:
-	DX11Renderer m_renderer;
+signals:
+	void stopRendering();
+	void resize(int width, int height);
 
+private:
+	QThread m_renderThread;
 };
 
 #endif

@@ -3,16 +3,16 @@
 
 // Qt
 #include <QWidget> // for WId
-
-// Windows
-#include <Windows.h>
+#include <QObject>
 
 // DirectX
 #include <d3d11.h>
 #include <d3dx11effect.h>
 
-class DX11Renderer
+class DX11Renderer : public QObject
 {
+	Q_OBJECT
+
 public:
 
 	DX11Renderer(WId hwnd, int width, int height);
@@ -21,11 +21,18 @@ public:
 	virtual bool onInit(); // Initialize renderer and directx11
 	virtual void onUpdate(); // Update the scene
 	virtual void onRender(); // Render the scene
-	virtual void onResize(int width, int height); // Resize viewport
 	virtual void onDestroy(); // Delete renderer and directx11
 
 	int getWidth(){ return m_width; };
 	int getHeight(){ return m_height; };
+
+public slots:
+	virtual void execute(); // Render loop
+	virtual void onResize(int width, int height); // Resize viewport
+	virtual void stop(); // Stop rendering
+
+signals:
+	void logit(const QString& str);
 
 private:
 	WId m_windowHandle;
@@ -38,8 +45,11 @@ private:
 	ID3D11DepthStencilView* m_depthStencilView;
 	ID3D11RasterizerState* m_rasterizerState;
 
+	// Viewport resolution
 	int m_width;
 	int m_height;
+
+	bool m_stopped; // Indicates if rendering should be stopped
 };
 
 #ifndef SAFE_RELEASE

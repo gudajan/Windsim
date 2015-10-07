@@ -4,10 +4,10 @@
 #include <cassert>
 #include <sstream>
 
-#include <QDebug>
-
 #include <DirectXMath.h>
 #include <DirectXColors.h>
+
+#include <QCoreApplication>
 
 static bool color = true;
 
@@ -21,7 +21,8 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	m_depthStencilView(nullptr),
 	m_rasterizerState(nullptr),
 	m_width(width),
-	m_height(height)
+	m_height(height),
+	m_stopped(false)
 {
 }
 
@@ -116,12 +117,30 @@ void DX11Renderer::onRender()
 	color = !color;
 
 	m_swapChain->Present(0, 0);
+}
 
-	qDebug() << "TEST RENDER";
+void DX11Renderer::execute()
+{
+	emit logit(QString("Start Rendering"));
+
+	// NOTE: Do NOT write to the gui log in every iteration of this loop.  Otherwise the GUI will block.
+	while (true)
+	{
+		// Process events to handle external signals (e.g. resize and stop)
+		QCoreApplication::processEvents();
+		if (m_stopped) break;
+		onUpdate();
+		onRender();
+	}
+
+	emit logit("Stop Rendering");
+	onDestroy();
 }
 
 void DX11Renderer::onResize(int width, int height)
 {
+	emit logit("Resize Viewport");
+
 	m_width = width;
 	m_height = height;
 
@@ -182,6 +201,8 @@ void DX11Renderer::onResize(int width, int height)
 
 void DX11Renderer::onDestroy()
 {
+	emit logit("Destroy DirectX11 Objects");
+
 	SAFE_RELEASE(m_depthStencilBuffer);
 	SAFE_RELEASE(m_depthStencilView);
 	SAFE_RELEASE(m_renderTargetView);
@@ -216,4 +237,9 @@ void DX11Renderer::onDestroy()
 			OutputDebugStringA(s.str().c_str());
 		}
 	}
+}
+
+void DX11Renderer::stop()
+{
+	m_stopped = true;
 }

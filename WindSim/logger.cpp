@@ -1,34 +1,34 @@
 #include "logger.h"
 
-QPointer<QTextEdit> Logger::log = nullptr;
+QPointer<QTextEdit> Logger::m_log = nullptr;
 
 void Logger::Setup(QWidget* parent)
 {
-	if (!log)
+	if (!m_log)
 	{
-		log = new QTextEdit(parent);
-		log->setObjectName(QStringLiteral("log"));
+		m_log = new QTextEdit(parent);
+		m_log->setObjectName(QStringLiteral("log"));
 		QSizePolicy sp(QSizePolicy::Expanding, QSizePolicy::Expanding);
 		sp.setHorizontalStretch(0);
 		sp.setVerticalStretch(1);
-		sp.setHeightForWidth(log->sizePolicy().hasHeightForWidth());
-		log->setSizePolicy(sp);
+		sp.setHeightForWidth(m_log->sizePolicy().hasHeightForWidth());
+		m_log->setSizePolicy(sp);
 
-		log->setReadOnly(true);
+		m_log->setReadOnly(true);
 	}
 }
 
 void Logger::logging(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
-	if (log)
+	if (m_log)
 	{
 		switch (type)
 		{
 		case QtDebugMsg:
 		case QtWarningMsg:
 		case QtCriticalMsg:
-			log->append(msg);
-			log->repaint();
+			m_log->append(msg);
+			m_log->repaint();
 			break;
 		case QtFatalMsg:
 			abort();
@@ -53,4 +53,10 @@ void Logger::logging(QtMsgType type, const QMessageLogContext &context, const QS
 			abort();
 		}
 	}
+}
+
+void Logger::logit(const QString& msg)
+{
+	m_log->append(msg);
+	m_log->repaint();
 }
