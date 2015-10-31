@@ -9,7 +9,8 @@
 
 #include <QCoreApplication>
 
-static bool color = true;
+using namespace DirectX;
+
 
 DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	: m_windowHandle(hwnd),
@@ -22,15 +23,25 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	m_rasterizerState(nullptr),
 	m_width(width),
 	m_height(height),
-	m_stopped(false)
+	m_stopped(false),
+	obj("bunny_high.obj"),
+	act(obj)
 {
+	XMVECTOR t = XMVectorSet(0.0, 0.0, 3.0, 0.0);
+	XMFLOAT3 p;
+	XMStoreFloat3(&p, t);
+	act.setPos(p);
+	XMVECTOR r = XMQuaternionRotationRollPitchYaw(0, -0.75 * XM_PI, 0);
+	XMFLOAT4 rs;
+	XMStoreFloat4(&rs, r);
+	act.setRot(rs);
 }
 
 DX11Renderer::~DX11Renderer()
 {
 }
 
-bool DX11Renderer::onInit()
+bool DX11Renderer::init()
 {
 	unsigned int createDeviceFlags = 0;
 
@@ -45,16 +56,7 @@ bool DX11Renderer::onInit()
 
 	if (featureLevel != D3D_FEATURE_LEVEL_11_0) return false;
 
-	IDXGIDevice* dxgiDevice = nullptr;
-	m_device->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<LPVOID*>(&dxgiDevice));
-
-	IDXGIAdapter* dxgiAdapter = nullptr;
-	dxgiDevice->GetParent(__uuidof(IDXGIAdapter), reinterpret_cast<LPVOID*>(&dxgiAdapter));
-
-	IDXGIFactory* dxgiFactory = nullptr;
-	dxgiAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<LPVOID*>(&dxgiFactory));
-
-	// set default render state to msaa enabled
+	// set default render state to msaa disabled
 	D3D11_RASTERIZER_DESC drd = {
 		D3D11_FILL_SOLID, //D3D11_FILL_MODE FillMode;
 		D3D11_CULL_BACK,//D3D11_CULL_MODE CullMode;
@@ -86,11 +88,20 @@ bool DX11Renderer::onInit()
 	scDesc.SampleDesc.Quality = 0;
 
 	scDesc.BufferUsage = 32;
-	scDesc.BufferCount = 1;
+	scDesc.BufferCount = 2;
 	scDesc.OutputWindow = reinterpret_cast<HWND>(m_windowHandle);
 	scDesc.Windowed = true;
 	scDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 	scDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+	IDXGIDevice* dxgiDevice = nullptr;
+	m_device->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<LPVOID*>(&dxgiDevice));
+
+	IDXGIAdapter* dxgiAdapter = nullptr;
+	dxgiDevice->GetAdapter(&dxgiAdapter);
+
+	IDXGIFactory* dxgiFactory = nullptr;
+	dxgiAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<LPVOID*>(&dxgiFactory));
 
 	hr = dxgiFactory->CreateSwapChain(m_device, &scDesc, &m_swapChain);
 
@@ -102,6 +113,14 @@ bool DX11Renderer::onInit()
 
 	onResize(m_width, m_height);
 
+	if (FAILED(Object3D::createShaderFromFile(L"..\\x64\\Debug\\object3D.fxo", m_device)))
+	{
+		return false;
+	}
+
+	obj.create(m_device, false);
+	//obj.createTestQuadGeometryBuffers(m_device, m_context);
+
 	return true;
 }
 
@@ -112,9 +131,11 @@ void DX11Renderer::onUpdate()
 
 void DX11Renderer::onRender()
 {
-	if (color) m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Azure);
-	else m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Chocolate);
-	color = !color;
+	m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Azure);
+	m_context->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	act.render(m_device, m_context);
+	//obj.renderTestQuad(m_device, m_context);
 
 	m_swapChain->Present(0, 0);
 }
@@ -124,7 +145,7 @@ void DX11Renderer::execute()
 	emit logit(QString("Start Rendering"));
 
 	// NOTE: Do NOT write to the gui log in every iteration of this loop.  Otherwise the GUI will block.
-	while (true)
+	while (!m_stopped)
 	{
 		// Process events to handle external signals (e.g. resize and stop)
 		QCoreApplication::processEvents();
@@ -147,6 +168,8 @@ void DX11Renderer::onResize(int width, int height)
 	assert(m_context);
 	assert(m_device);
 	assert(m_swapChain);
+
+	m_context->OMSetRenderTargets(0, 0, 0);
 
 	SAFE_RELEASE(m_renderTargetView);
 	SAFE_RELEASE(m_depthStencilView);
@@ -183,6 +206,9 @@ void DX11Renderer::onResize(int width, int height)
 
 	m_device->CreateDepthStencilView(m_depthStencilBuffer, &descDSV, &m_depthStencilView);
 
+	// Bind to pipeline
+	m_context->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
+
 	// Setup the viewport to match the backbuffer
 	D3D11_VIEWPORT vp;
 	vp.TopLeftX = 0;
@@ -193,9 +219,6 @@ void DX11Renderer::onResize(int width, int height)
 	vp.MaxDepth = 1.0f;
 
 	m_context->RSSetViewports(1, &vp);
-
-	// Bind to pipeline
-	m_context->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
 
 }
 
@@ -217,6 +240,9 @@ void DX11Renderer::onDestroy()
 		m_context->Flush();
 	}
 	SAFE_RELEASE(m_context);
+
+	Object3D::releaseShader();
+	obj.release();
 
 	if (m_device)
 	{
@@ -243,3 +269,4 @@ void DX11Renderer::stop()
 {
 	m_stopped = true;
 }
+

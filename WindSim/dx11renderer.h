@@ -1,6 +1,10 @@
 #ifndef DX11_RENDERER_H
 #define DX11_RENDERER_H
 
+#include "common.h"
+#include "object3D.h"
+#include "actor.h"
+
 // Qt
 #include <QWidget> // for WId
 #include <QObject>
@@ -18,7 +22,8 @@ public:
 	DX11Renderer(WId hwnd, int width, int height);
 	virtual ~DX11Renderer();
 
-	virtual bool onInit(); // Initialize renderer and directx11
+	virtual bool init(); // Initialize renderer and directx11
+
 	virtual void onUpdate(); // Update the scene
 	virtual void onRender(); // Render the scene
 	virtual void onDestroy(); // Delete renderer and directx11
@@ -29,6 +34,7 @@ public:
 public slots:
 	virtual void execute(); // Render loop
 	virtual void onResize(int width, int height); // Resize viewport
+	//virtual void addObject(std::string& name, std::string& objPath); // Add 3D object to renderer
 	virtual void stop(); // Stop rendering
 
 signals:
@@ -50,10 +56,12 @@ private:
 	int m_height;
 
 	bool m_stopped; // Indicates if rendering should be stopped
-};
 
-#ifndef SAFE_RELEASE
-#define SAFE_RELEASE(p) { if (p) { (p)->Release(); (p) = nullptr; } }
-#endif
+	//ObjectManager m_manager;
+	Object3D obj;
+	Actor act;
+
+
+};
 
 #endif

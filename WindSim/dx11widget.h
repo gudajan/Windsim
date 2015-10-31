@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QThread>
 
+class DX11Renderer;
+
 class DX11Widget : public QWidget
 {
 	Q_OBJECT
@@ -36,6 +38,7 @@ signals:
 
 private:
 	QThread m_renderThread;
+	DX11Renderer* m_renderer;
 };
 
 #endif

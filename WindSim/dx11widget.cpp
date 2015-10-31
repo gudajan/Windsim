@@ -6,22 +6,23 @@
 
 DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	: QWidget(parent, flags),
-
-	m_renderThread()
+	m_renderThread(),
+	m_renderer(nullptr)
 {
 	// Create DirectX Renderer on our widget
-	DX11Renderer* renderer = new DX11Renderer(winId(), width(), height());
+	DX11Renderer* m_renderer= new DX11Renderer(winId(), width(), height());
 
-	renderer->onInit();
+	if (!m_renderer->init())
+		throw std::runtime_error("Failed to initialize renderer!");
 
 	// Rendering should be executed in another thread, so 3D rendering does not block the GUI
-	renderer->moveToThread(&m_renderThread);
+	m_renderer->moveToThread(&m_renderThread);
 
-	connect(&m_renderThread, &QThread::finished,renderer, &QObject::deleteLater);
-	connect(&m_renderThread, &QThread::started, renderer, &DX11Renderer::execute);
-	connect(this, &DX11Widget::resize, renderer, &DX11Renderer::onResize);
-	connect(renderer, &DX11Renderer::logit, this, &DX11Widget::logit);
-	connect(this, &DX11Widget::stopRendering, renderer, &DX11Renderer::stop);
+	connect(&m_renderThread, &QThread::finished, m_renderer, &QObject::deleteLater);
+	connect(&m_renderThread, &QThread::started, m_renderer, &DX11Renderer::execute);
+	connect(this, &DX11Widget::resize, m_renderer, &DX11Renderer::onResize);
+	connect(m_renderer, &DX11Renderer::logit, this, &DX11Widget::logit);
+	connect(this, &DX11Widget::stopRendering, m_renderer, &DX11Renderer::stop);
 
 
 	setAttribute(Qt::WA_PaintOnScreen, true);
@@ -29,6 +30,8 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
 
 	setFocus();
+
+	m_renderThread.start();
 }
 
 DX11Widget::~DX11Widget()
@@ -40,13 +43,11 @@ DX11Widget::~DX11Widget()
 
 void DX11Widget::paintEvent(QPaintEvent* event)
 {
-	if (!m_renderThread.isRunning())
-		m_renderThread.start();
+		
 }
 
 void DX11Widget::resizeEvent(QResizeEvent* event)
 {
-	//m_renderer.onResize(event->size().width(), event->size().height());
 	emit resize(event->size().width(), event->size().height());
 }
 
