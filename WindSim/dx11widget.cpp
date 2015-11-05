@@ -3,6 +3,7 @@
 #include "dx11renderer.h"
 
 #include <QResizeEvent>
+#include <QApplication>
 
 DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	: QWidget(parent, flags),
@@ -10,7 +11,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	m_renderer(nullptr)
 {
 	// Create DirectX Renderer on our widget
-	DX11Renderer* m_renderer= new DX11Renderer(winId(), width(), height());
+	m_renderer= new DX11Renderer(winId(), width(), height());
 
 	if (!m_renderer->init())
 		throw std::runtime_error("Failed to initialize renderer!");
@@ -22,8 +23,10 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	connect(&m_renderThread, &QThread::started, m_renderer, &DX11Renderer::execute);
 	connect(this, &DX11Widget::resize, m_renderer, &DX11Renderer::onResize);
 	connect(m_renderer, &DX11Renderer::logit, this, &DX11Widget::logit);
+
 	connect(this, &DX11Widget::stopRendering, m_renderer, &DX11Renderer::stop);
 
+	connect(this, &DX11Widget::controlEvent, m_renderer, &DX11Renderer::onControlEvent);
 
 	setAttribute(Qt::WA_PaintOnScreen, true);
 	setAttribute(Qt::WA_NativeWindow, true);
@@ -36,9 +39,19 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 
 DX11Widget::~DX11Widget()
 {
-	emit stopRendering();
 	m_renderThread.quit();
 	m_renderThread.wait();
+}
+
+void DX11Widget::logit(const QString& str)
+{
+	Logger::logit(str);
+}
+
+void DX11Widget::cleanUp()
+{
+	emit stopRendering();
+
 }
 
 void DX11Widget::paintEvent(QPaintEvent* event)
@@ -51,7 +64,34 @@ void DX11Widget::resizeEvent(QResizeEvent* event)
 	emit resize(event->size().width(), event->size().height());
 }
 
-void DX11Widget::logit(const QString& str)
+
+void DX11Widget::keyPressEvent(QKeyEvent * event)
 {
-	Logger::logit(str);
+	m_renderer->getCamera()->handleControlEvent(event);
+	//emit controlEvent(event);
+}
+
+void DX11Widget::keyReleaseEvent(QKeyEvent * event)
+{
+	m_renderer->getCamera()->handleControlEvent(event);
+}
+
+void DX11Widget::mouseMoveEvent(QMouseEvent * event)
+{
+	m_renderer->getCamera()->handleControlEvent(event);
+}
+
+void DX11Widget::mousePressEvent(QMouseEvent * event)
+{
+	m_renderer->getCamera()->handleControlEvent(event);
+}
+
+void DX11Widget::mouseReleaseEvent(QMouseEvent * event)
+{
+	m_renderer->getCamera()->handleControlEvent(event);
+}
+
+void DX11Widget::wheelEvent(QWheelEvent * event)
+{
+	m_renderer->getCamera()->handleControlEvent(event);
 }

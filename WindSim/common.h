@@ -5,8 +5,6 @@
 
 #include <cstdint>
 
-
-
 #ifndef V_RETURN
 #define V_RETURN(x)    { hr = (x); if( FAILED(hr) ) { return hr; } }
 #endif
@@ -28,5 +26,22 @@ struct Triangle
 	uint32_t b;
 	uint32_t c;
 };
+
+struct Settings
+{
+	float rotatingSensitivity;
+	float translateSpeed;
+};
+
+static struct Settings config = { 0.1, 2.0f };
+
+static inline float degToRad(float degree)
+{
+	return degree / 180.0f * DirectX::XM_PI;
+}
+static inline float radToDeg(float radians)
+{
+	return radians / DirectX::XM_PI * 180.0f;
+}
 
 #endif

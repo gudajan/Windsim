@@ -24,21 +24,28 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	m_width(width),
 	m_height(height),
 	m_stopped(false),
-	obj("bunny_high.obj"),
+	m_elapsedTimer(),
+	m_renderTimer(this),
+	m_camera(width, height, FirstPerson),
+	obj("cube.obj"),
 	act(obj)
 {
-	XMVECTOR t = XMVectorSet(0.0, 0.0, 3.0, 0.0);
+	/*XMVECTOR t = XMVectorSet(0.0, 0.0, 3.0, 0.0);
 	XMFLOAT3 p;
 	XMStoreFloat3(&p, t);
 	act.setPos(p);
 	XMVECTOR r = XMQuaternionRotationRollPitchYaw(0, -0.75 * XM_PI, 0);
 	XMFLOAT4 rs;
 	XMStoreFloat4(&rs, r);
-	act.setRot(rs);
+	act.setRot(rs);*/
+
+	connect(&m_renderTimer, &QTimer::timeout, this, &DX11Renderer::frame);
+	OutputDebugStringA("DX11Renderer Constructor Finished\n");
 }
 
 DX11Renderer::~DX11Renderer()
 {
+
 }
 
 bool DX11Renderer::init()
@@ -113,6 +120,8 @@ bool DX11Renderer::init()
 
 	onResize(m_width, m_height);
 
+	OutputDebugStringA("Initialized DirectX 11\n");
+
 	if (FAILED(Object3D::createShaderFromFile(L"..\\x64\\Debug\\object3D.fxo", m_device)))
 	{
 		return false;
@@ -124,38 +133,39 @@ bool DX11Renderer::init()
 	return true;
 }
 
-void DX11Renderer::onUpdate()
-{
 
+void DX11Renderer::frame()
+{
+	double elapsedTime = m_elapsedTimer.restart() * 0.001;
+	update(elapsedTime);
+	render(elapsedTime);
 }
 
-void DX11Renderer::onRender()
+void DX11Renderer::update(double elapsedTime)
+{
+	m_camera.update(elapsedTime);
+}
+
+void DX11Renderer::render(double elapsedTime)
 {
 	m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Azure);
 	m_context->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	act.render(m_device, m_context);
+	act.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix());
 	//obj.renderTestQuad(m_device, m_context);
 
 	m_swapChain->Present(0, 0);
 }
 
+
 void DX11Renderer::execute()
 {
+	
 	emit logit(QString("Start Rendering"));
 
-	// NOTE: Do NOT write to the gui log in every iteration of this loop.  Otherwise the GUI will block.
-	while (!m_stopped)
-	{
-		// Process events to handle external signals (e.g. resize and stop)
-		QCoreApplication::processEvents();
-		if (m_stopped) break;
-		onUpdate();
-		onRender();
-	}
+	m_elapsedTimer.start();
+	m_renderTimer.start(1000.0f / 120.0f); // Rendering happens with 120 FPS at max
 
-	emit logit("Stop Rendering");
-	onDestroy();
 }
 
 void DX11Renderer::onResize(int width, int height)
@@ -164,6 +174,8 @@ void DX11Renderer::onResize(int width, int height)
 
 	m_width = width;
 	m_height = height;
+
+	m_camera.setAspectRatio(width, height);
 
 	assert(m_context);
 	assert(m_device);
@@ -222,7 +234,7 @@ void DX11Renderer::onResize(int width, int height)
 
 }
 
-void DX11Renderer::onDestroy()
+void DX11Renderer::destroy()
 {
 	emit logit("Destroy DirectX11 Objects");
 
@@ -267,6 +279,13 @@ void DX11Renderer::onDestroy()
 
 void DX11Renderer::stop()
 {
-	m_stopped = true;
+	m_renderTimer.stop();
+	destroy();
+	emit logit("Stopped Rendering\n");
+}
+
+void DX11Renderer::onControlEvent(QEvent* event)
+{
+	m_camera.handleControlEvent(event);
 }
 

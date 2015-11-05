@@ -5,9 +5,13 @@
 #include "object3D.h"
 #include "actor.h"
 
+#include "camera.h"
+
 // Qt
 #include <QWidget> // for WId
 #include <QObject>
+#include <QElapsedTimer>
+#include <QTimer>
 
 // DirectX
 #include <d3d11.h>
@@ -24,18 +28,22 @@ public:
 
 	virtual bool init(); // Initialize renderer and directx11
 
-	virtual void onUpdate(); // Update the scene
-	virtual void onRender(); // Render the scene
-	virtual void onDestroy(); // Delete renderer and directx11
+	virtual void update(double elapsedTime); // Update the scene
+	virtual void render(double elapsedTime); // Render the scene
+	virtual void destroy(); // Delete renderer and directx11
 
 	int getWidth(){ return m_width; };
 	int getHeight(){ return m_height; };
+	Camera* getCamera() { return &m_camera; };
 
 public slots:
 	virtual void execute(); // Render loop
+	virtual void frame(); // One Frame
 	virtual void onResize(int width, int height); // Resize viewport
 	//virtual void addObject(std::string& name, std::string& objPath); // Add 3D object to renderer
 	virtual void stop(); // Stop rendering
+
+	virtual void onControlEvent(QEvent* event);
 
 signals:
 	void logit(const QString& str);
@@ -57,11 +65,28 @@ private:
 
 	bool m_stopped; // Indicates if rendering should be stopped
 
+	QElapsedTimer m_elapsedTimer;
+	QTimer m_renderTimer;
+
+	Camera m_camera;
 	//ObjectManager m_manager;
 	Object3D obj;
 	Actor act;
 
 
+};
+
+class Test : public QObject
+{
+	Q_OBJECT
+public:
+	void log(const QString& str)
+	{
+		emit logit(str);
+	}
+
+signals:
+	void logit(const QString& str);
 };
 
 #endif

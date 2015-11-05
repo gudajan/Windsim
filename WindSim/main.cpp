@@ -1,6 +1,7 @@
 #include "windsim.h"
 #include "logger.h"
 #include <QtWidgets/QApplication>
+#include <QObject>
 
 
 int main(int argc, char *argv[])
@@ -17,5 +18,8 @@ int main(int argc, char *argv[])
 	QApplication a(argc, argv);
 	WindSim w;
 	w.show();
+
+	QObject::connect(&a, &QApplication::aboutToQuit, &w, &WindSim::cleanUp);
+
 	return a.exec();
 }

@@ -9,15 +9,13 @@ public:
 	Actor(Object3D& object);
 	virtual ~Actor();
 
-	void render(ID3D11Device* device, ID3D11DeviceContext* context);
+	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 
 	void setPos(const DirectX::XMFLOAT3& pos);
 	void setRot(const DirectX::XMFLOAT4& rot);
 	void setScale(const DirectX::XMFLOAT3& scale);
 	void setRender(bool render);
 	void toggleRender();
-	void setRenderBoundingBox(bool render);
-	void toggleRenderBoundingBox();
 
 	const DirectX::XMFLOAT3& getPos() const;
 	const DirectX::XMFLOAT4& getRot() const;

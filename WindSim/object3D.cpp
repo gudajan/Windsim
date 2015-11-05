@@ -129,17 +129,15 @@ void Object3D::release()
 	SAFE_RELEASE(m_vertexBuffer);
 }
 
-void Object3D::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world)
+void Object3D::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
 {
 	if (s_effect == nullptr)
 	{
 		return;
 	}
 
-	//const XMMATRIX worldView = world * view;
-	//s_shaderVariables.worldView->SetMatrix((float*)worldView.r);
-	XMMATRIX worldView = XMLoadFloat4x4(&world);
-	XMMATRIX proj = XMMatrixPerspectiveFovLH(0.25f * XM_PI, 4 / 3, 0.1f, 100.0f);
+	XMMATRIX worldView = XMLoadFloat4x4(&world) * XMLoadFloat4x4(&view);
+	XMMATRIX proj = XMLoadFloat4x4(&projection);
 
 	s_shaderVariables.worldView->SetMatrix(reinterpret_cast<float*>(worldView.r));
 	s_shaderVariables.worldViewIT->SetMatrix(reinterpret_cast<float*>(XMMatrixTranspose(XMMatrixInverse(nullptr, worldView)).r));

@@ -17,6 +17,9 @@ public:
 
 	static QPointer<QTextEdit> log;
 
+public slots:
+	void cleanUp();
+
 private:
 	Ui::WindSimClass ui;
 

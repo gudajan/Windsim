@@ -28,7 +28,7 @@ public:
 	virtual HRESULT create(ID3D11Device* device, bool clearClientBuffers = true);
 	virtual void release();
 
-	virtual void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world);
+	virtual void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 
 	//void Object3D::renderTestQuad(ID3D11Device* device, ID3D11DeviceContext* context);
 	//void Object3D::createTestQuadGeometryBuffers(ID3D11Device* device, ID3D11DeviceContext* context);

@@ -14,3 +14,8 @@ WindSim::~WindSim()
 {
 
 }
+
+void WindSim::cleanUp()
+{
+	ui.dx11Viewer->cleanUp();
+}

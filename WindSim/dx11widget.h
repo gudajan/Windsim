@@ -18,23 +18,28 @@ public:
 
 public slots:
 	virtual void logit(const QString& str);
+	virtual void cleanUp();
 
 protected:
-	//virtual void keyPressEvent(QKeyEvent * event);
-	//virtual void keyReleaseEvent(QKeyEvent * event);
-	//// virtual void leaveEvent(QEvent * event); // Mouse cursur leaves widget
-	////virtual void mouseDoubleClickEvent(QMouseEvent * event);
-	//virtual void mouseMoveEvent(QMouseEvent * event);
-	//virtual void mousePressEvent(QMouseEvent * event);
-	//virtual void mouseReleaseEvent(QMouseEvent * event);
-	// virtual void moveEvent(QMoveEvent * event); // When widget was moved to new position
 	virtual void paintEvent(QPaintEvent * event);
 	virtual void resizeEvent(QResizeEvent * event);
-	//virtual void wheelEvent(QWheelEvent * event);
+
+	virtual void keyPressEvent(QKeyEvent * event);
+	virtual void keyReleaseEvent(QKeyEvent * event);
+	virtual void mouseMoveEvent(QMouseEvent * event);
+	virtual void mousePressEvent(QMouseEvent * event);
+	virtual void mouseReleaseEvent(QMouseEvent * event);
+	virtual void wheelEvent(QWheelEvent * event);
+	//virtual void leaveEvent(QEvent * event); // Mouse cursur leaves widget
+	//virtual void mouseDoubleClickEvent(QMouseEvent * event);
+	//virtual void moveEvent(QMoveEvent * event); // When widget was moved to new position
+
+
 
 signals:
 	void stopRendering();
 	void resize(int width, int height);
+	void controlEvent(QEvent* event);
 
 private:
 	QThread m_renderThread;

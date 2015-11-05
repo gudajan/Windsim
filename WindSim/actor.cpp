@@ -3,26 +3,23 @@
 using namespace DirectX;
 
 Actor::Actor(Object3D& object)
-	: m_pos(),
-	m_rot(),
-	m_scale(),
+	: m_pos({ 0.0, 0.0, 0.0 }),
+	m_rot({ 0.0, 0.0, 0.0, 1.0 }),
+	m_scale({ 1.0, 1.0, 1.0 }),
 	m_render(true),
 	m_obj(object)
 {
-	XMStoreFloat3(&m_pos, XMVectorZero());
-	XMStoreFloat4(&m_rot, XMVectorZero());
-	XMStoreFloat3(&m_scale, XMVectorSplatOne());
 }
 
 Actor::~Actor()
 {
 }
 
-void Actor::render(ID3D11Device* device, ID3D11DeviceContext* context)
+void Actor::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
 {
 	if (m_render)
 	{
-		m_obj.render(device, context, getWorld());
+		m_obj.render(device, context, getWorld(), view, projection);
 	}
 }
 

@@ -172,6 +172,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="actor.cpp" />
+    <ClCompile Include="camera.cpp" />
     <ClCompile Include="dx11renderer.cpp" />
     <ClCompile Include="dx11widget.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_dx11renderer.cpp">
@@ -256,6 +257,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="actor.h" />
+    <ClInclude Include="camera.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="logger.h" />
     <ClInclude Include="object3D.h" />
