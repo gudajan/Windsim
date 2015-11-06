@@ -55,9 +55,10 @@ HRESULT Object3D::createShaderFromFile(const std::wstring& shaderPath, ID3D11Dev
 		V_RETURN(D3DX11CreateEffectFromFile(shaderPath.c_str(), 0, device, &s_effect));
 	}
 
-	s_shaderVariables.worldView = s_effect->GetVariableByName("g_worldView")->AsMatrix();
-	s_shaderVariables.worldViewIT = s_effect->GetVariableByName("g_worldViewIT")->AsMatrix();
-	s_shaderVariables.worldViewProj = s_effect->GetVariableByName("g_worldViewProj")->AsMatrix();
+	s_shaderVariables.worldView = s_effect->GetVariableByName("g_mWorldView")->AsMatrix();
+	s_shaderVariables.worldViewIT = s_effect->GetVariableByName("g_mWorldViewIT")->AsMatrix();
+	s_shaderVariables.worldViewProj = s_effect->GetVariableByName("g_mWorldViewProj")->AsMatrix();
+	s_shaderVariables.enableFlatShading = s_effect->GetVariableByName("g_bEnableFlatShading")->AsScalar();
 
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
@@ -142,6 +143,7 @@ void Object3D::render(ID3D11Device* device, ID3D11DeviceContext* context, const 
 	s_shaderVariables.worldView->SetMatrix(reinterpret_cast<float*>(worldView.r));
 	s_shaderVariables.worldViewIT->SetMatrix(reinterpret_cast<float*>(XMMatrixTranspose(XMMatrixInverse(nullptr, worldView)).r));
 	s_shaderVariables.worldViewProj->SetMatrix(reinterpret_cast<float*>((worldView * proj).r));
+	s_shaderVariables.enableFlatShading->SetBool(true);
 
 	s_effect->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, context);
 

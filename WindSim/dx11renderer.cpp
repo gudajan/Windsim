@@ -30,14 +30,7 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	obj("cube.obj"),
 	act(obj)
 {
-	/*XMVECTOR t = XMVectorSet(0.0, 0.0, 3.0, 0.0);
-	XMFLOAT3 p;
-	XMStoreFloat3(&p, t);
-	act.setPos(p);
-	XMVECTOR r = XMQuaternionRotationRollPitchYaw(0, -0.75 * XM_PI, 0);
-	XMFLOAT4 rs;
-	XMStoreFloat4(&rs, r);
-	act.setRot(rs);*/
+	//m_camera.setType(ModelView);
 
 	connect(&m_renderTimer, &QTimer::timeout, this, &DX11Renderer::frame);
 	OutputDebugStringA("DX11Renderer Constructor Finished\n");
@@ -74,10 +67,10 @@ bool DX11Renderer::init()
 		TRUE,//BOOL DepthClipEnable;
 		FALSE,//BOOL ScissorEnable;
 		FALSE,//BOOL MultisampleEnable;
-		FALSE//BOOL AntialiasedLineEnable;        
+		FALSE//BOOL AntialiasedLineEnable;
 	};
 	hr = m_device->CreateRasterizerState(&drd, &m_rasterizerState);
-	
+
 	if (FAILED(hr)) return false;
 
 	m_context->RSSetState(m_rasterizerState);
@@ -160,7 +153,6 @@ void DX11Renderer::render(double elapsedTime)
 
 void DX11Renderer::execute()
 {
-	
 	emit logit(QString("Start Rendering"));
 
 	m_elapsedTimer.start();

@@ -1,6 +1,6 @@
 RasterizerState CullBack
 {
-	CullMode = Back;
+	CullMode = None;
 };
 
 DepthStencilState DepthDefault
@@ -13,9 +13,10 @@ BlendState BlendDisable
 
 cbuffer cb
 {
-	float4x4 g_worldView;
-	float4x4 g_worldViewIT;
-	float4x4 g_worldViewProj;
+	float4x4 g_mWorldView;
+	float4x4 g_mWorldViewIT;
+	float4x4 g_mWorldViewProj;
+	bool g_bEnableFlatShading;
 }
 
 struct VSIn
@@ -35,9 +36,9 @@ struct PSIn
 PSIn vsProject(VSIn inVertex)
 {
 	PSIn outVertex;
-	outVertex.pos = mul(float4(inVertex.pos, 1.0f), g_worldViewProj);
-	outVertex.posView = mul(float4(inVertex.pos, 1.0f), g_worldView).xyz;
-	outVertex.normalView = mul(float4(inVertex.normal, 0.0f), g_worldViewIT).xyz;
+	outVertex.pos = mul(float4(inVertex.pos, 1.0f), g_mWorldViewProj);
+	outVertex.posView = mul(float4(inVertex.pos, 1.0f), g_mWorldView).xyz;
+	outVertex.normalView = mul(float4(inVertex.normal, 0.0f), g_mWorldViewIT).xyz;
 	return outVertex;
 }
 
@@ -50,16 +51,23 @@ float4 psBlinnPhong(PSIn inFragment) : SV_Target
 
 	const float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
 
-	float3 normal = normalize(cross(ddx(inFragment.posView), ddy(inFragment.posView)));
+	float3 n;
+	if (g_bEnableFlatShading)
+	{
+		// Calculate the normal from screenspace derivatives for flat shading
+		n = normalize(cross(ddx(inFragment.posView), ddy(inFragment.posView)));
+	}
+	else
+	{
+		n = normalize(inFragment.normalView);
+	}
+
 	// this will all get inlined anyway, might as well make it pretty
-	const float3 n = normal;
 	const float3 v = -normalize(inFragment.posView);
 	const float3 l = v; // special case: headlight
 	const float3 h = l; // still headlight
 
 	return color * (ka + kd * saturate(dot(n, l))) + ks * pow(saturate(dot(n, h)), s);
-	//return float4((inFragment.normalView * 0.5 + 0.5, 1.0f);
-	//return float4(normal * 0.5 + 0.5, 1.0f);
 }
 
 

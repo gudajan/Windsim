@@ -9,40 +9,26 @@
 using namespace DirectX;
 
 Camera::Camera(const uint32_t width, const uint32_t height, const CameraType type)
-	: m_pos({ 0.0, 3.0, -10.0 }),
-	m_rot({ 0.0, 0.0, 0.0, 1.0 }),
-	m_fov(degToRad(50)),
+	: m_view(),
+	m_projection(),
+	m_fov(degToRad(50.0f)),
 	m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
 	m_nearZ(0.1f),
 	m_farZ(100.0f),
 	m_type(type),
 	m_rotating(false),
 	m_translating(false),
-	m_angleX(0.15 * XM_PI),
-	m_angleY(0.0f),
-	m_keys({ false, false, false, false, false, false })
+	m_viewChanged(false),
+	m_fpi({{ 0.0f, 0.0f, -10.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, 0.0f, false, false, false, false, false, false }),
+	m_mvi({{ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, 0.0f, false, 1.0f })
 {
-	// Per default the camera looks down at the origin
-	XMStoreFloat4(&m_rot, XMQuaternionRotationRollPitchYaw(m_angleX, m_angleY, 0.0));
+	// Compute initial transformation matrices
+	computeViewMatrix();
+	computeProjectionMatrix();
 }
 
 Camera::~Camera()
 {
-}
-
-DirectX::XMFLOAT4X4 Camera::getViewMatrix() const
-{
-	XMFLOAT4X4 view;
-	XMVECTOR r = XMLoadFloat4(&m_rot);
-	XMVECTOR p = XMLoadFloat3(&m_pos);
-	XMStoreFloat4x4(&view, XMMatrixInverse(nullptr, XMMatrixRotationQuaternion(r) * XMMatrixTranslationFromVector(p)));
-	return view;
-}
-DirectX::XMFLOAT4X4 Camera::getProjectionMatrix() const
-{
-	XMFLOAT4X4 proj;
-	XMStoreFloat4x4(&proj, XMMatrixPerspectiveFovLH(m_fov, m_aspectRatio, m_nearZ, m_farZ));
-	return proj;
 }
 
 bool Camera::handleControlEvent(QEvent* event)
@@ -79,28 +65,47 @@ void Camera::update(double elapsedTime)
 	{
 		if (m_translating)
 		{
-			XMVECTOR r = XMLoadFloat4(&m_rot);
-			XMVECTOR p = XMLoadFloat3(&m_pos);
-			XMVECTOR povAxis = XMVector3Rotate(XMVectorSet(0.0, 0.0, 1.0, 0.0), r) * config.translateSpeed * elapsedTime;
-			XMVECTOR rightAxis = XMVector3Rotate(XMVectorSet(1.0, 0.0, 0.0, 0.0), r) * config.translateSpeed * elapsedTime;
-			XMVECTOR upAxis = XMVector3Rotate(XMVectorSet(0.0, 1.0, 0.0, 0.0), r) * config.translateSpeed * elapsedTime;
+			const XMVECTOR rot = XMLoadFloat4(&m_fpi.rot);
+			const XMVECTOR view = XMVector3Rotate(XMVectorSet(0.0, 0.0, 1.0, 0.0), rot) * conf.cam.fp.translationSpeed * elapsedTime; // View direction
+			const XMVECTOR right = XMVector3Rotate(XMVectorSet(1.0, 0.0, 0.0, 0.0), rot) * conf.cam.fp.translationSpeed * elapsedTime;
+			const XMVECTOR up = XMVector3Rotate(XMVectorSet(0.0, 1.0, 0.0, 0.0), rot) * conf.cam.fp.translationSpeed * elapsedTime;
 
-			if (m_keys.moveForward)	p += povAxis;
-			if (m_keys.moveBackward) p -= povAxis;
-			if (m_keys.moveLeft) p -= rightAxis;
-			if (m_keys.moveRight) p += rightAxis;
-			if (m_keys.moveUp) p += upAxis;
-			if (m_keys.moveDown) p -= upAxis;
+			XMVECTOR p = XMLoadFloat3(&m_fpi.pos);
 
-			XMStoreFloat3(&m_pos, p);
+			if (m_fpi.moveForward)	p += view;
+			if (m_fpi.moveBackward) p -= view;
+			if (m_fpi.moveLeft) p -= right;
+			if (m_fpi.moveRight) p += right;
+			if (m_fpi.moveUp) p += up;
+			if (m_fpi.moveDown) p -= up;
+
+			XMStoreFloat3(&m_fpi.pos, p);
+
+			m_viewChanged = true;
 		}
 	}
+
+	if (m_viewChanged)
+	{
+		m_viewChanged = false;
+		computeViewMatrix();
+	}
+}
+
+void Camera::setProjectionParams(const float fov, const uint32_t width, const uint32_t height, const float nearZ, const float farZ)
+{
+	m_fov = fov;
+	m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+	m_nearZ = nearZ;
+	m_farZ = farZ;
+	computeProjectionMatrix();
 }
 
 void Camera::handleMousePress(QMouseEvent* event)
 {
 	m_gMouseCoordLast = m_gMouseCoord;
 	m_gMouseCoord = event->globalPos();
+
 	if (m_type == FirstPerson)
 	{
 		if (event->button() == Qt::LeftButton)
@@ -113,6 +118,14 @@ void Camera::handleMousePress(QMouseEvent* event)
 		if (event->button() == Qt::LeftButton)
 		{
 			m_rotating = true;
+			if (m_mvi.pitch > XM_PI * 0.5 && m_mvi.pitch < XM_PI * 1.5)
+			{
+				m_mvi.flippedYawDir = true;
+			}
+			else
+			{
+				m_mvi.flippedYawDir = false;
+			}
 		}
 		if (event->button() == Qt::RightButton)
 		{
@@ -125,6 +138,7 @@ void Camera::handleMouseRelease(QMouseEvent* event)
 {
 	m_gMouseCoordLast = m_gMouseCoord;
 	m_gMouseCoord = event->globalPos();
+
 	if (m_type == FirstPerson)
 	{
 		if (event->button() == Qt::LeftButton)
@@ -156,30 +170,48 @@ void Camera::handleMouseMove(QMouseEvent* event)
 		if (m_rotating)
 		{
 			// Compute additional rotation, caused by mouse movement
+			m_fpi.yaw = normalizeRad(m_fpi.yaw + degToRad(mouseMove.x()) * conf.cam.fp.rotationSpeed);
+			m_fpi.pitch = normalizeRad(m_fpi.pitch + degToRad(mouseMove.y()) * conf.cam.fp.rotationSpeed);
 
-			m_angleY += degToRad(mouseMove.rx()) * config.rotatingSensitivity;
-			m_angleX += degToRad(mouseMove.ry()) * config.rotatingSensitivity;
+			// Recompute overall rotation of camera
+			XMStoreFloat4(&m_fpi.rot, XMQuaternionRotationRollPitchYaw(m_fpi.pitch, m_fpi.yaw, 0.0));
 
-			XMStoreFloat4(&m_rot, XMQuaternionRotationRollPitchYaw(m_angleX, m_angleY, 0.0));
+			m_viewChanged = true;
+		}
+	}
+	else // ModelView
+	{
+		if (m_rotating)
+		{
+			// Compute additional rotation, caused by mouse movement
+			m_mvi.pitch = normalizeRad(m_mvi.pitch + degToRad(mouseMove.y()) * conf.cam.mv.rotationSpeed);
 
-			//// Load current rotation quaternion
-			//XMVECTOR q = XMLoadFloat4(&m_rot);
+			if (m_mvi.flippedYawDir)
+			{
+				m_mvi.yaw = normalizeRad(m_mvi.yaw - degToRad(mouseMove.x()) * conf.cam.mv.rotationSpeed);
+			}
+			else
+			{
+				m_mvi.yaw = normalizeRad(m_mvi.yaw + degToRad(mouseMove.x()) * conf.cam.mv.rotationSpeed);
+			}
 
-			//// Compute current y-Axis respectively the up vector
-			//XMVECTOR yAxis = XMVector3Rotate(XMVectorSet(0.0, 1.0, 0.0, 0.0), q); 
+			XMStoreFloat4(&m_mvi.rot, XMQuaternionRotationRollPitchYaw(m_mvi.pitch, m_mvi.yaw, 0.0));
 
-			//// Add rotation arround y-Axis to camera rotation
-			//XMVECTOR addRot = XMQuaternionRotationAxis(yAxis, degToRad(mouseMove.rx()) * config.rotatingSensitivity);
-			//q = XMQuaternionMultiply(q, addRot);
-			//// With new rotation compute current x-Axis respectively the right vector (This way the camera always stays "upright")
-			//XMVECTOR xAxis = XMVector3Rotate(XMVectorSet(1.0, 0.0, 0.0, 0.0), q);
-		
-			//// Add rotation arround x-Axis to camera rotation
-			//addRot = XMQuaternionRotationAxis(xAxis, degToRad(mouseMove.ry()) * config.rotatingSensitivity);
-			//q = XMQuaternionMultiply(q, addRot);
+			m_viewChanged = true;
+		}
 
-			//// Store rotation quaternion
-			//XMStoreFloat4(&m_rot, q);
+		if (m_translating)
+		{
+			// Move the rotation center about in the plane, which is parallel to the view plane
+			// Speed of translation is dependent on the current zoom factor
+			const XMVECTOR rot = XMLoadFloat4(&m_mvi.rot);
+			const XMVECTOR right = XMVector3Rotate(XMVectorSet(1.0, 0.0, 0.0, 0.0), rot) * 1 / m_mvi.zoom * conf.cam.mv.translationSpeed * mouseMove.x();
+			const XMVECTOR up = XMVector3Rotate(XMVectorSet(0.0, 1.0, 0.0, 0.0), rot) * 1 / m_mvi.zoom * conf.cam.mv.translationSpeed * mouseMove.y();
+
+			// Invert the translation to make it appear we are moving the object and not the camera
+			XMStoreFloat3(&m_mvi.center, XMLoadFloat3(&m_mvi.center) - right + up);
+
+			m_viewChanged = true;
 		}
 	}
 }
@@ -191,29 +223,28 @@ void Camera::handleKeyPress(QKeyEvent* event)
 		switch (event->key())
 		{
 		case(Qt::Key_W) :
-			m_keys.moveForward = true;
+			m_fpi.moveForward = true;
 			break;
 		case(Qt::Key_S) :
-			m_keys.moveBackward = true;
+			m_fpi.moveBackward = true;
 			break;
 		case(Qt::Key_A) :
-			m_keys.moveLeft = true;
+			m_fpi.moveLeft = true;
 			break;
 		case(Qt::Key_D) :
-			m_keys.moveRight = true;
+			m_fpi.moveRight = true;
 			break;
 		case(Qt::Key_Q) :
-			m_keys.moveUp = true;
+			m_fpi.moveUp = true;
 			break;
 		case(Qt::Key_E) :
-			m_keys.moveDown = true;
+			m_fpi.moveDown = true;
 			break;
 		default:
 			break;
 		}
 
-		m_translating = m_keys.moveForward || m_keys.moveBackward || m_keys.moveLeft || m_keys.moveRight || m_keys.moveUp || m_keys.moveDown ? true : false;
-					
+		m_translating = m_fpi.moveForward || m_fpi.moveBackward || m_fpi.moveLeft || m_fpi.moveRight || m_fpi.moveUp || m_fpi.moveDown ? true : false;
 	}
 }
 
@@ -224,32 +255,70 @@ void Camera::handleKeyRelease(QKeyEvent* event)
 		switch (event->key())
 		{
 		case(Qt::Key_W) :
-			m_keys.moveForward = false;
+			m_fpi.moveForward = false;
 			break;
 		case(Qt::Key_S) :
-			m_keys.moveBackward = false;
+			m_fpi.moveBackward = false;
 			break;
 		case(Qt::Key_A) :
-			m_keys.moveLeft = false;
+			m_fpi.moveLeft = false;
 			break;
 		case(Qt::Key_D) :
-			m_keys.moveRight = false;
+			m_fpi.moveRight = false;
 			break;
 		case(Qt::Key_Q) :
-			m_keys.moveUp = false;
+			m_fpi.moveUp = false;
 			break;
 		case(Qt::Key_E) :
-			m_keys.moveDown = false;
+			m_fpi.moveDown = false;
 			break;
 		default:
 			break;
 		}
 
-		m_translating = m_keys.moveForward || m_keys.moveBackward || m_keys.moveLeft || m_keys.moveRight || m_keys.moveUp || m_keys.moveDown ? true : false;
+		m_translating = m_fpi.moveForward || m_fpi.moveBackward || m_fpi.moveLeft || m_fpi.moveRight || m_fpi.moveUp || m_fpi.moveDown ? true : false;
 	}
 }
 
 void Camera::handleWheel(QWheelEvent* event)
 {
+	if (m_type == ModelView)
+	{
+		// angleDelta returns amount of vertical scrolling in 8th of degrees
+		// ---> degrees = angleDelta().ry() / 8
+		// It is negative if wheel was scrolled towards the user
+		// One wheel tick usually is 15 degrees -> angleDelta() returns 120 for one tick
+		m_mvi.zoom += event->angleDelta().ry() / 120.0f * conf.cam.mv.zoomSpeed;
 
+		// Recompute camera position
+		m_viewChanged = true;
+	}
+}
+
+void Camera::computeViewMatrix()
+{
+	XMVECTOR pos;
+	XMVECTOR rot;
+	if (m_type == FirstPerson)
+	{
+		rot = XMLoadFloat4(&m_fpi.rot);
+		pos = XMLoadFloat3(&m_fpi.pos);
+	}
+	else // ModelView
+	{
+		rot = XMLoadFloat4(&m_mvi.rot);
+		// For the ModelView camera, the position must be recalculated in every case, so do it here once:
+		// Translate position depending on current zoom, rotation and rotation center
+		XMVECTOR view = XMVector3Rotate(XMVectorSet(0.0, 0.0, 1.0, 0.0), rot); // View direction
+		XMVECTOR center = XMLoadFloat3(&m_mvi.center); // Rotation center
+		pos = center - 1.0f / m_mvi.zoom * conf.cam.mv.defaultDist * view;
+	}
+
+	// Accumulate to view matrix
+	XMStoreFloat4x4(&m_view, XMMatrixInverse(nullptr, XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos)));
+}
+
+void Camera::computeProjectionMatrix()
+{
+	XMStoreFloat4x4(&m_projection, XMMatrixPerspectiveFovLH(m_fov, m_aspectRatio, m_nearZ, m_farZ));
 }

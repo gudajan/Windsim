@@ -56,7 +56,7 @@ void DX11Widget::cleanUp()
 
 void DX11Widget::paintEvent(QPaintEvent* event)
 {
-		
+
 }
 
 void DX11Widget::resizeEvent(QResizeEvent* event)

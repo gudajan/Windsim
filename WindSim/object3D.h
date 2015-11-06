@@ -12,6 +12,7 @@ struct ID3D11Buffer;
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct ID3DX11EffectMatrixVariable;
+struct ID3DX11EffectScalarVariable;
 struct ID3DX11Effect;
 struct ID3D11InputLayout;
 
@@ -42,6 +43,7 @@ private:
 		ID3DX11EffectMatrixVariable* worldView;
 		ID3DX11EffectMatrixVariable* worldViewIT; // Inverse-Transposed World View
 		ID3DX11EffectMatrixVariable* worldViewProj;
+		ID3DX11EffectScalarVariable* enableFlatShading;
 	};
 
 	static ShaderVariables s_shaderVariables;
