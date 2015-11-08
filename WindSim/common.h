@@ -28,34 +28,6 @@ struct Triangle
 	uint32_t c;
 };
 
-struct Settings
-{
-	struct Camera
-	{
-		struct FirstPerson
-		{
-			float rotationSpeed;
-			float translationSpeed;
-		} fp;
-
-		struct ModelView
-		{
-			float rotationSpeed;
-			float translationSpeed;
-			float defaultDist; // Default distance of the camera to the object, corresponding to zoom factor 1.0
-			float zoomSpeed;
-		} mv;
-	} cam;
-};
-
-static struct Settings conf = {
-	// Camera
-	{
-		{ 0.1f, 2.0f }, // FirstPerson
-		{ 0.3f, 0.01f, 10.0f, 0.1f } // ModelView
-	}
-};
-
 static inline float degToRad(float degree)
 {
 	return degree / 180.0f * DirectX::XM_PI;

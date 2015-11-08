@@ -1,5 +1,6 @@
 #include "camera.h"
 #include "common.h"
+#include "settings.h"
 
 #include <QEvent>
 #include <QMouseEvent>

@@ -8,6 +8,7 @@
 #include <DirectXColors.h>
 
 #include <QCoreApplication>
+#include <QDir>
 
 using namespace DirectX;
 
@@ -115,7 +116,8 @@ bool DX11Renderer::init()
 
 	OutputDebugStringA("Initialized DirectX 11\n");
 
-	if (FAILED(Object3D::createShaderFromFile(L"..\\x64\\Debug\\object3D.fxo", m_device)))
+	QString fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("object3D.fxo");
+	if (FAILED(Object3D::createShaderFromFile(fxoPath.toStdWString() , m_device)))
 	{
 		return false;
 	}
@@ -153,8 +155,6 @@ void DX11Renderer::render(double elapsedTime)
 
 void DX11Renderer::execute()
 {
-	emit logit(QString("Start Rendering"));
-
 	m_elapsedTimer.start();
 	m_renderTimer.start(1000.0f / 120.0f); // Rendering happens with 120 FPS at max
 
@@ -162,8 +162,6 @@ void DX11Renderer::execute()
 
 void DX11Renderer::onResize(int width, int height)
 {
-	emit logit("Resize Viewport");
-
 	m_width = width;
 	m_height = height;
 
@@ -228,8 +226,6 @@ void DX11Renderer::onResize(int width, int height)
 
 void DX11Renderer::destroy()
 {
-	emit logit("Destroy DirectX11 Objects");
-
 	SAFE_RELEASE(m_depthStencilBuffer);
 	SAFE_RELEASE(m_depthStencilView);
 	SAFE_RELEASE(m_renderTargetView);
@@ -273,7 +269,6 @@ void DX11Renderer::stop()
 {
 	m_renderTimer.stop();
 	destroy();
-	emit logit("Stopped Rendering\n");
 }
 
 void DX11Renderer::onControlEvent(QEvent* event)

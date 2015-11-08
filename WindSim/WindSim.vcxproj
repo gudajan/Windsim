@@ -213,6 +213,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="object3D.cpp" />
     <ClCompile Include="objLoader.cpp" />
+    <ClCompile Include="settings.cpp" />
     <ClCompile Include="windsim.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -262,6 +263,8 @@
     <ClInclude Include="logger.h" />
     <ClInclude Include="object3D.h" />
     <ClInclude Include="objLoader.h" />
+    <ClInclude Include="libini.hpp" />
+    <ClInclude Include="settings.h" />
     <CustomBuild Include="dx11widget.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing dx11widget.h...</Message>

@@ -56,42 +56,49 @@ void DX11Widget::cleanUp()
 
 void DX11Widget::paintEvent(QPaintEvent* event)
 {
-
+	return QWidget::paintEvent(event);
 }
 
 void DX11Widget::resizeEvent(QResizeEvent* event)
 {
 	emit resize(event->size().width(), event->size().height());
+
+	return QWidget::resizeEvent(event);
 }
 
 
 void DX11Widget::keyPressEvent(QKeyEvent * event)
 {
 	m_renderer->getCamera()->handleControlEvent(event);
-	//emit controlEvent(event);
+	return QWidget::keyPressEvent(event);
 }
 
 void DX11Widget::keyReleaseEvent(QKeyEvent * event)
 {
 	m_renderer->getCamera()->handleControlEvent(event);
+	return QWidget::keyReleaseEvent(event);
 }
 
 void DX11Widget::mouseMoveEvent(QMouseEvent * event)
 {
 	m_renderer->getCamera()->handleControlEvent(event);
+	return QWidget::mouseMoveEvent(event);
 }
 
 void DX11Widget::mousePressEvent(QMouseEvent * event)
 {
 	m_renderer->getCamera()->handleControlEvent(event);
+	return QWidget::mousePressEvent(event);
 }
 
 void DX11Widget::mouseReleaseEvent(QMouseEvent * event)
 {
 	m_renderer->getCamera()->handleControlEvent(event);
+	return QWidget::mouseReleaseEvent(event);
 }
 
 void DX11Widget::wheelEvent(QWheelEvent * event)
 {
 	m_renderer->getCamera()->handleControlEvent(event);
+	return QWidget::wheelEvent(event);
 }

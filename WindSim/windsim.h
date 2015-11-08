@@ -20,8 +20,16 @@ public:
 public slots:
 	void cleanUp();
 
+protected:
+	void keyPressEvent(QKeyEvent * event);
+
 private:
+
+	void reloadIni();
+
 	Ui::WindSimClass ui;
+
+	QString m_iniFilePath;
 
 };
 
