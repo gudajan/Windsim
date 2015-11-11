@@ -1,11 +1,15 @@
 #ifndef WINDSIM_H
 #define WINDSIM_H
 
-#include <QtWidgets/QMainWindow>
-#include "ui_windsim.h"
-
+#include <QMainWindow>
 #include <QPointer>
 #include <QTextEdit>
+#include <QStandardItemModel>
+
+#include "ui_windsim.h"
+
+#include "project.h"
+
 
 class WindSim : public QMainWindow
 {
@@ -17,19 +21,37 @@ public:
 
 	static QPointer<QTextEdit> log;
 
-public slots:
-	void cleanUp();
-
 protected:
 	void keyPressEvent(QKeyEvent * event);
+	void closeEvent(QCloseEvent* event);
+
+private slots:
+	// Project actions:
+	bool actionNewTriggered();
+	bool actionOpenTriggered();
+	void actionCloseTriggered();
+	bool actionSaveTriggered();
+	bool actionSaveAsTriggered();
+
+	// Create actions:
+	bool actionCreateMeshTriggered();
+	// void actionRemoveObjectTriggered();
 
 private:
-
 	void reloadIni();
+	bool maybeSave();
+	bool nameAvailable(const QString& name);
+
+	void projectActionsEnable(bool newAct, bool open, bool close, bool save, bool saveAs);
+	void createActionEnable(bool mesh);
 
 	Ui::WindSimClass ui;
 
 	QString m_iniFilePath;
+	Project m_project;
+	QStandardItemModel m_objectModel;
+
+
 
 };
 

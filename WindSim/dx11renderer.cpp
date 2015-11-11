@@ -1,4 +1,5 @@
 #include "dx11renderer.h"
+#include "mesh.h"
 
 #include <iostream>
 #include <cassert>
@@ -28,13 +29,11 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	m_elapsedTimer(),
 	m_renderTimer(this),
 	m_camera(width, height, FirstPerson),
-	obj("cube.obj"),
-	act(obj)
+	m_manager()
 {
 	//m_camera.setType(ModelView);
 
 	connect(&m_renderTimer, &QTimer::timeout, this, &DX11Renderer::frame);
-	OutputDebugStringA("DX11Renderer Constructor Finished\n");
 }
 
 DX11Renderer::~DX11Renderer()
@@ -51,12 +50,14 @@ bool DX11Renderer::init()
 #endif
 
 	D3D_FEATURE_LEVEL featureLevel;
-	HRESULT hr = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, 0, 0, D3D11_SDK_VERSION, &m_device, &featureLevel, &m_context);
 
-	if (FAILED(hr)) return false;
+	if (FAILED(D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, 0, 0, D3D11_SDK_VERSION, &m_device, &featureLevel, &m_context)))
+		return false;
 
-	if (featureLevel != D3D_FEATURE_LEVEL_11_0) return false;
+	if (featureLevel != D3D_FEATURE_LEVEL_11_0)
+		return false;
 
+	// Create rasterizerstate
 	// set default render state to msaa disabled
 	D3D11_RASTERIZER_DESC drd = {
 		D3D11_FILL_SOLID, //D3D11_FILL_MODE FillMode;
@@ -70,12 +71,12 @@ bool DX11Renderer::init()
 		FALSE,//BOOL MultisampleEnable;
 		FALSE//BOOL AntialiasedLineEnable;
 	};
-	hr = m_device->CreateRasterizerState(&drd, &m_rasterizerState);
-
-	if (FAILED(hr)) return false;
+	if (FAILED(m_device->CreateRasterizerState(&drd, &m_rasterizerState)))
+		return false;
 
 	m_context->RSSetState(m_rasterizerState);
 
+	// Create swapchain
 	DXGI_SWAP_CHAIN_DESC scDesc;
 	scDesc.BufferDesc.Width = m_width;
 	scDesc.BufferDesc.Height = m_height;
@@ -104,26 +105,22 @@ bool DX11Renderer::init()
 	IDXGIFactory* dxgiFactory = nullptr;
 	dxgiAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<LPVOID*>(&dxgiFactory));
 
-	hr = dxgiFactory->CreateSwapChain(m_device, &scDesc, &m_swapChain);
-
-	if (FAILED(hr)) return false;
+	if (FAILED(dxgiFactory->CreateSwapChain(m_device, &scDesc, &m_swapChain)))
+		return false;
 
 	SAFE_RELEASE(dxgiDevice);
 	SAFE_RELEASE(dxgiAdapter);
 	SAFE_RELEASE(dxgiFactory);
 
+	// Initialize rendertargets and set viewport
 	onResize(m_width, m_height);
 
 	OutputDebugStringA("Initialized DirectX 11\n");
 
-	QString fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("object3D.fxo");
-	if (FAILED(Object3D::createShaderFromFile(fxoPath.toStdWString() , m_device)))
-	{
+	// Create all shaders
+	QString fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("mesh.fxo");
+	if (FAILED(Mesh::createShaderFromFile(fxoPath.toStdWString() , m_device)))
 		return false;
-	}
-
-	obj.create(m_device, false);
-	//obj.createTestQuadGeometryBuffers(m_device, m_context);
 
 	return true;
 }
@@ -146,8 +143,7 @@ void DX11Renderer::render(double elapsedTime)
 	m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Azure);
 	m_context->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	act.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix());
-	//obj.renderTestQuad(m_device, m_context);
+	m_manager.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix());
 
 	m_swapChain->Present(0, 0);
 }
@@ -241,8 +237,11 @@ void DX11Renderer::destroy()
 	}
 	SAFE_RELEASE(m_context);
 
-	Object3D::releaseShader();
-	obj.release();
+	// Release all shaders
+	Mesh::releaseShader();
+
+	// Release all objects
+	m_manager.release();
 
 	if (m_device)
 	{
@@ -258,9 +257,7 @@ void DX11Renderer::destroy()
 		if (references > 0)
 		{
 			// TODO: MAYBE ERROR WINDOW
-			std::stringstream s;
-			s << "ERROR: " << references << " UNRELEASED REFERENCES!\n";
-			OutputDebugStringA(s.str().c_str());
+			OutputDebugStringA(std::string("ERROR: " + std::to_string(references) + " UNRELEASED REFERENCES!\n").c_str());
 		}
 	}
 }
@@ -274,5 +271,10 @@ void DX11Renderer::stop()
 void DX11Renderer::onControlEvent(QEvent* event)
 {
 	m_camera.handleControlEvent(event);
+}
+
+void DX11Renderer::onMeshCreated(const QString& name, const QString& path)
+{
+	m_manager.add(name.toStdString(), m_device, path.toStdString(), ObjectType::Mesh);
 }
 

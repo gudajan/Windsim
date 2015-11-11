@@ -4,6 +4,8 @@
 #include <DirectXMath.h>
 
 #include <cstdint>
+#include <string>
+#include <fstream>
 #include <cmath>
 
 #ifndef V_RETURN
@@ -41,6 +43,33 @@ static inline float radToDeg(float radians)
 static inline float normalizeRad(float rad)
 {
 	return rad - (std::floor(rad / (2 * DirectX::XM_PI)) * 2 * DirectX::XM_PI);
+}
+
+static std::string loadFile(const std::string& path)
+{
+	std::ifstream in(path, std::ios::in | std::ios::binary);
+	if (in)
+	{
+		std::string str;
+		in.seekg(0, std::ios::end);
+		str.resize(in.tellg());
+		in.seekg(0, std::ios::beg);
+		in.read(&str[0], str.size());
+		in.close();
+		return str;
+	}
+	throw std::runtime_error("Failed to open the file '" + path + "' for reading");
+}
+
+static void storeFile(const std::string& path, const std::string& data)
+{
+	std::ofstream out(path, std::ios::out | std::ios::binary);
+	if (out)
+	{
+		out.write(data.data(), data.size());
+		out.close();
+	}
+	throw std::runtime_error("Failed to open the file '" + path + "' for writing");
 }
 
 #endif

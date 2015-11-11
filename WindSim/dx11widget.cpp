@@ -25,13 +25,14 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	connect(m_renderer, &DX11Renderer::logit, this, &DX11Widget::logit);
 
 	connect(this, &DX11Widget::stopRendering, m_renderer, &DX11Renderer::stop);
-
 	connect(this, &DX11Widget::controlEvent, m_renderer, &DX11Renderer::onControlEvent);
+	connect(this, &DX11Widget::meshCreated, m_renderer, &DX11Renderer::onMeshCreated);
 
 	setAttribute(Qt::WA_PaintOnScreen, true);
 	setAttribute(Qt::WA_NativeWindow, true);
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
 
+	setFocusPolicy(Qt::StrongFocus);
 	setFocus();
 
 	m_renderThread.start();
@@ -43,6 +44,11 @@ DX11Widget::~DX11Widget()
 	m_renderThread.wait();
 }
 
+void DX11Widget::addMesh(const QString& name, const QString& path)
+{
+	emit meshCreated(name, path);
+}
+
 void DX11Widget::logit(const QString& str)
 {
 	Logger::logit(str);
@@ -51,7 +57,6 @@ void DX11Widget::logit(const QString& str)
 void DX11Widget::cleanUp()
 {
 	emit stopRendering();
-
 }
 
 void DX11Widget::paintEvent(QPaintEvent* event)

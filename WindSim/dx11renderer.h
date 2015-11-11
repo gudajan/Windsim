@@ -2,10 +2,8 @@
 #define DX11_RENDERER_H
 
 #include "common.h"
-#include "object3D.h"
-#include "actor.h"
-
 #include "camera.h"
+#include "objectManager.h"
 
 // Qt
 #include <QWidget> // for WId
@@ -44,6 +42,7 @@ public slots:
 	virtual void stop(); // Stop rendering
 
 	virtual void onControlEvent(QEvent* event);
+	virtual void onMeshCreated(const QString& name, const QString& path);
 
 signals:
 	void logit(const QString& str);
@@ -69,24 +68,8 @@ private:
 	QTimer m_renderTimer;
 
 	Camera m_camera;
-	//ObjectManager m_manager;
-	Object3D obj;
-	Actor act;
+	ObjectManager m_manager;
 
-
-};
-
-class Test : public QObject
-{
-	Q_OBJECT
-public:
-	void log(const QString& str)
-	{
-		emit logit(str);
-	}
-
-signals:
-	void logit(const QString& str);
 };
 
 #endif

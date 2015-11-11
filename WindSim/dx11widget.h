@@ -16,6 +16,8 @@ public:
 
 	inline virtual QPaintEngine* paintEngine() const { return nullptr; }
 
+	void addMesh(const QString& name, const QString& path);
+
 public slots:
 	virtual void logit(const QString& str);
 	virtual void cleanUp();
@@ -40,6 +42,7 @@ signals:
 	void stopRendering();
 	void resize(int width, int height);
 	void controlEvent(QEvent* event);
+	void meshCreated(const QString name, const QString path);
 
 private:
 	QThread m_renderThread;

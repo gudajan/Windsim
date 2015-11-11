@@ -2,7 +2,6 @@
 #define SETTINGS_H
 
 #include <string>
-#include <fstream>
 
 #include "libini.hpp"
 
@@ -30,8 +29,6 @@ struct Settings
 
 extern Settings conf;
 extern void loadIni(const std::string& path);
-
-extern std::string loadFile(const std::string& path);
 extern const std::string& getIniVal(libini::ini_model& map, const std::string& category, const std::string& value, const std::string& default);
 
 #endif

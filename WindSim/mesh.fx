@@ -1,4 +1,4 @@
-RasterizerState CullBack
+RasterizerState CullNone
 {
 	CullMode = None;
 };
@@ -78,7 +78,7 @@ technique11 Simple
 		SetVertexShader(CompileShader(vs_5_0, vsProject()));
 		SetGeometryShader(NULL);
 		SetPixelShader(CompileShader(ps_5_0, psBlinnPhong()));
-		SetRasterizerState(CullBack);
+		SetRasterizerState(CullNone);
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}

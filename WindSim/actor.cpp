@@ -2,25 +2,16 @@
 
 using namespace DirectX;
 
-Actor::Actor(Object3D& object)
+Actor::Actor()
 	: m_pos({ 0.0, 0.0, 0.0 }),
 	m_rot({ 0.0, 0.0, 0.0, 1.0 }),
 	m_scale({ 1.0, 1.0, 1.0 }),
-	m_render(true),
-	m_obj(object)
+	m_render(true)
 {
 }
 
 Actor::~Actor()
 {
-}
-
-void Actor::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
-{
-	if (m_render)
-	{
-		m_obj.render(device, context, getWorld(), view, projection);
-	}
 }
 
 void Actor::setPos(const DirectX::XMFLOAT3& pos)

@@ -1,4 +1,5 @@
 #include "settings.h"
+#include "common.h"
 
 // Default values:
 Settings conf = {
@@ -23,22 +24,6 @@ void loadIni(const std::string& path)
 	conf.cam.mv.translationSpeed = std::stof(getIniVal(iniMap, "Camera", "ModelView.translationSpeed", std::to_string(conf.cam.mv.translationSpeed)));
 	conf.cam.mv.defaultDist = std::stof(getIniVal(iniMap, "Camera", "ModelView.defaultDist", std::to_string(conf.cam.mv.defaultDist)));
 	conf.cam.mv.zoomSpeed = std::stof(getIniVal(iniMap, "Camera", "ModelView.zoomSpeed", std::to_string(conf.cam.mv.zoomSpeed)));
-}
-
-std::string loadFile(const std::string& path)
-{
-	std::ifstream in(path, std::ios::in | std::ios::binary);
-	if (in)
-	{
-		std::string str;
-		in.seekg(0, std::ios::end);
-		str.resize(in.tellg());
-		in.seekg(0, std::ios::beg);
-		in.read(&str[0], str.size());
-		in.close();
-		return str;
-	}
-	throw std::runtime_error("Failed to open the file '" + path + "'");
 }
 
 const std::string& getIniVal(libini::ini_model& map, const std::string& category, const std::string& value, const std::string& default)
