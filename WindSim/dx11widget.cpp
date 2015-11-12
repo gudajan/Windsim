@@ -70,6 +70,12 @@ void DX11Widget::cleanUp()
 	emit stopRendering();
 }
 
+// Trigger update of current settings
+void DX11Widget::applySettings()
+{
+	m_renderer->getCamera()->computeViewMatrix(); // Settings may have changed
+}
+
 void DX11Widget::logit(const QString& str)
 {
 	Logger::logit(str);

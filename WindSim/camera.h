@@ -18,7 +18,7 @@ enum CameraType {FirstPerson, ModelView};
 class Camera
 {
 public:
-	Camera(const uint32_t width, const uint32_t height, const CameraType type = FirstPerson);
+	Camera(const uint32_t width, const uint32_t height);
 	virtual ~Camera();
 
 	DirectX::XMFLOAT4X4 getViewMatrix() const {	return m_view; };
@@ -28,13 +28,12 @@ public:
 	void update(double elapsedTime);
 
 	void setProjectionParams(const float fov, const uint32_t width, const uint32_t height, const float nearZ, const float farZ);
+	void computeViewMatrix();
 
 	void setFov(const float fov) { m_fov = fov; computeProjectionMatrix(); };
 	void setAspectRatio(const uint32_t width, const uint32_t height) { m_aspectRatio = static_cast<float>(width) / static_cast<float>(height); computeProjectionMatrix(); };
 	void setNearZ(const float nearZ) { m_nearZ = nearZ; computeProjectionMatrix(); };
 	void setFarZ(const float farZ) { m_farZ = farZ; computeProjectionMatrix(); };
-
-	void setType(const CameraType type) { m_type = type; computeViewMatrix(); };
 
 private:
 	void handleMousePress(QMouseEvent* event);
@@ -44,7 +43,6 @@ private:
 	void handleKeyRelease(QKeyEvent* event);
 	void handleWheel(QWheelEvent* event);
 
-	void computeViewMatrix();
 	void computeProjectionMatrix();
 
 	DirectX::XMFLOAT4X4 m_view;
@@ -53,8 +51,6 @@ private:
 	float m_aspectRatio; // Width / height
 	float m_nearZ; // Near plane of view frustum
 	float m_farZ; // Far plane of view frustum
-
-	CameraType m_type;
 
 	bool m_rotating;
 	bool m_translating;

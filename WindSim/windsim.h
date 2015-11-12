@@ -35,7 +35,7 @@ private slots:
 
 	// Create actions:
 	bool actionCreateMeshTriggered();
-	bool actionCreateSkyTriggered();
+	bool actionCreateSkyTriggered(QString name = QString());
 	// void actionRemoveObjectTriggered();
 
 private:

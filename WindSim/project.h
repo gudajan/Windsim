@@ -18,6 +18,7 @@ public:
 	bool isEmpty() { return m_empty; };
 	bool unsavedChanges() { return m_unsavedChanges; };
 	bool hasFilename() { return !m_path.empty(); };
+	const std::string& getFilename() const { return m_path; };
 
 private:
 	std::string m_path;

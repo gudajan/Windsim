@@ -4,6 +4,7 @@
 #include <string>
 
 #include "libini.hpp"
+#include "camera.h"
 
 struct Settings
 {
@@ -22,6 +23,9 @@ struct Settings
 			float defaultDist; // Default distance of the camera to the object, corresponding to zoom factor 1.0
 			float zoomSpeed;
 		} mv;
+
+		CameraType type;
+
 	} cam;
 };
 

@@ -18,7 +18,7 @@ WindSim::WindSim(QWidget *parent)
 {
 	ui.setupUi(this);
 
-	Logger::Setup(ui.splitter);
+	Logger::Setup(ui.gbLog, ui.verticalLayout_5);
 
 	ui.objectView->setModel(&m_objectModel);
 
@@ -31,8 +31,6 @@ WindSim::WindSim(QWidget *parent)
 
 	// Create actions
 	connect(ui.actionCreateMesh, SIGNAL(triggered()), this, SLOT(actionCreateMeshTriggered()));
-
-
 
 	reloadIni();
 }
@@ -78,14 +76,16 @@ bool WindSim::actionNewTriggered()
 
 	if(!m_project.create()) return false;
 
-	// // Create default sky object
-	//actionCreateSkyTriggered();
-
 	setWindowTitle("WindSim - Unnamed");
 
 	// Disable, enable actions
 	projectActionsEnable(false, false, true, true, true);
 	createActionEnable(true);
+
+	Logger::logit("INFO: Initialized new project.");
+
+	// Create default sky object
+	actionCreateSkyTriggered("Sky");
 
 	return true;
 }
@@ -110,6 +110,8 @@ bool WindSim::actionOpenTriggered()
 	projectActionsEnable(false, false, true, true, true);
 	createActionEnable(true);
 
+	Logger::logit("INFO: Opened project from '" + filename + "'.");
+
 	return true;
 }
 
@@ -124,13 +126,21 @@ void WindSim::actionCloseTriggered()
 	// Disable, enable actions
 	projectActionsEnable(true, true, false, false, false);
 	createActionEnable(false);
+
+	Logger::logit("INFO: Closed project.");
 }
 
 bool WindSim::actionSaveTriggered()
 {
 	if (m_project.hasFilename())
 	{
-		return m_project.save();
+		if (!m_project.save())
+		{
+			Logger::logit("ERROR: Failed to save project to '" + QString::fromStdString(m_project.getFilename()) +"'.");
+			return false;
+		}
+		Logger::logit("INFO: Saved project to '" + QString::fromStdString(m_project.getFilename()) + "'.");
+		return true;
 	}
 	return actionSaveAsTriggered();
 }
@@ -142,7 +152,14 @@ bool WindSim::actionSaveAsTriggered()
 	if (filename.isEmpty())
 		return false;
 
-	return m_project.saveAs(filename.toStdString());
+	if (!m_project.saveAs(filename.toStdString()))
+	{
+		Logger::logit("ERROR: Failed to save project to '" + filename + "'.");
+		return false;
+	}
+
+	Logger::logit("INFO: Saved project to '" + filename + "'.");
+	return true;
 }
 
 bool WindSim::actionCreateMeshTriggered()
@@ -161,18 +178,25 @@ bool WindSim::actionCreateMeshTriggered()
 
 	ui.dx11Viewer->createMesh(name, filename);
 
+	Logger::logit("INFO: Created new mesh '" + name + "' from OBJ-file '" + filename + "'.");
+
 	return true;
 }
 
-bool WindSim::actionCreateSkyTriggered()
+bool WindSim::actionCreateSkyTriggered(QString name)
 {
-	QString name = getName("New Sky", "Sky name:", "Sky");
 	if (name.isEmpty())
-		return false;
+	{
+		name = getName("New Sky", "Sky name:", "Sky");
+		if (name.isEmpty())
+			return false;
+	}
 	QStandardItem* item = new QStandardItem(name);
 	m_objectModel.appendRow(item);
 
 	ui.dx11Viewer->createSky(name);
+
+	Logger::logit("INFO: Created new sky '" + name + "'.");
 
 	return true;
 }
@@ -182,6 +206,7 @@ void WindSim::reloadIni()
 	try
 	{
 		loadIni(m_iniFilePath.toStdString());
+		ui.dx11Viewer->applySettings();
 		Logger::logit("INFO: Reloaded settings from ini-file '" + m_iniFilePath + "'.");
 	}
 	catch (const std::runtime_error& re)

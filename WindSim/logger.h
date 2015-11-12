@@ -2,18 +2,20 @@
 #define LOGGER_H
 
 #include <QWidget>
-#include <QTextEdit>
+#include <QPlainTextEdit>
 #include <QPointer>
+
+class QLayout;
 
 class Logger
 {
 public:
-	static void Setup(QWidget* parent);
+	static void Setup(QWidget* parent, QLayout* layout);
 	static void logging(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 	static void logit(const QString& msg);
 
 private:
-	static QPointer<QTextEdit> m_log;
+	static QPointer<QPlainTextEdit> m_log;
 
 };
 

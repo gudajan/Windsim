@@ -49,7 +49,7 @@ float4 psBlinnPhong(PSIn inFragment) : SV_Target
 	const float ks = 0.1f; // specular
 	const float s = 1.0f; // shininess (alpha)
 
-	const float4 color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	const float4 color = float4(0.9f, 0.85f, 0.70f, 1.0f);
 
 	float3 n;
 	if (g_bEnableFlatShading)

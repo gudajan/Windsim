@@ -20,6 +20,7 @@ public:
 	void createSky(const QString& name);
 	void reloadShaders();
 	void cleanUp();
+	void applySettings();
 
 public slots:
 	virtual void logit(const QString& str);

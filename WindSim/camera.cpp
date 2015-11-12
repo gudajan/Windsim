@@ -9,14 +9,13 @@
 
 using namespace DirectX;
 
-Camera::Camera(const uint32_t width, const uint32_t height, const CameraType type)
+Camera::Camera(const uint32_t width, const uint32_t height)
 	: m_view(),
 	m_projection(),
-	m_fov(degToRad(50.0f)),
+	m_fov(degToRad(60.0f)),
 	m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
 	m_nearZ(0.1f),
 	m_farZ(1000.0f),
-	m_type(type),
 	m_rotating(false),
 	m_translating(false),
 	m_viewChanged(false),
@@ -62,7 +61,7 @@ bool Camera::handleControlEvent(QEvent* event)
 
 void Camera::update(double elapsedTime)
 {
-	if (m_type == FirstPerson)
+	if (conf.cam.type == FirstPerson)
 	{
 		if (m_translating)
 		{
@@ -102,12 +101,35 @@ void Camera::setProjectionParams(const float fov, const uint32_t width, const ui
 	computeProjectionMatrix();
 }
 
+void Camera::computeViewMatrix()
+{
+	XMVECTOR pos;
+	XMVECTOR rot;
+	if (conf.cam.type == FirstPerson)
+	{
+		rot = XMLoadFloat4(&m_fpi.rot);
+		pos = XMLoadFloat3(&m_fpi.pos);
+	}
+	else // ModelView
+	{
+		rot = XMLoadFloat4(&m_mvi.rot);
+		// For the ModelView camera, the position must be recalculated in every case, so do it here once:
+		// Translate position depending on current zoom, rotation and rotation center
+		XMVECTOR view = XMVector3Rotate(XMVectorSet(0.0, 0.0, 1.0, 0.0), rot); // View direction
+		XMVECTOR center = XMLoadFloat3(&m_mvi.center); // Rotation center
+		pos = center - 1.0f / m_mvi.zoom * conf.cam.mv.defaultDist * view;
+	}
+
+	// Accumulate to view matrix
+	XMStoreFloat4x4(&m_view, XMMatrixInverse(nullptr, XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos)));
+}
+
 void Camera::handleMousePress(QMouseEvent* event)
 {
 	m_gMouseCoordLast = m_gMouseCoord;
 	m_gMouseCoord = event->globalPos();
 
-	if (m_type == FirstPerson)
+	if (conf.cam.type == FirstPerson)
 	{
 		if (event->button() == Qt::LeftButton)
 		{
@@ -140,7 +162,7 @@ void Camera::handleMouseRelease(QMouseEvent* event)
 	m_gMouseCoordLast = m_gMouseCoord;
 	m_gMouseCoord = event->globalPos();
 
-	if (m_type == FirstPerson)
+	if (conf.cam.type == FirstPerson)
 	{
 		if (event->button() == Qt::LeftButton)
 		{
@@ -166,7 +188,7 @@ void Camera::handleMouseMove(QMouseEvent* event)
 	m_gMouseCoord = event->globalPos();
 
 	QPoint mouseMove = m_gMouseCoord - m_gMouseCoordLast;
-	if (m_type == FirstPerson)
+	if (conf.cam.type == FirstPerson)
 	{
 		if (m_rotating)
 		{
@@ -219,7 +241,7 @@ void Camera::handleMouseMove(QMouseEvent* event)
 
 void Camera::handleKeyPress(QKeyEvent* event)
 {
-	if (m_type == FirstPerson)
+	if (conf.cam.type == FirstPerson)
 	{
 		switch (event->key())
 		{
@@ -251,7 +273,7 @@ void Camera::handleKeyPress(QKeyEvent* event)
 
 void Camera::handleKeyRelease(QKeyEvent* event)
 {
-	if (m_type == FirstPerson)
+	if (conf.cam.type == FirstPerson)
 	{
 		switch (event->key())
 		{
@@ -283,7 +305,7 @@ void Camera::handleKeyRelease(QKeyEvent* event)
 
 void Camera::handleWheel(QWheelEvent* event)
 {
-	if (m_type == ModelView)
+	if (conf.cam.type == ModelView)
 	{
 		// angleDelta returns amount of vertical scrolling in 8th of degrees
 		// ---> degrees = angleDelta().ry() / 8
@@ -294,29 +316,6 @@ void Camera::handleWheel(QWheelEvent* event)
 		// Recompute camera position
 		m_viewChanged = true;
 	}
-}
-
-void Camera::computeViewMatrix()
-{
-	XMVECTOR pos;
-	XMVECTOR rot;
-	if (m_type == FirstPerson)
-	{
-		rot = XMLoadFloat4(&m_fpi.rot);
-		pos = XMLoadFloat3(&m_fpi.pos);
-	}
-	else // ModelView
-	{
-		rot = XMLoadFloat4(&m_mvi.rot);
-		// For the ModelView camera, the position must be recalculated in every case, so do it here once:
-		// Translate position depending on current zoom, rotation and rotation center
-		XMVECTOR view = XMVector3Rotate(XMVectorSet(0.0, 0.0, 1.0, 0.0), rot); // View direction
-		XMVECTOR center = XMLoadFloat3(&m_mvi.center); // Rotation center
-		pos = center - 1.0f / m_mvi.zoom * conf.cam.mv.defaultDist * view;
-	}
-
-	// Accumulate to view matrix
-	XMStoreFloat4x4(&m_view, XMMatrixInverse(nullptr, XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos)));
 }
 
 void Camera::computeProjectionMatrix()

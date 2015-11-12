@@ -1,20 +1,24 @@
 #include "logger.h"
 
-QPointer<QTextEdit> Logger::m_log = nullptr;
+#include <QLayout>
 
-void Logger::Setup(QWidget* parent)
+QPointer<QPlainTextEdit> Logger::m_log = nullptr;
+
+void Logger::Setup(QWidget* parent, QLayout* layout)
 {
 	if (!m_log)
 	{
-		m_log = new QTextEdit(parent);
+		m_log = new QPlainTextEdit(parent);
 		m_log->setObjectName(QStringLiteral("log"));
 		QSizePolicy sp(QSizePolicy::Expanding, QSizePolicy::Expanding);
 		sp.setHorizontalStretch(0);
-		sp.setVerticalStretch(1);
+		sp.setVerticalStretch(0);
 		sp.setHeightForWidth(m_log->sizePolicy().hasHeightForWidth());
 		m_log->setSizePolicy(sp);
 
 		m_log->setReadOnly(true);
+
+		layout->addWidget(m_log);
 	}
 }
 
@@ -27,7 +31,7 @@ void Logger::logging(QtMsgType type, const QMessageLogContext &context, const QS
 		case QtDebugMsg:
 		case QtWarningMsg:
 		case QtCriticalMsg:
-			m_log->append(msg);
+			m_log->appendPlainText(msg);
 			m_log->repaint();
 			break;
 		case QtFatalMsg:
@@ -57,6 +61,6 @@ void Logger::logging(QtMsgType type, const QMessageLogContext &context, const QS
 
 void Logger::logit(const QString& msg)
 {
-	m_log->append(msg);
+	m_log->appendPlainText(msg);
 	m_log->repaint();
 }

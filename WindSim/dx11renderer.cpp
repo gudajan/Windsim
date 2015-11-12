@@ -1,6 +1,7 @@
 #include "dx11renderer.h"
 #include "mesh.h"
 #include "sky.h"
+#include "settings.h"
 
 #include <iostream>
 #include <cassert>
@@ -28,11 +29,9 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	m_height(height),
 	m_elapsedTimer(),
 	m_renderTimer(this),
-	m_camera(width, height, FirstPerson),
+	m_camera(width, height),
 	m_manager()
 {
-	//m_camera.setType(ModelView);
-
 	connect(&m_renderTimer, &QTimer::timeout, this, &DX11Renderer::frame);
 }
 
@@ -116,8 +115,6 @@ bool DX11Renderer::init()
 	onResize(m_width, m_height);
 
 	OutputDebugStringA("Initialized DirectX 11\n");
-
-	onCreateSky("DefaultSky");
 
 	return createShaders();
 }
@@ -298,7 +295,7 @@ void DX11Renderer::update(double elapsedTime)
 
 void DX11Renderer::render(double elapsedTime)
 {
-	m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Azure);
+	m_context->ClearRenderTargetView(m_renderTargetView, Colors::WhiteSmoke);
 	m_context->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH , 1.0f, 0);
 
 	m_manager.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix());
