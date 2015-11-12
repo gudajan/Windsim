@@ -21,6 +21,8 @@ public:
 	virtual void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 
 private:
+	bool readObj(const std::string& path);
+
 	struct ShaderVariables
 	{
 		ShaderVariables();
@@ -35,7 +37,5 @@ private:
 	static ShaderVariables s_shaderVariables;
 	static ID3DX11Effect* s_effect;
 	static ID3D11InputLayout* s_inputLayout;
-
-	bool readObj(const std::string& path);
 };
 #endif

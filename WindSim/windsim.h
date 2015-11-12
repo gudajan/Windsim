@@ -35,11 +35,13 @@ private slots:
 
 	// Create actions:
 	bool actionCreateMeshTriggered();
+	bool actionCreateSkyTriggered();
 	// void actionRemoveObjectTriggered();
 
 private:
 	void reloadIni();
 	bool maybeSave();
+	QString getName(const QString& title, const QString& label, const QString& defaultName);
 	bool nameAvailable(const QString& name);
 
 	void projectActionsEnable(bool newAct, bool open, bool close, bool save, bool saveAs);
@@ -50,8 +52,6 @@ private:
 	QString m_iniFilePath;
 	Project m_project;
 	QStandardItemModel m_objectModel;
-
-
 
 };
 

@@ -1,6 +1,8 @@
 #include "objectManager.h"
 #include "mesh.h"
 #include "MeshActor.h"
+#include "sky.h"
+#include "skyActor.h"
 
 #include <d3d11.h>
 
@@ -14,23 +16,38 @@ ObjectManager::~ObjectManager()
 {
 }
 
-void ObjectManager::add(const std::string& name, ID3D11Device* device, const std::string& path, ObjectType type)
+void ObjectManager::add(const std::string& name, ID3D11Device* device, ObjectType type, void const * const data)
 {
-	if (type == ObjectType::Mesh)
+	if (m_objects.find(name) == m_objects.end() && m_actors.find(name) == m_actors.end())
 	{
-		if (m_objects.find(name) == m_objects.end() && m_actors.find(name) == m_actors.end())
+		if (type == ObjectType::Mesh)
 		{
+			if (data == nullptr)
+			{
+				throw std::invalid_argument("Failed to create Mesh object '" + name + "' because no OBJ-Path was given in 'data' variable!");
+			}
+			const std::string& path(static_cast<char const * const>(data));
 			Mesh* obj = new Mesh(path);
 			m_objects.emplace(name, std::unique_ptr<Object3D>(obj));
 			MeshActor* act = new MeshActor(*obj);
 			m_actors.emplace(name, std::unique_ptr<Actor>(act));
 
 			obj->create(device, false);
+
 		}
-		else
+		else if (type == ObjectType::Sky)
 		{
-			throw std::runtime_error("Failed to add object '" + name + "' as identically named object already exists!");
+			Sky* obj = new Sky();
+			m_objects.emplace(name, std::unique_ptr<Object3D>(obj));
+			SkyActor* act = new SkyActor(*obj);
+			m_actors.emplace(name, std::unique_ptr<Actor>(act));
+
+			obj->create(device, true);
 		}
+	}
+	else
+	{
+		throw std::runtime_error("Failed to add object '" + name + "' as identically named object already exists!");
 	}
 }
 

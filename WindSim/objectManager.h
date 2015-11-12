@@ -19,7 +19,7 @@ public:
 	~ObjectManager();
 
 	// Add one object, which is rendered
-	void add(const std::string& name, ID3D11Device* device, const std::string& path, ObjectType type);
+	void add(const std::string& name, ID3D11Device* device, ObjectType type, void const * const data = nullptr);
 	// Erase one object
 	void erase(const std::string& name);
 

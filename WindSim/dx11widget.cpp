@@ -19,20 +19,26 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	// Rendering should be executed in another thread, so 3D rendering does not block the GUI
 	m_renderer->moveToThread(&m_renderThread);
 
-	connect(&m_renderThread, &QThread::finished, m_renderer, &QObject::deleteLater);
+	// Start/Stop rendering
 	connect(&m_renderThread, &QThread::started, m_renderer, &DX11Renderer::execute);
-	connect(this, &DX11Widget::resize, m_renderer, &DX11Renderer::onResize);
-	connect(m_renderer, &DX11Renderer::logit, this, &DX11Widget::logit);
-
 	connect(this, &DX11Widget::stopRendering, m_renderer, &DX11Renderer::stop);
+	connect(&m_renderThread, &QThread::finished, m_renderer, &QObject::deleteLater);
+
+	// Arbitrary Events Widget -> Renderer
+	connect(this, &DX11Widget::resize, m_renderer, &DX11Renderer::onResize);
 	connect(this, &DX11Widget::controlEvent, m_renderer, &DX11Renderer::onControlEvent);
-	connect(this, &DX11Widget::meshCreated, m_renderer, &DX11Renderer::onMeshCreated);
+	connect(this, &DX11Widget::createMeshTriggered, m_renderer, &DX11Renderer::onCreateMesh);
+	connect(this, &DX11Widget::createSkyTriggered, m_renderer, &DX11Renderer::onCreateSky);
+	connect(this, &DX11Widget::reloadShadersTriggered, m_renderer, &DX11Renderer::reloadShaders);
+
+	// Arbitrary Events Renerer -> Widget
+	connect(m_renderer, &DX11Renderer::logit, this, &DX11Widget::logit);
 
 	setAttribute(Qt::WA_PaintOnScreen, true);
 	setAttribute(Qt::WA_NativeWindow, true);
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
 
-	setFocusPolicy(Qt::StrongFocus);
+	setFocusPolicy(Qt::StrongFocus); // Set keyboard focus on mouseclick
 	setFocus();
 
 	m_renderThread.start();
@@ -44,19 +50,29 @@ DX11Widget::~DX11Widget()
 	m_renderThread.wait();
 }
 
-void DX11Widget::addMesh(const QString& name, const QString& path)
+void DX11Widget::createMesh(const QString& name, const QString& path)
 {
-	emit meshCreated(name, path);
+	emit createMeshTriggered(name, path);
 }
 
-void DX11Widget::logit(const QString& str)
+void DX11Widget::createSky(const QString& name)
 {
-	Logger::logit(str);
+	emit createSkyTriggered(name);
+}
+
+void DX11Widget::reloadShaders()
+{
+	emit reloadShadersTriggered();
 }
 
 void DX11Widget::cleanUp()
 {
 	emit stopRendering();
+}
+
+void DX11Widget::logit(const QString& str)
+{
+	Logger::logit(str);
 }
 
 void DX11Widget::paintEvent(QPaintEvent* event)
@@ -70,7 +86,6 @@ void DX11Widget::resizeEvent(QResizeEvent* event)
 
 	return QWidget::resizeEvent(event);
 }
-
 
 void DX11Widget::keyPressEvent(QKeyEvent * event)
 {

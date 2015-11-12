@@ -15,7 +15,7 @@ Camera::Camera(const uint32_t width, const uint32_t height, const CameraType typ
 	m_fov(degToRad(50.0f)),
 	m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
 	m_nearZ(0.1f),
-	m_farZ(100.0f),
+	m_farZ(1000.0f),
 	m_type(type),
 	m_rotating(false),
 	m_translating(false),

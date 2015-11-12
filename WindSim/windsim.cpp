@@ -61,6 +61,10 @@ void WindSim::keyPressEvent(QKeyEvent* event)
 	{
 		reloadIni();
 	}
+	else if (event->key() == Qt::Key_F4)
+	{
+		ui.dx11Viewer->reloadShaders();
+	}
 	return QMainWindow::keyPressEvent(event);
 }
 
@@ -73,6 +77,9 @@ bool WindSim::actionNewTriggered()
 	}
 
 	if(!m_project.create()) return false;
+
+	// // Create default sky object
+	//actionCreateSkyTriggered();
 
 	setWindowTitle("WindSim - Unnamed");
 
@@ -140,22 +147,9 @@ bool WindSim::actionSaveAsTriggered()
 
 bool WindSim::actionCreateMeshTriggered()
 {
-	// TODO: Iterate mesh names and get first available name (mesh1, mesh2 usw)
-	bool ok = true;
-	QString name;
-	while (true)
-	{
-		name = QInputDialog::getText(this, tr("New Mesh"), tr("Mesh Name:"), QLineEdit::Normal, "mesh", &ok);
-		if (!ok) return false; // If pressed cancel -> abort mesh creation
-		if (nameAvailable(name))
-		{
-			break;
-		}
-		else
-		{
-			QMessageBox::warning(this, tr("Invalid mesh name"), tr(qPrintable("The mesh name '" + name + "' is already taken. Please reenter an available name.")), QMessageBox::Ok);
-		}
-	}
+	QString name = getName("New Mesh", "Mesh name:", "Mesh");
+	if (name.isEmpty())
+		return false;
 
 	QString filename = QFileDialog::getOpenFileName(this, tr("Choose Mesh"), QCoreApplication::applicationDirPath(), tr("Wavefront OBJ (*.obj)"));
 
@@ -165,7 +159,22 @@ bool WindSim::actionCreateMeshTriggered()
 	item->setData(filename);
 	m_objectModel.appendRow(item);
 
-	ui.dx11Viewer->addMesh(name, filename);
+	ui.dx11Viewer->createMesh(name, filename);
+
+	return true;
+}
+
+bool WindSim::actionCreateSkyTriggered()
+{
+	QString name = getName("New Sky", "Sky name:", "Sky");
+	if (name.isEmpty())
+		return false;
+	QStandardItem* item = new QStandardItem(name);
+	m_objectModel.appendRow(item);
+
+	ui.dx11Viewer->createSky(name);
+
+	return true;
 }
 
 void WindSim::reloadIni()
@@ -200,6 +209,27 @@ bool WindSim::maybeSave()
 		}
 	}
 	return true;
+}
+
+QString WindSim::getName(const QString& title, const QString& label, const QString& defaultName)
+{
+	// TODO: Iterate object names and get first available name (object1, object2 etc)
+	bool ok = true;
+	QString name;
+	while (true)
+	{
+		name = QInputDialog::getText(this, tr(qPrintable(title)), tr(qPrintable(label)), QLineEdit::Normal, defaultName, &ok);
+		if (!ok) return QString(); // If pressed cancel -> abort object creation
+		if (nameAvailable(name))
+		{
+			break;
+		}
+		else
+		{
+			QMessageBox::warning(this, tr("Invalid name"), tr(qPrintable("The name '" + name + "' is already taken. Please reenter an available name.")), QMessageBox::Ok);
+		}
+	}
+	return name;
 }
 
 bool WindSim::nameAvailable(const QString& name)

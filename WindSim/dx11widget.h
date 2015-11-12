@@ -16,11 +16,13 @@ public:
 
 	inline virtual QPaintEngine* paintEngine() const { return nullptr; }
 
-	void addMesh(const QString& name, const QString& path);
+	void createMesh(const QString& name, const QString& path);
+	void createSky(const QString& name);
+	void reloadShaders();
+	void cleanUp();
 
 public slots:
 	virtual void logit(const QString& str);
-	virtual void cleanUp();
 
 protected:
 	virtual void paintEvent(QPaintEvent * event);
@@ -36,13 +38,13 @@ protected:
 	//virtual void mouseDoubleClickEvent(QMouseEvent * event);
 	//virtual void moveEvent(QMoveEvent * event); // When widget was moved to new position
 
-
-
 signals:
 	void stopRendering();
 	void resize(int width, int height);
 	void controlEvent(QEvent* event);
-	void meshCreated(const QString name, const QString path);
+	void createMeshTriggered(const QString name, const QString path);
+	void createSkyTriggered(const QString name);
+	void reloadShadersTriggered();
 
 private:
 	QThread m_renderThread;

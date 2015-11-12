@@ -218,6 +218,8 @@
     <ClCompile Include="objLoader.cpp" />
     <ClCompile Include="project.cpp" />
     <ClCompile Include="settings.cpp" />
+    <ClCompile Include="sky.cpp" />
+    <ClCompile Include="skyActor.cpp" />
     <ClCompile Include="windsim.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -273,6 +275,8 @@
     <ClInclude Include="libini.hpp" />
     <ClInclude Include="project.h" />
     <ClInclude Include="settings.h" />
+    <ClInclude Include="sky.h" />
+    <ClInclude Include="skyActor.h" />
     <CustomBuild Include="dx11widget.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing dx11widget.h...</Message>

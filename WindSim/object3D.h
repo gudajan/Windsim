@@ -6,8 +6,6 @@
 
 #include <vector>
 
-#include "common.h" // Vertex, Triangle
-
 class ID3D11Buffer;
 class ID3D11Device;
 class ID3D11DeviceContext;
@@ -30,8 +28,8 @@ protected:
 	ID3D11Buffer* m_indexBuffer;
 	uint32_t m_numIndices;
 
-	std::vector<Vertex> m_vertexData;
-	std::vector<Triangle> m_indexData;
+	std::vector<float> m_vertexData;
+	std::vector<uint32_t> m_indexData;
 
 };
 

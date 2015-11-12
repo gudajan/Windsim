@@ -1,5 +1,6 @@
 #include "dx11renderer.h"
 #include "mesh.h"
+#include "sky.h"
 
 #include <iostream>
 #include <cassert>
@@ -25,7 +26,6 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
 	m_rasterizerState(nullptr),
 	m_width(width),
 	m_height(height),
-	m_stopped(false),
 	m_elapsedTimer(),
 	m_renderTimer(this),
 	m_camera(width, height, FirstPerson),
@@ -68,7 +68,7 @@ bool DX11Renderer::init()
 		0.0f,//FLOAT SlopeScaledDepthBias;
 		TRUE,//BOOL DepthClipEnable;
 		FALSE,//BOOL ScissorEnable;
-		FALSE,//BOOL MultisampleEnable;
+		TRUE,//BOOL MultisampleEnable;
 		FALSE//BOOL AntialiasedLineEnable;
 	};
 	if (FAILED(m_device->CreateRasterizerState(&drd, &m_rasterizerState)))
@@ -117,13 +117,11 @@ bool DX11Renderer::init()
 
 	OutputDebugStringA("Initialized DirectX 11\n");
 
-	// Create all shaders
-	QString fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("mesh.fxo");
-	if (FAILED(Mesh::createShaderFromFile(fxoPath.toStdWString() , m_device)))
-		return false;
+	onCreateSky("DefaultSky");
 
-	return true;
+	return createShaders();
 }
+
 
 
 void DX11Renderer::frame()
@@ -133,27 +131,16 @@ void DX11Renderer::frame()
 	render(elapsedTime);
 }
 
-void DX11Renderer::update(double elapsedTime)
-{
-	m_camera.update(elapsedTime);
-}
-
-void DX11Renderer::render(double elapsedTime)
-{
-	m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Azure);
-	m_context->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-	m_manager.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix());
-
-	m_swapChain->Present(0, 0);
-}
-
-
 void DX11Renderer::execute()
 {
 	m_elapsedTimer.start();
 	m_renderTimer.start(1000.0f / 120.0f); // Rendering happens with 120 FPS at max
+}
 
+void DX11Renderer::stop()
+{
+	m_renderTimer.stop();
+	destroy();
 }
 
 void DX11Renderer::onResize(int width, int height)
@@ -220,6 +207,47 @@ void DX11Renderer::onResize(int width, int height)
 
 }
 
+void DX11Renderer::onControlEvent(QEvent* event)
+{
+	m_camera.handleControlEvent(event);
+}
+
+void DX11Renderer::onCreateMesh(const QString& name, const QString& path)
+{
+	// TODO: emit error if object not created: try, catch -> emit
+	m_manager.add(name.toStdString(), m_device, ObjectType::Mesh, path.toStdString().c_str());
+}
+
+void DX11Renderer::onCreateSky(const QString& name)
+{
+	// TODO: emit error if object not created: try, catch -> emit
+	m_manager.add(name.toStdString(), m_device, ObjectType::Sky);
+}
+
+bool DX11Renderer::reloadShaders()
+{
+	if (FAILED(Mesh::createShaderFromFile(L"mesh.fx", m_device, true)))
+		return false;
+
+	if (FAILED(Sky::createShaderFromFile(L"sky.fx", m_device, true)))
+		return false;
+
+	return true;
+}
+
+bool DX11Renderer::createShaders()
+{
+	QString fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("mesh.fxo");
+	if (FAILED(Mesh::createShaderFromFile(fxoPath.toStdWString(), m_device)))
+		return false;
+
+	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("sky.fxo");
+	if (FAILED(Sky::createShaderFromFile(fxoPath.toStdWString(), m_device)))
+		return false;
+
+	return true;
+}
+
 void DX11Renderer::destroy()
 {
 	SAFE_RELEASE(m_depthStencilBuffer);
@@ -239,6 +267,7 @@ void DX11Renderer::destroy()
 
 	// Release all shaders
 	Mesh::releaseShader();
+	Sky::releaseShader();
 
 	// Release all objects
 	m_manager.release();
@@ -262,19 +291,17 @@ void DX11Renderer::destroy()
 	}
 }
 
-void DX11Renderer::stop()
+void DX11Renderer::update(double elapsedTime)
 {
-	m_renderTimer.stop();
-	destroy();
+	m_camera.update(elapsedTime);
 }
 
-void DX11Renderer::onControlEvent(QEvent* event)
+void DX11Renderer::render(double elapsedTime)
 {
-	m_camera.handleControlEvent(event);
-}
+	m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Azure);
+	m_context->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH , 1.0f, 0);
 
-void DX11Renderer::onMeshCreated(const QString& name, const QString& path)
-{
-	m_manager.add(name.toStdString(), m_device, path.toStdString(), ObjectType::Mesh);
-}
+	m_manager.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix());
 
+	m_swapChain->Present(0, 0);
+}

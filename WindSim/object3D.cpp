@@ -1,4 +1,5 @@
 #include "object3D.h"
+#include "common.h"
 
 #include <d3d11.h>
 
@@ -40,7 +41,7 @@ HRESULT Object3D::create(ID3D11Device* device, bool clearClientBuffers)
 
 	D3D11_BUFFER_DESC bd = {};
 	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = static_cast<UINT>(sizeof(Vertex) * m_vertexData.size());
+	bd.ByteWidth = static_cast<UINT>(sizeof(float) * m_vertexData.size());
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = 0;
@@ -55,7 +56,7 @@ HRESULT Object3D::create(ID3D11Device* device, bool clearClientBuffers)
 		m_vertexData.shrink_to_fit();
 	}
 
-	bd.ByteWidth = static_cast<UINT>(sizeof(Triangle) * m_indexData.size());
+	bd.ByteWidth = static_cast<UINT>(sizeof(uint32_t) * m_indexData.size());
 	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	initData.pSysMem = m_indexData.data();
 

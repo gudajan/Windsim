@@ -15,7 +15,7 @@ Mesh::Mesh(const std::string& path)
 	{
 		throw(std::runtime_error("Could not load obj-file '" + path + "' into 3D object!"));
 	}
-	m_numIndices = m_indexData.size() * 3; // 1 Triangle consists of 3 indices
+	m_numIndices = m_indexData.size();
 }
 
 Mesh::Mesh(Mesh&& other)
@@ -90,7 +90,7 @@ void Mesh::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFL
 
 	s_effect->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, context);
 
-	const unsigned int strides[] = { sizeof(Vertex) };
+	const unsigned int strides[] = { sizeof(float) * 6 }; // 3 floats postion, 3 floats normal
 	const unsigned int offsets[] = { 0 };
 	context->IASetVertexBuffers(0, 1, &m_vertexBuffer, strides, offsets);
 	context->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
@@ -113,39 +113,12 @@ Mesh::ShaderVariables::~ShaderVariables()
 bool Mesh::readObj(const std::string& path)
 {
 	// Load obj into standard vector container
-	std::vector<float> vertex;
-	std::vector<uint32_t> index;
-	if (!ObjLoader::loadObj(path, vertex, index))
-	{
+	if (!ObjLoader::loadObj(path, m_vertexData, m_indexData))
 		return false;
-	}
 
-	float scale = ObjLoader::normalizeSize(vertex);
-	ObjLoader::calculateNormals(vertex, index);
+	float scale = ObjLoader::normalizeSize(m_vertexData);
+	ObjLoader::calculateNormals(m_vertexData, m_indexData);
 
-	// Copy standard vertex vector container into custom vertex vector container
-	int factor = sizeof(Vertex) / sizeof(float);
-	int vertexSize = vertex.size() / factor;
-	m_vertexData.clear();
-	m_vertexData.reserve(vertexSize);
-	for (int i = 0; i < vertexSize; ++i)
-	{
-		XMFLOAT3 p;
-		XMStoreFloat3(&p, XMVectorSet(vertex[i * factor], vertex[i * factor + 1], vertex[i * factor + 2], 0));
-		XMFLOAT3 n;
-		XMStoreFloat3(&n, XMVectorSet(vertex[i * factor + 3], vertex[i * factor + 4], vertex[i * factor + 5], 0));
-		m_vertexData.push_back({ p, n });
-	}
-
-	// Copy standard index vector container into custom index vector container
-	factor = sizeof(Triangle) / sizeof(uint32_t);
-	int indexSize = index.size() / factor;
-	m_indexData.clear();
-	m_indexData.reserve(indexSize);
-	for (int i = 0; i < indexSize; ++i)
-	{
-		m_indexData.push_back({ index[i * factor], index[i * factor + 1], index[i * factor + 2] });
-	}
 	return true;
 }
 
