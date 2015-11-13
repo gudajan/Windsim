@@ -44,9 +44,9 @@ float4 PSGradient(PSSkyIn inPix) : SV_Target
 
 	// Draw a color gradient from horizon to top and bottom
 	// inPix.Tex has values [-1, 1]
-	float3 horizonColor = float3(0.95f, 0.95f, 1.0f); // color at the horizon (0)
-	float3 topColor = float3(0.1f, 0.2f, 0.3f); // color at top (1.0)
-	float3 bottomColor = float3(0.0f, 0.0f, 0.1f); // color at bottom (-1.0)
+	float3 horizonColor = float3(1.0f, 1.0f, 1.0f); // color at the horizon (0)
+	float3 topColor = float3(0.3f, 0.4f, 0.5f); // color at top (1.0)
+	float3 bottomColor = float3(0.2f, 0.25f, 0.3f); // color at bottom (-1.0)
 
 	// Calculate interpolation cooeficient for gradient depending on the y-value of the position
 	float intensity = 1.0f / (abs(sp.y) + 1.0f);

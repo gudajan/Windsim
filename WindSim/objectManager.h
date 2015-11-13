@@ -3,13 +3,13 @@
 
 #include "object3D.h"
 #include "actor.h"
+#include "common.h"
 
 #include <unordered_map>
 #include <string>
 #include <memory>
 
-
-enum class ObjectType { Mesh, Sky };
+#include <QVariant>
 
 
 class ObjectManager
@@ -19,9 +19,10 @@ public:
 	~ObjectManager();
 
 	// Add one object, which is rendered
-	void add(const std::string& name, ID3D11Device* device, ObjectType type, void const * const data = nullptr);
-	// Erase one object
-	void erase(const std::string& name);
+	void add(const std::string& name, ID3D11Device* device, ObjectType type, const QVariant& data = QVariant());
+	// Remove one object
+	void remove(const std::string& name);
+	void removeAll();
 
 	// Render ALL objects at their current transformation
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);

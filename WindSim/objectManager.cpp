@@ -16,18 +16,17 @@ ObjectManager::~ObjectManager()
 {
 }
 
-void ObjectManager::add(const std::string& name, ID3D11Device* device, ObjectType type, void const * const data)
+void ObjectManager::add(const std::string& name, ID3D11Device* device, ObjectType type, const QVariant& data)
 {
 	if (m_objects.find(name) == m_objects.end() && m_actors.find(name) == m_actors.end())
 	{
 		if (type == ObjectType::Mesh)
 		{
-			if (data == nullptr)
+			if (data.isNull())
 			{
 				throw std::invalid_argument("Failed to create Mesh object '" + name + "' because no OBJ-Path was given in 'data' variable!");
 			}
-			const std::string& path(static_cast<char const * const>(data));
-			Mesh* obj = new Mesh(path);
+			Mesh* obj = new Mesh(data.toString().toStdString());
 			m_objects.emplace(name, std::unique_ptr<Object3D>(obj));
 			MeshActor* act = new MeshActor(*obj);
 			m_actors.emplace(name, std::unique_ptr<Actor>(act));
@@ -51,7 +50,7 @@ void ObjectManager::add(const std::string& name, ID3D11Device* device, ObjectTyp
 	}
 }
 
-void ObjectManager::erase(const std::string& name)
+void ObjectManager::remove(const std::string& name)
 {
 	const auto object = m_objects.find(name);
 	if (object != m_objects.end())
@@ -60,6 +59,13 @@ void ObjectManager::erase(const std::string& name)
 		m_objects.erase(name);
 	}
 	m_actors.erase(name);
+}
+
+void ObjectManager::removeAll()
+{
+	release();
+	m_objects.clear();
+	m_actors.clear();
 }
 
 void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)

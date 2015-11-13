@@ -209,16 +209,14 @@ void DX11Renderer::onControlEvent(QEvent* event)
 	m_camera.handleControlEvent(event);
 }
 
-void DX11Renderer::onCreateMesh(const QString& name, const QString& path)
+void DX11Renderer::onAddObject(const QString& name, ObjectType type, const QVariant& data)
 {
-	// TODO: emit error if object not created: try, catch -> emit
-	m_manager.add(name.toStdString(), m_device, ObjectType::Mesh, path.toStdString().c_str());
+	m_manager.add(name.toStdString(), m_device, type, data);
 }
 
-void DX11Renderer::onCreateSky(const QString& name)
+void DX11Renderer::onRemoveAll()
 {
-	// TODO: emit error if object not created: try, catch -> emit
-	m_manager.add(name.toStdString(), m_device, ObjectType::Sky);
+	m_manager.removeAll();
 }
 
 bool DX11Renderer::reloadShaders()

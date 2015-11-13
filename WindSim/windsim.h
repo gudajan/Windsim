@@ -4,11 +4,12 @@
 #include <QMainWindow>
 #include <QPointer>
 #include <QTextEdit>
-#include <QStandardItemModel>
 
 #include "ui_windsim.h"
 
 #include "project.h"
+
+class SettingsDialog;
 
 
 class WindSim : public QMainWindow
@@ -18,8 +19,6 @@ class WindSim : public QMainWindow
 public:
 	WindSim(QWidget *parent = 0);
 	~WindSim();
-
-	static QPointer<QTextEdit> log;
 
 protected:
 	void keyPressEvent(QKeyEvent * event);
@@ -38,6 +37,14 @@ private slots:
 	bool actionCreateSkyTriggered(QString name = QString());
 	// void actionRemoveObjectTriggered();
 
+	// Dialog actions:
+	void showSettingsDialog();
+
+	void applySettings();
+
+signals:
+	void settingsChanged();
+
 private:
 	void reloadIni();
 	bool maybeSave();
@@ -50,8 +57,9 @@ private:
 	Ui::WindSimClass ui;
 
 	QString m_iniFilePath;
+	QPointer<SettingsDialog> m_settingsDialog;
 	Project m_project;
-	QStandardItemModel m_objectModel;
+
 
 };
 

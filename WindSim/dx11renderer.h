@@ -40,8 +40,8 @@ public slots:
 	// Arbitrary Events
 	virtual void onResize(int width, int height); // Resize viewport
 	virtual void onControlEvent(QEvent* event);
-	virtual void onCreateMesh(const QString& name, const QString& path);
-	virtual void onCreateSky(const QString& name);
+	virtual void onAddObject(const QString& name, ObjectType type, const QVariant& data);
+	virtual void onRemoveAll();
 	virtual bool reloadShaders(); // Recompile and load all shaders
 
 signals:

@@ -1,7 +1,11 @@
 #ifndef PROJECT_H
 #define PROJECT_H
 
-#include <string>
+#include "common.h"
+
+#include <QStandardItemModel>
+#include <QString>
+#include <QVariant>
 
 class Project
 {
@@ -10,20 +14,27 @@ public:
 	virtual ~Project();
 
 	bool create(); // New
-	bool open(const std::string& path);
+	bool open(const QString& path);
 	bool close();
 	bool save();
-	bool saveAs(const std::string& path);
+	bool saveAs(const QString& path);
 
-	bool isEmpty() { return m_empty; };
-	bool unsavedChanges() { return m_unsavedChanges; };
-	bool hasFilename() { return !m_path.empty(); };
-	const std::string& getFilename() const { return m_path; };
+	bool addObject(const QString& name, ObjectType type, const QVariant& data = QVariant());
+
+	bool isEmpty() const { return m_empty; };
+	bool unsavedChanges() const { return m_unsavedChanges; };
+	bool hasFilename() const { return !m_path.isEmpty(); };
+	const QString& getFilename() const { return m_path; };
+	QStandardItemModel& getModel() { return m_objectModel; };
+
 
 private:
-	std::string m_path;
+	QString verifyObject(const QJsonObject& object);
+	QString m_path;
 	bool m_empty;
 	bool m_unsavedChanges;
+
+	QStandardItemModel m_objectModel;
 
 };
 

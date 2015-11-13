@@ -1,8 +1,11 @@
 #ifndef DX11_WIDGET_H
 #define DX11_WIDGET_H
 
+#include "common.h"
+
 #include <QWidget>
 #include <QThread>
+#include <QVariant>
 
 class DX11Renderer;
 
@@ -16,8 +19,8 @@ public:
 
 	inline virtual QPaintEngine* paintEngine() const { return nullptr; }
 
-	void createMesh(const QString& name, const QString& path);
-	void createSky(const QString& name);
+	void addObject3D(const QString& name, ObjectType type, const QVariant& data = QVariant());
+	void removeAllObject3D();
 	void reloadShaders();
 	void cleanUp();
 	void applySettings();
@@ -43,8 +46,8 @@ signals:
 	void stopRendering();
 	void resize(int width, int height);
 	void controlEvent(QEvent* event);
-	void createMeshTriggered(const QString name, const QString path);
-	void createSkyTriggered(const QString name);
+	void addObject3DTriggered(const QString& name, ObjectType type, const QVariant& data);
+	void removeAllObject3DTriggered();
 	void reloadShadersTriggered();
 
 private:

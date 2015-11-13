@@ -8,6 +8,8 @@
 #include <fstream>
 #include <cmath>
 
+#include <QMetaType>
+
 #ifndef V_RETURN
 #define V_RETURN(x)    { hr = (x); if( FAILED(hr) ) { return hr; } }
 #endif
@@ -16,19 +18,26 @@
 #define SAFE_RELEASE(p) { if (p) { (p)->Release(); (p) = nullptr; } }
 #endif
 
+enum class ObjectType {Invalid, Mesh, Sky };
 
-struct Vertex
-{
-	DirectX::XMFLOAT3 p;
-	DirectX::XMFLOAT3 n;
-};
+Q_DECLARE_METATYPE(ObjectType) // Necessary for qRegisterMetaType() and to pass ObjectType via signals/slots
 
-struct Triangle
+static inline std::string objectTypeToString(ObjectType type)
 {
-	uint32_t a;
-	uint32_t b;
-	uint32_t c;
-};
+	switch (type)
+	{
+	case(ObjectType::Mesh) : return "Mesh";
+	case(ObjectType::Sky) : return "Sky";
+	}
+	return "Invalid";
+}
+
+static inline ObjectType stringToObjectType(const std::string& str)
+{
+	if(str == "Mesh") return ObjectType::Mesh;
+	else if (str == "Sky") return ObjectType::Sky;
+	return ObjectType::Invalid;
+}
 
 static inline float degToRad(float degree)
 {

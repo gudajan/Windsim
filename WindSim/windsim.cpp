@@ -1,6 +1,7 @@
 #include "windsim.h"
 #include "logger.h"
 #include "settings.h"
+#include "settingsDialog.h"
 
 #include <QKeyEvent>
 #include <QCloseEvent>
@@ -9,28 +10,33 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QJsonObject>
+#include <QStandardItemModel>
 
 WindSim::WindSim(QWidget *parent)
 	: QMainWindow(parent),
 	m_iniFilePath(QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath("settings.ini"))),
-	m_project(),
-	m_objectModel(parent)
+	m_settingsDialog(nullptr),
+	m_project()
 {
 	ui.setupUi(this);
 
 	Logger::Setup(ui.gbLog, ui.verticalLayout_5);
 
-	ui.objectView->setModel(&m_objectModel);
+	ui.objectView->setModel(&m_project.getModel());
 
-	// Project actions
+	// Project-actions
 	connect(ui.actionNew, SIGNAL(triggered()), this, SLOT(actionNewTriggered()));
 	connect(ui.actionOpen, SIGNAL(triggered()), this, SLOT(actionOpenTriggered()));
 	connect(ui.actionClose, SIGNAL(triggered()), this, SLOT(actionCloseTriggered()));
 	connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(actionSaveTriggered()));
 	connect(ui.actionSaveAs, SIGNAL(triggered()), this, SLOT(actionSaveAsTriggered()));
 
-	// Create actions
+	// Create-actions
 	connect(ui.actionCreateMesh, SIGNAL(triggered()), this, SLOT(actionCreateMeshTriggered()));
+
+	// Settings-action
+	connect(ui.actionSettings, SIGNAL(triggered()), this, SLOT(showSettingsDialog()));
 
 	reloadIni();
 }
@@ -102,7 +108,24 @@ bool WindSim::actionOpenTriggered()
 
 	if (filename.isEmpty()) return false;
 
-	if (!m_project.open(filename.toStdString())) return false;
+	if (!m_project.open(filename))
+	{
+		Logger::logit("ERROR: Failed to open the project file '" + filename + "'.");
+		return false;
+	}
+
+	// Add 3D objects
+	const QStandardItemModel& model = m_project.getModel();
+	int rc = model.rowCount();
+	for (int i = 0; i < rc; ++i)
+	{
+		QJsonObject json = model.item(i)->data().toJsonObject();
+		ObjectType type = stringToObjectType(json["type"].toString().toStdString());
+		if (type == ObjectType::Mesh)
+			ui.dx11Viewer->addObject3D(json["name"].toString(), type, json["obj-file"].toString());
+		else if (type == ObjectType::Sky)
+			ui.dx11Viewer->addObject3D(json["name"].toString(), type);
+	}
 
 	setWindowTitle("WindSim - " + filename);
 
@@ -120,6 +143,7 @@ void WindSim::actionCloseTriggered()
 	if (!maybeSave()) return;
 
 	m_project.close();
+	ui.dx11Viewer->removeAllObject3D();
 
 	setWindowTitle("WindSim");
 
@@ -136,10 +160,10 @@ bool WindSim::actionSaveTriggered()
 	{
 		if (!m_project.save())
 		{
-			Logger::logit("ERROR: Failed to save project to '" + QString::fromStdString(m_project.getFilename()) +"'.");
+			Logger::logit("ERROR: Failed to save project to '" + m_project.getFilename() +"'.");
 			return false;
 		}
-		Logger::logit("INFO: Saved project to '" + QString::fromStdString(m_project.getFilename()) + "'.");
+		Logger::logit("INFO: Saved project to '" + m_project.getFilename() + "'.");
 		return true;
 	}
 	return actionSaveAsTriggered();
@@ -152,7 +176,7 @@ bool WindSim::actionSaveAsTriggered()
 	if (filename.isEmpty())
 		return false;
 
-	if (!m_project.saveAs(filename.toStdString()))
+	if (!m_project.saveAs(filename))
 	{
 		Logger::logit("ERROR: Failed to save project to '" + filename + "'.");
 		return false;
@@ -172,11 +196,8 @@ bool WindSim::actionCreateMeshTriggered()
 
 	if (filename.isEmpty()) return false; // Empty filename -> Cancel -> abort mesh creation
 
-	QStandardItem* item = new QStandardItem(name);
-	item->setData(filename);
-	m_objectModel.appendRow(item);
-
-	ui.dx11Viewer->createMesh(name, filename);
+	m_project.addObject(name, ObjectType::Mesh, filename);
+	ui.dx11Viewer->addObject3D(name, ObjectType::Mesh, filename);
 
 	Logger::logit("INFO: Created new mesh '" + name + "' from OBJ-file '" + filename + "'.");
 
@@ -191,14 +212,31 @@ bool WindSim::actionCreateSkyTriggered(QString name)
 		if (name.isEmpty())
 			return false;
 	}
-	QStandardItem* item = new QStandardItem(name);
-	m_objectModel.appendRow(item);
 
-	ui.dx11Viewer->createSky(name);
+	m_project.addObject(name, ObjectType::Sky);
+	ui.dx11Viewer->addObject3D(name, ObjectType::Sky);
 
 	Logger::logit("INFO: Created new sky '" + name + "'.");
 
 	return true;
+}
+
+void WindSim::showSettingsDialog()
+{
+	if (!m_settingsDialog)
+	{
+		m_settingsDialog = new SettingsDialog(this);
+		connect(m_settingsDialog, SIGNAL(settingsChanged()), this, SLOT(applySettings()));
+		connect(this, SIGNAL(settingsChanged()), m_settingsDialog, SLOT(updateSettings()));
+	}
+
+	m_settingsDialog->show();
+	m_settingsDialog->raise();
+}
+
+void WindSim::applySettings()
+{
+	ui.dx11Viewer->applySettings();
 }
 
 void WindSim::reloadIni()
@@ -206,8 +244,9 @@ void WindSim::reloadIni()
 	try
 	{
 		loadIni(m_iniFilePath.toStdString());
-		ui.dx11Viewer->applySettings();
+		applySettings();
 		Logger::logit("INFO: Reloaded settings from ini-file '" + m_iniFilePath + "'.");
+		emit settingsChanged();
 	}
 	catch (const std::runtime_error& re)
 	{
@@ -238,7 +277,7 @@ bool WindSim::maybeSave()
 
 QString WindSim::getName(const QString& title, const QString& label, const QString& defaultName)
 {
-	// TODO: Iterate object names and get first available name (object1, object2 etc)
+	// TODO: Iterate object names and get first available name (defaultName1, defaultName2 etc) as default
 	bool ok = true;
 	QString name;
 	while (true)

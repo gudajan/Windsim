@@ -1,6 +1,9 @@
 #include "windsim.h"
 #include "logger.h"
+#include "common.h"
+
 #include <QtWidgets/QApplication>
+#include <QMetaType>
 
 int main(int argc, char *argv[])
 {
@@ -12,6 +15,8 @@ int main(int argc, char *argv[])
 
 	// Install own logging method
 	qInstallMessageHandler(Logger::logging);
+	// Install ObjectType enum for enabling usage with signals/slots
+	qRegisterMetaType<ObjectType>();
 
 	QApplication a(argc, argv);
 	WindSim w;
