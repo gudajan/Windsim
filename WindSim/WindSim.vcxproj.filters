@@ -113,6 +113,9 @@
     <ClCompile Include="settingsDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="commands.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="windsim.h">
@@ -185,6 +188,9 @@
     </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_settings.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="commands.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

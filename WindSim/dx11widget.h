@@ -5,7 +5,7 @@
 
 #include <QWidget>
 #include <QThread>
-#include <QVariant>
+#include <QJsonObject>
 
 class DX11Renderer;
 
@@ -19,7 +19,8 @@ public:
 
 	inline virtual QPaintEngine* paintEngine() const { return nullptr; }
 
-	void addObject3D(const QString& name, ObjectType type, const QVariant& data = QVariant());
+	void addObject3D(const QJsonObject& data);
+	void removeObject3D(const QString& name);
 	void removeAllObject3D();
 	void reloadShaders();
 	void cleanUp();
@@ -46,7 +47,8 @@ signals:
 	void stopRendering();
 	void resize(int width, int height);
 	void controlEvent(QEvent* event);
-	void addObject3DTriggered(const QString& name, ObjectType type, const QVariant& data);
+	void addObject3DTriggered(const QJsonObject& data);
+	void removeObject3DTriggered(const QString& name);
 	void removeAllObject3DTriggered();
 	void reloadShadersTriggered();
 

@@ -2,6 +2,7 @@
 #include "logger.h"
 #include "settings.h"
 #include "settingsDialog.h"
+#include "commands.h"
 
 #include <QKeyEvent>
 #include <QCloseEvent>
@@ -17,9 +18,21 @@ WindSim::WindSim(QWidget *parent)
 	: QMainWindow(parent),
 	m_iniFilePath(QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath("settings.ini"))),
 	m_settingsDialog(nullptr),
-	m_project()
+	m_project(),
+	m_undoStack(parent)
 {
 	ui.setupUi(this);
+
+	// Create Undo/Redo actions
+	ui.actionUndo = m_undoStack.createUndoAction(this, tr("&Undo"));
+	ui.actionUndo->setShortcuts(QKeySequence::Undo);
+	ui.menuEdit->insertAction(ui.menuCreate->menuAction(), ui.actionUndo);
+	ui.actionRedo = m_undoStack.createRedoAction(this, tr("&Redo"));
+	ui.actionRedo->setShortcuts(QKeySequence::Redo);
+	ui.menuEdit->insertAction(ui.menuCreate->menuAction(), ui.actionRedo);
+	ui.menuEdit->insertSeparator(ui.menuCreate->menuAction());
+
+	ui.objectView->setSelectionMode(QListView::ExtendedSelection); // Select multiple items (with shift and ctrl)
 
 	Logger::Setup(ui.gbLog, ui.verticalLayout_5);
 
@@ -93,6 +106,8 @@ bool WindSim::actionNewTriggered()
 	// Create default sky object
 	actionCreateSkyTriggered("Sky");
 
+	m_undoStack.clear();
+
 	return true;
 }
 
@@ -120,11 +135,7 @@ bool WindSim::actionOpenTriggered()
 	for (int i = 0; i < rc; ++i)
 	{
 		QJsonObject json = model.item(i)->data().toJsonObject();
-		ObjectType type = stringToObjectType(json["type"].toString().toStdString());
-		if (type == ObjectType::Mesh)
-			ui.dx11Viewer->addObject3D(json["name"].toString(), type, json["obj-file"].toString());
-		else if (type == ObjectType::Sky)
-			ui.dx11Viewer->addObject3D(json["name"].toString(), type);
+		ui.dx11Viewer->addObject3D(json);
 	}
 
 	setWindowTitle("WindSim - " + filename);
@@ -133,6 +144,7 @@ bool WindSim::actionOpenTriggered()
 	projectActionsEnable(false, false, true, true, true);
 	createActionEnable(true);
 
+	m_undoStack.clear();
 	Logger::logit("INFO: Opened project from '" + filename + "'.");
 
 	return true;
@@ -151,6 +163,7 @@ void WindSim::actionCloseTriggered()
 	projectActionsEnable(true, true, false, false, false);
 	createActionEnable(false);
 
+	m_undoStack.clear();
 	Logger::logit("INFO: Closed project.");
 }
 
@@ -163,6 +176,7 @@ bool WindSim::actionSaveTriggered()
 			Logger::logit("ERROR: Failed to save project to '" + m_project.getFilename() +"'.");
 			return false;
 		}
+		m_undoStack.setClean();
 		Logger::logit("INFO: Saved project to '" + m_project.getFilename() + "'.");
 		return true;
 	}
@@ -182,6 +196,7 @@ bool WindSim::actionSaveAsTriggered()
 		return false;
 	}
 
+	m_undoStack.setClean();
 	Logger::logit("INFO: Saved project to '" + filename + "'.");
 	return true;
 }
@@ -196,8 +211,15 @@ bool WindSim::actionCreateMeshTriggered()
 
 	if (filename.isEmpty()) return false; // Empty filename -> Cancel -> abort mesh creation
 
-	m_project.addObject(name, ObjectType::Mesh, filename);
-	ui.dx11Viewer->addObject3D(name, ObjectType::Mesh, filename);
+	QJsonObject json
+	{
+		{ "name", name },
+		{ "type", QString::fromStdString(objectTypeToString(ObjectType::Mesh)) },
+		{ "obj-file", filename }
+	};
+
+	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project, ui.dx11Viewer);
+	m_undoStack.push(addCmd);
 
 	Logger::logit("INFO: Created new mesh '" + name + "' from OBJ-file '" + filename + "'.");
 
@@ -213,8 +235,14 @@ bool WindSim::actionCreateSkyTriggered(QString name)
 			return false;
 	}
 
-	m_project.addObject(name, ObjectType::Sky);
-	ui.dx11Viewer->addObject3D(name, ObjectType::Sky);
+	QJsonObject json
+	{
+		{ "name", name },
+		{ "type", QString::fromStdString(objectTypeToString(ObjectType::Sky))}
+	};
+
+	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project, ui.dx11Viewer);
+	m_undoStack.push(addCmd);
 
 	Logger::logit("INFO: Created new sky '" + name + "'.");
 
@@ -256,7 +284,7 @@ void WindSim::reloadIni()
 
 bool WindSim::maybeSave()
 {
-	if (m_project.unsavedChanges())
+	if (!m_undoStack.isClean())
 	{
 		QMessageBox::StandardButton ret = QMessageBox::warning(this, tr("WindSim"), tr("The project has been modified.\nDo you want to save your changes?"),
 			QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);

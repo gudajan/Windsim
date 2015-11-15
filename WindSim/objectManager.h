@@ -9,7 +9,7 @@
 #include <string>
 #include <memory>
 
-#include <QVariant>
+#include <QJsonObject>
 
 
 class ObjectManager
@@ -19,7 +19,7 @@ public:
 	~ObjectManager();
 
 	// Add one object, which is rendered
-	void add(const std::string& name, ID3D11Device* device, ObjectType type, const QVariant& data = QVariant());
+	void add(ID3D11Device* device, const QJsonObject& data);
 	// Remove one object
 	void remove(const std::string& name);
 	void removeAll();

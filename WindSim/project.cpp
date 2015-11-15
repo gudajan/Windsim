@@ -10,7 +10,6 @@
 Project::Project()
 	: m_path(),
 	m_empty(true),
-	m_unsavedChanges(false),
 	m_objectModel()
 {
 }
@@ -53,8 +52,8 @@ bool Project::open(const QString& path)
 	for (auto i : it->toArray())
 	{
 		QJsonObject obj = i.toObject();
-		const QString& name = verifyObject(obj);
-		if (name.isEmpty())
+		QString name;
+		if (!verifyObject(obj, name))
 			continue;
 		QStandardItem* item = new QStandardItem(name);
 		item->setData(obj);
@@ -63,7 +62,6 @@ bool Project::open(const QString& path)
 
 	m_path = path;
 	m_empty = false;
-	m_unsavedChanges = false;
 	return true;
 }
 bool Project::close()
@@ -71,7 +69,6 @@ bool Project::close()
 	m_objectModel.clear();
 	m_path.clear();
 	m_empty = true;
-	m_unsavedChanges = false;
 	return true;
 }
 
@@ -96,50 +93,87 @@ bool Project::saveAs(const QString& path)
 	f.close();
 
 	m_path = path;
-	m_unsavedChanges = false;
 	return true;
 }
 
 // Store objects with their propterties as QJsonObjects
 // This way, every object can have custom properties, without creating special object classes
 // The objects and its properties also may be saved to file in a human readable and modifiable format
-bool Project::addObject(const QString& name, ObjectType type, const QVariant& data)
+bool Project::addObject(const QJsonObject& data)
 {
-	QJsonObject json
+	QString name;
+	if (!verifyObject(data, name))
 	{
-		{ "name", name },
-		{ "type", QString::fromStdString(objectTypeToString(type)) }
-	};
-
-	if (type == ObjectType::Mesh)
-	{
-		json.insert("obj-file", data.toString());
+		return false;
 	}
 
 	QStandardItem* item = new QStandardItem(name);
-	item->setData(json);
+	item->setData(data);
 	m_objectModel.appendRow(item);
 
 	return true;
 }
 
-QString Project::verifyObject(const QJsonObject& object)
+QJsonObject Project::removeObject(const QString& name)
+{
+	QStandardItem* item = findItem(name);
+	if (!item)
+	{
+		Logger::logit("WARNING: Object not removed! The object '" + name + "' does not exist.");
+		return QJsonObject();
+	}
+
+	QJsonObject json = item->data().toJsonObject();
+	m_objectModel.removeRow(item->row());
+
+	return json;
+}
+
+QJsonObject Project::getObject(const QString& name)
+{
+	QStandardItem* item = findItem(name);
+	if (!item)
+	{
+		Logger::logit("WARNING: Object not found! The object '" + name + "' does not exist.");
+		return QJsonObject();
+	}
+
+	return item->data().toJsonObject();
+}
+
+
+QStandardItem* Project::findItem(const QString& name)
+{
+	//Iterate all items in list
+	int rc = m_objectModel.rowCount();
+	for (int i = 0; i < rc; ++i)
+	{
+		QStandardItem* item = m_objectModel.item(i);
+		if (name == item->text()) // Displayed text equals the searched name
+		{
+			return item;
+		}
+	}
+	return nullptr;
+}
+
+bool Project::verifyObject(const QJsonObject& object, QString& name)
 {
 	// Check if "name" key exists:
 	auto nameIt = object.find("name");
 	if (nameIt == object.end())
 	{
 		Logger::logit("WARNING: Found no name for object in project file!");
-		return "";
+		return false;
 	}
-	QString name = nameIt->toString();
+	name = nameIt->toString();
 
 	// Check if "type" key exists:
 	auto typeIt = object.find("type");
 	if (typeIt == object.end())
 	{
 		Logger::logit("WARNING: Found no type for object '" + name + "' in project file!");
-		return "";
+		return false;
 	}
 
 	ObjectType type = stringToObjectType(typeIt->toString().toStdString());
@@ -151,9 +185,9 @@ QString Project::verifyObject(const QJsonObject& object)
 		if (objIt == object.end())
 		{
 			Logger::logit("WARNING: Found no obj-file for Mesh '" + name + "' in project file!");
-			return "";
+			return false;
 		}
 	}
 
-	return name;
+	return true;
 }

@@ -10,6 +10,7 @@
 #include <QObject>
 #include <QElapsedTimer>
 #include <QTimer>
+#include <QJsonObject>
 
 // DirectX
 #include <d3d11.h>
@@ -40,7 +41,8 @@ public slots:
 	// Arbitrary Events
 	virtual void onResize(int width, int height); // Resize viewport
 	virtual void onControlEvent(QEvent* event);
-	virtual void onAddObject(const QString& name, ObjectType type, const QVariant& data);
+	virtual void onAddObject(const QJsonObject& data);
+	virtual void onRemoveObject(const QString& name);
 	virtual void onRemoveAll();
 	virtual bool reloadShaders(); // Recompile and load all shaders
 

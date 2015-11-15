@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QPointer>
 #include <QTextEdit>
+#include <QUndoStack>
 
 #include "ui_windsim.h"
 
@@ -60,6 +61,7 @@ private:
 	QPointer<SettingsDialog> m_settingsDialog;
 	Project m_project;
 
+	QUndoStack m_undoStack;
 
 };
 

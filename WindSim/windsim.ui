@@ -96,6 +96,9 @@
           <property name="statusTip">
            <string>Objects list</string>
           </property>
+          <property name="alternatingRowColors">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
        </layout>
@@ -224,7 +227,7 @@
            <property name="flat">
             <bool>true</bool>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_5" stretch="">
+           <layout class="QVBoxLayout" name="verticalLayout_5">
             <property name="spacing">
              <number>0</number>
             </property>
@@ -271,14 +274,22 @@
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
    </widget>
-   <widget class="QMenu" name="menuCreate">
+   <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Create</string>
+     <string>Edit</string>
     </property>
-    <addaction name="actionCreateMesh"/>
+    <widget class="QMenu" name="menuCreate">
+     <property name="title">
+      <string>Create</string>
+     </property>
+     <addaction name="actionCreateMesh"/>
+     <addaction name="actionCreateSky"/>
+    </widget>
+    <addaction name="menuCreate"/>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuCreate"/>
+   <addaction name="menuEdit"/>
   </widget>
   <widget class="QToolBar" name="toolBar">
    <property name="windowTitle">
@@ -329,23 +340,38 @@
     <string>Close</string>
    </property>
   </action>
-  <action name="actionCreateMesh">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Mesh</string>
-   </property>
-   <property name="toolTip">
-    <string>Create new Mesh</string>
-   </property>
-  </action>
   <action name="actionSettings">
    <property name="text">
     <string>Settings</string>
    </property>
    <property name="toolTip">
     <string>Modify the general settings</string>
+   </property>
+  </action>
+  <action name="actionCreateMesh">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Create Mesh</string>
+   </property>
+  </action>
+  <action name="actionCreateSky">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Creat Sky</string>
+   </property>
+  </action>
+  <action name="actionUndo">
+   <property name="text">
+    <string>Undo</string>
+   </property>
+  </action>
+  <action name="actionRedo">
+   <property name="text">
+    <string>Redo</string>
    </property>
   </action>
  </widget>

@@ -16,17 +16,21 @@ ObjectManager::~ObjectManager()
 {
 }
 
-void ObjectManager::add(const std::string& name, ID3D11Device* device, ObjectType type, const QVariant& data)
+void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 {
+	const std::string& name = data["name"].toString().toStdString();
+	ObjectType type = stringToObjectType(data["type"].toString().toStdString());
+
 	if (m_objects.find(name) == m_objects.end() && m_actors.find(name) == m_actors.end())
 	{
 		if (type == ObjectType::Mesh)
 		{
-			if (data.isNull())
+			auto objIt = data.find("obj-file");
+			if (objIt == data.end())
 			{
 				throw std::invalid_argument("Failed to create Mesh object '" + name + "' because no OBJ-Path was given in 'data' variable!");
 			}
-			Mesh* obj = new Mesh(data.toString().toStdString());
+			Mesh* obj = new Mesh(objIt->toString().toStdString());
 			m_objects.emplace(name, std::unique_ptr<Object3D>(obj));
 			MeshActor* act = new MeshActor(*obj);
 			m_actors.emplace(name, std::unique_ptr<Actor>(act));

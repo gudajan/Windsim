@@ -28,6 +28,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	connect(this, &DX11Widget::resize, m_renderer, &DX11Renderer::onResize);
 	connect(this, &DX11Widget::controlEvent, m_renderer, &DX11Renderer::onControlEvent);
 	connect(this, &DX11Widget::addObject3DTriggered, m_renderer, &DX11Renderer::onAddObject);
+	connect(this, &DX11Widget::removeObject3D, m_renderer, &DX11Renderer::onRemoveObject);
 	connect(this, &DX11Widget::removeAllObject3DTriggered, m_renderer, &DX11Renderer::onRemoveAll);
 	connect(this, &DX11Widget::reloadShadersTriggered, m_renderer, &DX11Renderer::reloadShaders);
 
@@ -50,9 +51,14 @@ DX11Widget::~DX11Widget()
 	m_renderThread.wait();
 }
 
-void DX11Widget::addObject3D(const QString& name, ObjectType type, const QVariant& data)
+void DX11Widget::addObject3D(const QJsonObject& data)
 {
-	emit addObject3DTriggered(name, type, data);
+	emit addObject3DTriggered(data);
+}
+
+void DX11Widget::removeObject3D(const QString& name)
+{
+	emit removeObject3DTriggered(name);
 }
 
 void DX11Widget::removeAllObject3D()

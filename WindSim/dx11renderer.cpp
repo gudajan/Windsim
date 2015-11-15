@@ -209,9 +209,14 @@ void DX11Renderer::onControlEvent(QEvent* event)
 	m_camera.handleControlEvent(event);
 }
 
-void DX11Renderer::onAddObject(const QString& name, ObjectType type, const QVariant& data)
+void DX11Renderer::onAddObject(const QJsonObject& data)
 {
-	m_manager.add(name.toStdString(), m_device, type, data);
+	m_manager.add(m_device, data);
+}
+
+void DX11Renderer::onRemoveObject(const QString& name)
+{
+	m_manager.remove(name.toStdString());
 }
 
 void DX11Renderer::onRemoveAll()
