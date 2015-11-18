@@ -37,6 +37,11 @@ private slots:
 	bool actionCreateSkyTriggered(QString name = QString());
 	// void actionRemoveObjectTriggered();
 
+	// Propagate object changes to 3D Representation
+	void objectsInserted(const QModelIndex & parent, int first, int last);
+	void objectsRemoved(const QModelIndex & parent, int first, int last);
+	void objectModified(QStandardItem * item);
+
 	// Dialog actions:
 	void showSettingsDialog();
 

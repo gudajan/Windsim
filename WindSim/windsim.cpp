@@ -48,6 +48,12 @@ WindSim::WindSim(QWidget *parent)
 
 	// Create-actions
 	connect(ui.actionCreateMesh, SIGNAL(triggered()), this, SLOT(actionCreateMeshTriggered()));
+	connect(ui.actionCreateSky, SIGNAL(triggered()), this, SLOT(actionCreateSkyTriggered()));
+
+	// Propagate object changes
+	connect(&m_project.getModel(), SIGNAL(rowsInserted(const QModelIndex &, int, int)), this, SLOT(objectsInserted(const QModelIndex &, int, int)));
+	connect(&m_project.getModel(), SIGNAL(rowsAboutToBeRemoved(const QModelIndex &, int, int)), this, SLOT(objectsRemoved(const QModelIndex &, int, int)));
+	connect(&m_project.getModel(), SIGNAL(itemChanged(QStandardItem*)), this, SLOT(objectModified(QStandardItem*)));
 
 	// Settings-action
 	connect(ui.actionSettings, SIGNAL(triggered()), this, SLOT(showSettingsDialog()));
@@ -129,15 +135,7 @@ bool WindSim::actionOpenTriggered()
 		Logger::logit("ERROR: Failed to open the project file '" + filename + "'.");
 		return false;
 	}
-
-	// Add 3D objects
-	const QStandardItemModel& model = m_project.getModel();
-	int rc = model.rowCount();
-	for (int i = 0; i < rc; ++i)
-	{
-		QJsonObject json = model.item(i)->data().toJsonObject();
-		ui.dx11Viewer->addObject3D(json);
-	}
+	// 3D objects are automatically created via signal/slot rowsInserted()/objectsInserted()
 
 	setWindowTitle("WindSim - " + filename);
 
@@ -155,8 +153,8 @@ void WindSim::actionCloseTriggered()
 {
 	if (!maybeSave()) return;
 
-	m_project.close();
-	ui.dx11Viewer->removeAllObject3D();
+	m_project.close(); // This does NOT emit rowsRemoved() but rather modelReset()
+	ui.dx11Viewer->removeAllObject3D(); // Clear 3D data manually
 
 	setWindowTitle("WindSim");
 
@@ -219,7 +217,7 @@ bool WindSim::actionCreateMeshTriggered()
 		{ "obj-file", filename }
 	};
 
-	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project, ui.dx11Viewer);
+	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project);
 	g_undoStack.push(addCmd);
 
 	Logger::logit("INFO: Created new mesh '" + name + "' from OBJ-file '" + filename + "'.");
@@ -242,12 +240,31 @@ bool WindSim::actionCreateSkyTriggered(QString name)
 		{ "type", QString::fromStdString(objectTypeToString(ObjectType::Sky))}
 	};
 
-	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project, ui.dx11Viewer);
+	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project);
 	g_undoStack.push(addCmd);
 
 	Logger::logit("INFO: Created new sky '" + name + "'.");
 
 	return true;
+}
+
+void WindSim::objectsInserted(const QModelIndex & parent, int first, int last)
+{
+	// Add Object3D for every inserted Item in the object List, using the specified data
+	for (int i = first; i <= last; ++i)
+		ui.dx11Viewer->addObject3D(m_project.getModel().item(i)->data().toJsonObject());
+}
+
+void WindSim::objectsRemoved(const QModelIndex & parent, int first, int last)
+{
+	// Remove Object3D for every item, that is about to be removed
+	for (int i = first; i <= last; ++i)
+		ui.dx11Viewer->removeObject3D(m_project.getModel().item(i)->data().toJsonObject()["id"].toInt());
+
+}
+void WindSim::objectModified(QStandardItem * item)
+{
+	// TODO (currently 3D data can not be modified)
 }
 
 void WindSim::showSettingsDialog()

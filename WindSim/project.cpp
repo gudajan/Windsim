@@ -8,7 +8,8 @@
 #include <QFile>
 #include <QByteArray>
 
-int Project::s_id = 0;
+// id 0 is the default id for an empty QJsonObject
+int Project::s_id = 1;
 
 Project::Project()
 	: m_path(),
@@ -111,7 +112,6 @@ ObjectItem* Project::addObject(QJsonObject& data)
 	data.insert("id", s_id++);
 	item->setData(data);
 	m_objectModel.appendRow(item);
-
 	return item;
 }
 
@@ -128,6 +128,24 @@ QJsonObject Project::removeObject(int id)
 	m_objectModel.removeRow(item->row());
 
 	return json;
+}
+
+ObjectItem* Project::modifyObject(QJsonObject& data)
+{
+	if (!verifyObject(data))
+	{
+		return nullptr;
+	}
+
+	ObjectItem * item = findItem(data["id"].toInt());
+	if (!item)
+	{
+		Logger::logit("WARNING: Object not modified! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
+		return nullptr;
+	}
+	item->setData(data["name"].toString(), Qt::DisplayRole); // Modify name in gui
+	item->setData(data); // Modify object data ( UserRole + 1)
+	return item;
 }
 
 QJsonObject Project::getObject(int id)

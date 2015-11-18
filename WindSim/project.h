@@ -23,6 +23,8 @@ public:
 
 	ObjectItem* addObject(QJsonObject& data);
 	QJsonObject removeObject(int id);
+	// Update the data of the object with id data["id"] => data MUST contain object id
+	ObjectItem* modifyObject(QJsonObject& data);
 
 	QJsonObject getObject(int id);
 

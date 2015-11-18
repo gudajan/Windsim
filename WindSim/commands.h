@@ -7,12 +7,14 @@
 #include "common.h"
 
 class Project;
-class DX11Widget;
+class ObjectItem;
 
+
+//=================================================================================
 class AddObjectCmd : public QUndoCommand
 {
 public:
-	AddObjectCmd(QJsonObject info, Project* project, DX11Widget* viewer, QUndoCommand* parent = nullptr);
+	AddObjectCmd(QJsonObject data, Project* project, QUndoCommand* parent = nullptr);
 	~AddObjectCmd();
 
 	void undo() override;
@@ -21,13 +23,13 @@ public:
 private:
 	QJsonObject m_data;
 	Project* m_project;
-	DX11Widget* m_viewer;
 };
 
+//=================================================================================
 class RemoveObjectCmd : public QUndoCommand
 {
 public:
-	RemoveObjectCmd(int id, Project* project, DX11Widget* viewer, QUndoCommand* parent = nullptr);
+	RemoveObjectCmd(int id, Project* project, QUndoCommand* parent = nullptr);
 	~RemoveObjectCmd();
 
 	void undo() override;
@@ -36,7 +38,22 @@ public:
 private:
 	QJsonObject m_data;
 	Project* m_project;
-	DX11Widget* m_viewer;
+};
+
+//=================================================================================
+class ModifyObjectCmd : public QUndoCommand
+{
+public:
+	ModifyObjectCmd(QJsonObject oldData, QJsonObject newData, ObjectItem* item, QUndoCommand* parent = nullptr);
+	~ModifyObjectCmd();
+
+	void undo() override;
+	void redo() override;
+
+private:
+	QJsonObject m_oldData;
+	QJsonObject m_newData;
+	ObjectItem* m_item;
 };
 
 #endif

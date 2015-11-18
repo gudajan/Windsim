@@ -63,6 +63,10 @@ void ObjectManager::remove(int id)
 		object->second->release();
 		m_objects.erase(id);
 	}
+	else
+	{
+		throw std::runtime_error("Failed to remove object with id '" + std::to_string(id) + "' as the id was not found!");
+	}
 	m_actors.erase(id);
 }
 
