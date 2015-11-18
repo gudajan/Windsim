@@ -17,38 +17,35 @@ public:
 	DX11Widget(QWidget * parent = nullptr, Qt::WindowFlags = 0);
 	virtual ~DX11Widget();
 
-	inline virtual QPaintEngine* paintEngine() const { return nullptr; }
+	inline QPaintEngine* paintEngine() const override { return nullptr; }
 
 	void addObject3D(const QJsonObject& data);
-	void removeObject3D(const QString& name);
+	void removeObject3D(int id);
 	void removeAllObject3D();
 	void reloadShaders();
 	void cleanUp();
 	void applySettings();
 
 public slots:
-	virtual void logit(const QString& str);
+	void logit(const QString& str);
 
 protected:
-	virtual void paintEvent(QPaintEvent * event);
-	virtual void resizeEvent(QResizeEvent * event);
+	void paintEvent(QPaintEvent * event) override;
+	void resizeEvent(QResizeEvent * event) override;
 
-	virtual void keyPressEvent(QKeyEvent * event);
-	virtual void keyReleaseEvent(QKeyEvent * event);
-	virtual void mouseMoveEvent(QMouseEvent * event);
-	virtual void mousePressEvent(QMouseEvent * event);
-	virtual void mouseReleaseEvent(QMouseEvent * event);
-	virtual void wheelEvent(QWheelEvent * event);
-	//virtual void leaveEvent(QEvent * event); // Mouse cursur leaves widget
-	//virtual void mouseDoubleClickEvent(QMouseEvent * event);
-	//virtual void moveEvent(QMoveEvent * event); // When widget was moved to new position
+	void keyPressEvent(QKeyEvent * event) override;
+	void keyReleaseEvent(QKeyEvent * event) override;
+	void mouseMoveEvent(QMouseEvent * event) override;
+	void mousePressEvent(QMouseEvent * event) override;
+	void mouseReleaseEvent(QMouseEvent * event) override;
+	void wheelEvent(QWheelEvent * event) override;
 
 signals:
 	void stopRendering();
 	void resize(int width, int height);
 	void controlEvent(QEvent* event);
 	void addObject3DTriggered(const QJsonObject& data);
-	void removeObject3DTriggered(const QString& name);
+	void removeObject3DTriggered(int id);
 	void removeAllObject3DTriggered();
 	void reloadShadersTriggered();
 

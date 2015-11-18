@@ -6,7 +6,6 @@
 #include "common.h"
 
 #include <unordered_map>
-#include <string>
 #include <memory>
 
 #include <QJsonObject>
@@ -21,7 +20,7 @@ public:
 	// Add one object, which is rendered
 	void add(ID3D11Device* device, const QJsonObject& data);
 	// Remove one object
-	void remove(const std::string& name);
+	void remove(int id);
 	void removeAll();
 
 	// Render ALL objects at their current transformation
@@ -30,8 +29,8 @@ public:
 	void release();
 
 private:
-	std::unordered_map<std::string, std::unique_ptr<Object3D>> m_objects;
-	std::unordered_map<std::string, std::unique_ptr<Actor>> m_actors;
+	std::unordered_map<int, std::unique_ptr<Object3D>> m_objects;
+	std::unordered_map<int, std::unique_ptr<Actor>> m_actors;
 };
 
 #endif

@@ -1,11 +1,14 @@
 #include "project.h"
 #include "logger.h"
+#include "objectItem.h"
 
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QFile>
 #include <QByteArray>
+
+int Project::s_id = 0;
 
 Project::Project()
 	: m_path(),
@@ -34,6 +37,7 @@ bool Project::open(const QString& path)
 	QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
 	f.close();
 
+	// JsonObject with 'objects' array
 	QJsonObject json = doc.object();
 	auto it = json.find("objects");
 	if (it == json.end())
@@ -48,16 +52,11 @@ bool Project::open(const QString& path)
 		return false;
 	}
 
-	// Iterate all objects
+	// Iterate all objects in array
 	for (auto i : it->toArray())
 	{
 		QJsonObject obj = i.toObject();
-		QString name;
-		if (!verifyObject(obj, name))
-			continue;
-		QStandardItem* item = new QStandardItem(name);
-		item->setData(obj);
-		m_objectModel.appendRow(item);
+		addObject(obj);
 	}
 
 	m_path = path;
@@ -83,7 +82,9 @@ bool Project::saveAs(const QString& path)
 	QJsonArray objects;
 	for (int i = 0; i < rc; ++i)
 	{
-		objects.append(m_objectModel.item(i)->data().toJsonObject());
+		QJsonObject json = m_objectModel.item(i)->data().toJsonObject();
+		json.remove("id");
+		objects.append(json);
 	}
 	QJsonDocument doc(QJsonObject{ { "objects", objects } });
 
@@ -99,27 +100,27 @@ bool Project::saveAs(const QString& path)
 // Store objects with their propterties as QJsonObjects
 // This way, every object can have custom properties, without creating special object classes
 // The objects and its properties also may be saved to file in a human readable and modifiable format
-bool Project::addObject(const QJsonObject& data)
+ObjectItem* Project::addObject(QJsonObject& data)
 {
-	QString name;
-	if (!verifyObject(data, name))
+	if (!verifyObject(data))
 	{
-		return false;
+		return nullptr;
 	}
 
-	QStandardItem* item = new QStandardItem(name);
+	ObjectItem* item = new ObjectItem(data["name"].toString());
+	data.insert("id", s_id++);
 	item->setData(data);
 	m_objectModel.appendRow(item);
 
-	return true;
+	return item;
 }
 
-QJsonObject Project::removeObject(const QString& name)
+QJsonObject Project::removeObject(int id)
 {
-	QStandardItem* item = findItem(name);
+	ObjectItem* item = findItem(id);
 	if (!item)
 	{
-		Logger::logit("WARNING: Object not removed! The object '" + name + "' does not exist.");
+		Logger::logit("WARNING: Object not removed! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
 		return QJsonObject();
 	}
 
@@ -129,12 +130,12 @@ QJsonObject Project::removeObject(const QString& name)
 	return json;
 }
 
-QJsonObject Project::getObject(const QString& name)
+QJsonObject Project::getObject(int id)
 {
-	QStandardItem* item = findItem(name);
+	ObjectItem* item = findItem(id);
 	if (!item)
 	{
-		Logger::logit("WARNING: Object not found! The object '" + name + "' does not exist.");
+		Logger::logit("WARNING: Object not found! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
 		return QJsonObject();
 	}
 
@@ -142,14 +143,14 @@ QJsonObject Project::getObject(const QString& name)
 }
 
 
-QStandardItem* Project::findItem(const QString& name)
+ObjectItem* Project::findItem(int id)
 {
 	//Iterate all items in list
 	int rc = m_objectModel.rowCount();
 	for (int i = 0; i < rc; ++i)
 	{
-		QStandardItem* item = m_objectModel.item(i);
-		if (name == item->text()) // Displayed text equals the searched name
+		ObjectItem* item = static_cast<ObjectItem*>(m_objectModel.item(i));
+		if (id == item->data().toJsonObject()["id"].toInt()) // Given id equals the id of the current object
 		{
 			return item;
 		}
@@ -157,16 +158,16 @@ QStandardItem* Project::findItem(const QString& name)
 	return nullptr;
 }
 
-bool Project::verifyObject(const QJsonObject& object, QString& name)
+bool Project::verifyObject(const QJsonObject& object)
 {
-	// Check if "name" key exists:
+	// Check if "name" key exists (necessary for displaying in the list):
 	auto nameIt = object.find("name");
 	if (nameIt == object.end())
 	{
 		Logger::logit("WARNING: Found no name for object in project file!");
 		return false;
 	}
-	name = nameIt->toString();
+	const QString& name = nameIt->toString();
 
 	// Check if "type" key exists:
 	auto typeIt = object.find("type");

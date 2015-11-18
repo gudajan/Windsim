@@ -14,20 +14,21 @@
 #include <QJsonObject>
 #include <QStandardItemModel>
 
+QUndoStack g_undoStack;
+
 WindSim::WindSim(QWidget *parent)
 	: QMainWindow(parent),
 	m_iniFilePath(QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath("settings.ini"))),
 	m_settingsDialog(nullptr),
-	m_project(),
-	m_undoStack(parent)
+	m_project()
 {
 	ui.setupUi(this);
 
 	// Create Undo/Redo actions
-	ui.actionUndo = m_undoStack.createUndoAction(this, tr("&Undo"));
+	ui.actionUndo = g_undoStack.createUndoAction(this, tr("&Undo"));
 	ui.actionUndo->setShortcuts(QKeySequence::Undo);
 	ui.menuEdit->insertAction(ui.menuCreate->menuAction(), ui.actionUndo);
-	ui.actionRedo = m_undoStack.createRedoAction(this, tr("&Redo"));
+	ui.actionRedo = g_undoStack.createRedoAction(this, tr("&Redo"));
 	ui.actionRedo->setShortcuts(QKeySequence::Redo);
 	ui.menuEdit->insertAction(ui.menuCreate->menuAction(), ui.actionRedo);
 	ui.menuEdit->insertSeparator(ui.menuCreate->menuAction());
@@ -106,7 +107,7 @@ bool WindSim::actionNewTriggered()
 	// Create default sky object
 	actionCreateSkyTriggered("Sky");
 
-	m_undoStack.clear();
+	g_undoStack.clear();
 
 	return true;
 }
@@ -144,7 +145,7 @@ bool WindSim::actionOpenTriggered()
 	projectActionsEnable(false, false, true, true, true);
 	createActionEnable(true);
 
-	m_undoStack.clear();
+	g_undoStack.clear();
 	Logger::logit("INFO: Opened project from '" + filename + "'.");
 
 	return true;
@@ -163,7 +164,7 @@ void WindSim::actionCloseTriggered()
 	projectActionsEnable(true, true, false, false, false);
 	createActionEnable(false);
 
-	m_undoStack.clear();
+	g_undoStack.clear();
 	Logger::logit("INFO: Closed project.");
 }
 
@@ -176,7 +177,7 @@ bool WindSim::actionSaveTriggered()
 			Logger::logit("ERROR: Failed to save project to '" + m_project.getFilename() +"'.");
 			return false;
 		}
-		m_undoStack.setClean();
+		g_undoStack.setClean();
 		Logger::logit("INFO: Saved project to '" + m_project.getFilename() + "'.");
 		return true;
 	}
@@ -196,7 +197,7 @@ bool WindSim::actionSaveAsTriggered()
 		return false;
 	}
 
-	m_undoStack.setClean();
+	g_undoStack.setClean();
 	Logger::logit("INFO: Saved project to '" + filename + "'.");
 	return true;
 }
@@ -219,7 +220,7 @@ bool WindSim::actionCreateMeshTriggered()
 	};
 
 	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project, ui.dx11Viewer);
-	m_undoStack.push(addCmd);
+	g_undoStack.push(addCmd);
 
 	Logger::logit("INFO: Created new mesh '" + name + "' from OBJ-file '" + filename + "'.");
 
@@ -242,7 +243,7 @@ bool WindSim::actionCreateSkyTriggered(QString name)
 	};
 
 	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project, ui.dx11Viewer);
-	m_undoStack.push(addCmd);
+	g_undoStack.push(addCmd);
 
 	Logger::logit("INFO: Created new sky '" + name + "'.");
 
@@ -284,7 +285,7 @@ void WindSim::reloadIni()
 
 bool WindSim::maybeSave()
 {
-	if (!m_undoStack.isClean())
+	if (!g_undoStack.isClean())
 	{
 		QMessageBox::StandardButton ret = QMessageBox::warning(this, tr("WindSim"), tr("The project has been modified.\nDo you want to save your changes?"),
 			QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);

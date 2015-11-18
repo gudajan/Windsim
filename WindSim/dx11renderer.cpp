@@ -214,9 +214,9 @@ void DX11Renderer::onAddObject(const QJsonObject& data)
 	m_manager.add(m_device, data);
 }
 
-void DX11Renderer::onRemoveObject(const QString& name)
+void DX11Renderer::onRemoveObject(int id)
 {
-	m_manager.remove(name.toStdString());
+	m_manager.remove(id);
 }
 
 void DX11Renderer::onRemoveAll()

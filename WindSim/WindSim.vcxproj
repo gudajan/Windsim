@@ -223,6 +223,7 @@
     <ClCompile Include="mesh.cpp" />
     <ClCompile Include="meshActor.cpp" />
     <ClCompile Include="object3D.cpp" />
+    <ClCompile Include="objectItem.cpp" />
     <ClCompile Include="objectManager.cpp" />
     <ClCompile Include="objLoader.cpp" />
     <ClCompile Include="project.cpp" />
@@ -282,6 +283,7 @@
     <ClInclude Include="mesh.h" />
     <ClInclude Include="meshActor.h" />
     <ClInclude Include="object3D.h" />
+    <ClInclude Include="objectItem.h" />
     <ClInclude Include="objectManager.h" />
     <ClInclude Include="objLoader.h" />
     <ClInclude Include="libini.hpp" />

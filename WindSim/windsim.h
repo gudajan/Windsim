@@ -12,7 +12,6 @@
 
 class SettingsDialog;
 
-
 class WindSim : public QMainWindow
 {
 	Q_OBJECT
@@ -22,8 +21,8 @@ public:
 	~WindSim();
 
 protected:
-	void keyPressEvent(QKeyEvent * event);
-	void closeEvent(QCloseEvent* event);
+	void keyPressEvent(QKeyEvent * event) override;
+	void closeEvent(QCloseEvent* event) override;
 
 private slots:
 	// Project actions:
@@ -60,8 +59,6 @@ private:
 	QString m_iniFilePath;
 	QPointer<SettingsDialog> m_settingsDialog;
 	Project m_project;
-
-	QUndoStack m_undoStack;
 
 };
 

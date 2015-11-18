@@ -23,40 +23,40 @@ class DX11Renderer : public QObject
 public:
 
 	DX11Renderer(WId hwnd, int width, int height);
-	virtual ~DX11Renderer();
+	 ~DX11Renderer();
 
-	virtual bool init(); // Initialize renderer and directx11
+	bool init(); // Initialize renderer and directx11
 
 	int getWidth(){ return m_width; };
 	int getHeight(){ return m_height; };
 	Camera* getCamera() { return &m_camera; };
 
 public slots:
-	virtual void frame(); // Compute one Frame
+	void frame(); // Compute one Frame
 
 	// Start/Stop rendering
-	virtual void execute(); // Enter Render loop
-	virtual void stop(); // Stop Render loop
+	void execute(); // Enter Render loop
+	void stop(); // Stop Render loop
 
 	// Arbitrary Events
-	virtual void onResize(int width, int height); // Resize viewport
-	virtual void onControlEvent(QEvent* event);
-	virtual void onAddObject(const QJsonObject& data);
-	virtual void onRemoveObject(const QString& name);
-	virtual void onRemoveAll();
-	virtual bool reloadShaders(); // Recompile and load all shaders
+	void onResize(int width, int height); // Resize viewport
+	void onControlEvent(QEvent* event);
+	void onAddObject(const QJsonObject& data);
+	void onRemoveObject(int name);
+	void onRemoveAll();
+	bool reloadShaders(); // Recompile and load all shaders
 
 signals:
 	void logit(const QString& str);
 
 private:
-	virtual bool createShaders(); // Load all shaders
-	virtual void destroy(); // Delete renderer and directx11
+	bool createShaders(); // Load all shaders
+	void destroy(); // Delete renderer and directx11
 
 
 	// Called per frame
-	virtual void update(double elapsedTime); // Update the scene
-	virtual void render(double elapsedTime); // Render the scene
+	void update(double elapsedTime); // Update the scene
+	void render(double elapsedTime); // Render the scene
 
 	WId m_windowHandle;
 

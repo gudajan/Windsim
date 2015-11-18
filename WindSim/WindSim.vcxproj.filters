@@ -116,6 +116,9 @@
     <ClCompile Include="commands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="objectItem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="windsim.h">
@@ -190,6 +193,9 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="commands.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="objectItem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

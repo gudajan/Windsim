@@ -15,8 +15,8 @@ public:
 	AddObjectCmd(QJsonObject info, Project* project, DX11Widget* viewer, QUndoCommand* parent = nullptr);
 	~AddObjectCmd();
 
-	void undo() Q_DECL_OVERRIDE;
-	void redo() Q_DECL_OVERRIDE;
+	void undo() override;
+	void redo() override;
 
 private:
 	QJsonObject m_data;
@@ -27,11 +27,11 @@ private:
 class RemoveObjectCmd : public QUndoCommand
 {
 public:
-	RemoveObjectCmd(QString name, Project* project, DX11Widget* viewer, QUndoCommand* parent = nullptr);
+	RemoveObjectCmd(int id, Project* project, DX11Widget* viewer, QUndoCommand* parent = nullptr);
 	~RemoveObjectCmd();
 
-	void undo() Q_DECL_OVERRIDE;
-	void redo() Q_DECL_OVERRIDE;
+	void undo() override;
+	void redo() override;
 
 private:
 	QJsonObject m_data;

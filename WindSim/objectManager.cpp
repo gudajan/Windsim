@@ -18,10 +18,11 @@ ObjectManager::~ObjectManager()
 
 void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 {
-	const std::string& name = data["name"].toString().toStdString();
+	int id = data["id"].toInt();
 	ObjectType type = stringToObjectType(data["type"].toString().toStdString());
+	const std::string& name = data["name"].toString().toStdString();
 
-	if (m_objects.find(name) == m_objects.end() && m_actors.find(name) == m_actors.end())
+	if (m_objects.find(id) == m_objects.end() && m_actors.find(id) == m_actors.end())
 	{
 		if (type == ObjectType::Mesh)
 		{
@@ -31,9 +32,9 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 				throw std::invalid_argument("Failed to create Mesh object '" + name + "' because no OBJ-Path was given in 'data' variable!");
 			}
 			Mesh* obj = new Mesh(objIt->toString().toStdString());
-			m_objects.emplace(name, std::unique_ptr<Object3D>(obj));
+			m_objects.emplace(id, std::unique_ptr<Object3D>(obj));
 			MeshActor* act = new MeshActor(*obj);
-			m_actors.emplace(name, std::unique_ptr<Actor>(act));
+			m_actors.emplace(id, std::unique_ptr<Actor>(act));
 
 			obj->create(device, false);
 
@@ -41,9 +42,9 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 		else if (type == ObjectType::Sky)
 		{
 			Sky* obj = new Sky();
-			m_objects.emplace(name, std::unique_ptr<Object3D>(obj));
+			m_objects.emplace(id, std::unique_ptr<Object3D>(obj));
 			SkyActor* act = new SkyActor(*obj);
-			m_actors.emplace(name, std::unique_ptr<Actor>(act));
+			m_actors.emplace(id, std::unique_ptr<Actor>(act));
 
 			obj->create(device, true);
 		}
@@ -54,15 +55,15 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 	}
 }
 
-void ObjectManager::remove(const std::string& name)
+void ObjectManager::remove(int id)
 {
-	const auto object = m_objects.find(name);
+	const auto object = m_objects.find(id);
 	if (object != m_objects.end())
 	{
 		object->second->release();
-		m_objects.erase(name);
+		m_objects.erase(id);
 	}
-	m_actors.erase(name);
+	m_actors.erase(id);
 }
 
 void ObjectManager::removeAll()

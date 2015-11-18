@@ -7,6 +7,8 @@
 #include <QString>
 #include <QVariant>
 
+class ObjectItem;
+
 class Project
 {
 public:
@@ -19,10 +21,10 @@ public:
 	bool save();
 	bool saveAs(const QString& path);
 
-	bool addObject(const QJsonObject& data);
-	QJsonObject removeObject(const QString& name);
+	ObjectItem* addObject(QJsonObject& data);
+	QJsonObject removeObject(int id);
 
-	QJsonObject getObject(const QString& name);
+	QJsonObject getObject(int id);
 
 	bool isEmpty() const { return m_empty; };
 	bool hasFilename() const { return !m_path.isEmpty(); };
@@ -31,13 +33,15 @@ public:
 
 
 private:
-	QStandardItem* findItem(const QString& name);
-	bool verifyObject(const QJsonObject& object, QString& name);
+	ObjectItem* findItem(int id);
+	bool verifyObject(const QJsonObject& object);
 
 	QString m_path;
 	bool m_empty;
 
 	QStandardItemModel m_objectModel;
+
+	static int s_id;
 
 };
 

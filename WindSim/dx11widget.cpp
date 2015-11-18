@@ -56,9 +56,9 @@ void DX11Widget::addObject3D(const QJsonObject& data)
 	emit addObject3DTriggered(data);
 }
 
-void DX11Widget::removeObject3D(const QString& name)
+void DX11Widget::removeObject3D(int id)
 {
-	emit removeObject3DTriggered(name);
+	emit removeObject3DTriggered(id);
 }
 
 void DX11Widget::removeAllObject3D()
