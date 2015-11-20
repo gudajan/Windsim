@@ -16,8 +16,9 @@
 using namespace DirectX;
 
 
-DX11Renderer::DX11Renderer(WId hwnd, int width, int height)
-	: m_windowHandle(hwnd),
+DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
+	: QObject(parent),
+	m_windowHandle(hwnd),
 	m_device(nullptr),
 	m_context(nullptr),
 	m_swapChain(nullptr),
@@ -212,6 +213,11 @@ void DX11Renderer::onControlEvent(QEvent* event)
 void DX11Renderer::onAddObject(const QJsonObject& data)
 {
 	m_manager.add(m_device, data);
+}
+
+void DX11Renderer::onModifyObject(const QJsonObject& data)
+{
+	m_manager.modify(data);
 }
 
 void DX11Renderer::onRemoveObject(int id)

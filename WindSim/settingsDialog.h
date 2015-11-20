@@ -11,6 +11,8 @@ public:
 	SettingsDialog(QWidget* parent = nullptr);
 	~SettingsDialog();
 
+	void setup(QObject* obj);
+
 public slots:
 	void updateSettings(); // Call if settings were changed outside the dialog (e.g reload via keyboard short cut) to update values in the GUI of the dialog
 

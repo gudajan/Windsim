@@ -20,10 +20,10 @@ struct Settings
 		{
 			float rotationSpeed;
 			float translationSpeed;
-			float defaultDist; // Default distance of the camera to the object, corresponding to zoom factor 1.0
-			float zoomSpeed;
+			float zoomSpeed; // The speed, the zoom changes with mouse wheel spin
 		} mv;
 
+		float defaultDist; // Default distance of the camera to the object
 		CameraType type;
 
 	} cam;

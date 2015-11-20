@@ -59,7 +59,7 @@ float4 psBlinnPhong(PSIn inFragment) : SV_Target
 	}
 	else
 	{
-		n = normalize(inFragment.normalView);
+		n = -normalize(inFragment.normalView);
 	}
 
 	// this will all get inlined anyway, might as well make it pretty

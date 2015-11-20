@@ -19,8 +19,8 @@ Camera::Camera(const uint32_t width, const uint32_t height)
 	m_rotating(false),
 	m_translating(false),
 	m_viewChanged(false),
-	m_fpi({{ 0.0f, 0.0f, -10.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, 0.0f, false, false, false, false, false, false }),
-	m_mvi({{ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, 0.0f, false, 1.0f })
+	m_fpi({{ 0.0f, 0.0f, -conf.cam.defaultDist }, { 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, 0.0f, false, false, false, false, false, false }),
+	m_mvi({{ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, 0.0f, false, conf.cam.defaultDist })
 {
 	// Compute initial transformation matrices
 	computeViewMatrix();
@@ -117,7 +117,7 @@ void Camera::computeViewMatrix()
 		// Translate position depending on current zoom, rotation and rotation center
 		XMVECTOR view = XMVector3Rotate(XMVectorSet(0.0, 0.0, 1.0, 0.0), rot); // View direction
 		XMVECTOR center = XMLoadFloat3(&m_mvi.center); // Rotation center
-		pos = center - 1.0f / m_mvi.zoom * conf.cam.mv.defaultDist * view;
+		pos = center - m_mvi.zoom * view;
 	}
 
 	// Accumulate to view matrix
@@ -197,7 +197,7 @@ void Camera::handleMouseMove(QMouseEvent* event)
 			m_fpi.pitch = normalizeRad(m_fpi.pitch + degToRad(mouseMove.y()) * conf.cam.fp.rotationSpeed);
 
 			// Recompute overall rotation of camera
-			XMStoreFloat4(&m_fpi.rot, XMQuaternionRotationRollPitchYaw(m_fpi.pitch, m_fpi.yaw, 0.0));
+			XMStoreFloat4(&m_fpi.rot, XMQuaternionRotationRollPitchYaw(m_fpi.pitch, m_fpi.yaw, 0.0)); // Switch because of DirectX coordinate system
 
 			m_viewChanged = true;
 		}
@@ -218,7 +218,7 @@ void Camera::handleMouseMove(QMouseEvent* event)
 				m_mvi.yaw = normalizeRad(m_mvi.yaw + degToRad(mouseMove.x()) * conf.cam.mv.rotationSpeed);
 			}
 
-			XMStoreFloat4(&m_mvi.rot, XMQuaternionRotationRollPitchYaw(m_mvi.pitch, m_mvi.yaw, 0.0));
+			XMStoreFloat4(&m_mvi.rot, XMQuaternionRotationRollPitchYaw(m_mvi.pitch, m_mvi.yaw, 0.0)); // Switch because of DirectX coordinate system
 
 			m_viewChanged = true;
 		}
@@ -228,8 +228,8 @@ void Camera::handleMouseMove(QMouseEvent* event)
 			// Move the rotation center about in the plane, which is parallel to the view plane
 			// Speed of translation is dependent on the current zoom factor
 			const XMVECTOR rot = XMLoadFloat4(&m_mvi.rot);
-			const XMVECTOR right = XMVector3Rotate(XMVectorSet(1.0, 0.0, 0.0, 0.0), rot) * 1 / m_mvi.zoom * conf.cam.mv.translationSpeed * mouseMove.x();
-			const XMVECTOR up = XMVector3Rotate(XMVectorSet(0.0, 1.0, 0.0, 0.0), rot) * 1 / m_mvi.zoom * conf.cam.mv.translationSpeed * mouseMove.y();
+			const XMVECTOR right = XMVector3Rotate(XMVectorSet(1.0, 0.0, 0.0, 0.0), rot) * m_mvi.zoom * conf.cam.mv.translationSpeed * mouseMove.x();
+			const XMVECTOR up = XMVector3Rotate(XMVectorSet(0.0, 1.0, 0.0, 0.0), rot) * m_mvi.zoom * conf.cam.mv.translationSpeed * mouseMove.y();
 
 			// Invert the translation to make it appear we are moving the object and not the camera
 			XMStoreFloat3(&m_mvi.center, XMLoadFloat3(&m_mvi.center) - right + up);
@@ -311,7 +311,9 @@ void Camera::handleWheel(QWheelEvent* event)
 		// ---> degrees = angleDelta().ry() / 8
 		// It is negative if wheel was scrolled towards the user
 		// One wheel tick usually is 15 degrees -> angleDelta() returns 120 for one tick
-		m_mvi.zoom += event->angleDelta().ry() / 120.0f * conf.cam.mv.zoomSpeed;
+		m_mvi.zoom -= event->angleDelta().ry() / 120.0f * conf.cam.mv.zoomSpeed * m_mvi.zoom; // Amount off zoom change is dependent on current zoom/distance to the model
+
+		m_mvi.zoom = std::max(0.01f, m_mvi.zoom); // cap minimal zoom, so we always can change zoom with the mouse wheel
 
 		// Recompute camera position
 		m_viewChanged = true;

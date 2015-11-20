@@ -2,12 +2,13 @@
 #define DX11_WIDGET_H
 
 #include "common.h"
+#include "dx11renderer.h"
 
 #include <QWidget>
 #include <QThread>
 #include <QJsonObject>
+#include <QPointer>
 
-class DX11Renderer;
 
 class DX11Widget : public QWidget
 {
@@ -19,12 +20,11 @@ public:
 
 	inline QPaintEngine* paintEngine() const override { return nullptr; }
 
-	void addObject3D(const QJsonObject& data);
-	void removeObject3D(int id);
-	void removeAllObject3D();
 	void reloadShaders();
 	void cleanUp();
 	void applySettings();
+
+	DX11Renderer* getRenderer() { return m_renderer; };
 
 public slots:
 	void logit(const QString& str);
@@ -44,14 +44,11 @@ signals:
 	void stopRendering();
 	void resize(int width, int height);
 	void controlEvent(QEvent* event);
-	void addObject3DTriggered(const QJsonObject& data);
-	void removeObject3DTriggered(int id);
-	void removeAllObject3DTriggered();
 	void reloadShadersTriggered();
 
 private:
 	QThread m_renderThread;
-	DX11Renderer* m_renderer;
+	QPointer<DX11Renderer> m_renderer;
 };
 
 #endif

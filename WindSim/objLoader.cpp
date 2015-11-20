@@ -133,7 +133,12 @@ void ObjLoader::calculateNormals(std::vector<float>& vertexData, const std::vect
 
 void ObjLoader::addVertexToBuffer(std::vector<float>& b, const Vertex& v)
 {
-	b.insert(b.end(), { v.p.x, v.p.y, v.p.z, v.n.x, v.n.y, v.n.z });
+	b.push_back(v.p.x);
+	b.push_back(v.p.y);
+	b.push_back(v.p.z);
+	b.push_back(v.n.x);
+	b.push_back(v.n.y);
+	b.push_back(v.n.z);
 }
 
 

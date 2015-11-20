@@ -56,6 +56,10 @@ private:
 	bool m_translating;
 	bool m_viewChanged;
 
+	// In general, for Roll,Pitch,Yaw the coordinate system is considered to be x-forward, y-right, z-up
+	// However, in DirectX we have x-right, y-up, z-forward
+	// => Roll -> arround z-axis, Pitch -> arround x-axis, Yaw -> y-axis
+
 	struct FirstPersonInfo
 	{
 		DirectX::XMFLOAT3 pos; // The current position of the First Person Camera
@@ -77,7 +81,7 @@ private:
 		float pitch; // The current rotation angle arround the x-axis through the rotation center
 		float yaw; // The current rotation angle arround the y-axis through the rotation center
 		bool flippedYawDir; // If Model (the Camera respectively) is flipped upside down, the rotation direction arround the y-Axis is switched
-		float zoom; // Current zoom factor
+		float zoom; // Current zoom (corresponds to distance to object)
 	} m_mvi;
 
 	QPoint m_gMouseCoord; // Global mouse coordinates

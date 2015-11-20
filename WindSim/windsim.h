@@ -9,8 +9,10 @@
 #include "ui_windsim.h"
 
 #include "project.h"
+#include "objectContainer.h"
 
 class SettingsDialog;
+
 
 class WindSim : public QMainWindow
 {
@@ -37,15 +39,10 @@ private slots:
 	bool actionCreateSkyTriggered(QString name = QString());
 	// void actionRemoveObjectTriggered();
 
-	// Propagate object changes to 3D Representation
-	void objectsInserted(const QModelIndex & parent, int first, int last);
-	void objectsRemoved(const QModelIndex & parent, int first, int last);
-	void objectModified(QStandardItem * item);
-
 	// Dialog actions:
 	void showSettingsDialog();
 
-	void applySettings();
+	void applySettings(); // Settings Dialog connects to this
 
 signals:
 	void settingsChanged();
@@ -54,15 +51,16 @@ private:
 	void reloadIni();
 	bool maybeSave();
 	QString getName(const QString& title, const QString& label, const QString& defaultName);
-	bool nameAvailable(const QString& name);
 
 	void projectActionsEnable(bool newAct, bool open, bool close, bool save, bool saveAs);
-	void createActionEnable(bool mesh);
+	void createActionEnable(bool mesh, bool sky);
 
 	Ui::WindSimClass ui;
 
 	QString m_iniFilePath;
+
 	QPointer<SettingsDialog> m_settingsDialog;
+	ObjectContainer m_container;
 	Project m_project;
 
 };

@@ -86,7 +86,7 @@ void Mesh::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFL
 	s_shaderVariables.worldView->SetMatrix(reinterpret_cast<float*>(worldView.r));
 	s_shaderVariables.worldViewIT->SetMatrix(reinterpret_cast<float*>(XMMatrixTranspose(XMMatrixInverse(nullptr, worldView)).r));
 	s_shaderVariables.worldViewProj->SetMatrix(reinterpret_cast<float*>((worldView * proj).r));
-	s_shaderVariables.enableFlatShading->SetBool(true);
+
 
 	s_effect->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, context);
 
@@ -97,6 +97,11 @@ void Mesh::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFL
 	context->IASetInputLayout(s_inputLayout);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	context->DrawIndexed(m_numIndices, 0, 0);
+}
+
+void Mesh::setShaderVariables(bool flatShading)
+{
+	s_shaderVariables.enableFlatShading->SetBool(flatShading);
 }
 
 Mesh::ShaderVariables::ShaderVariables()

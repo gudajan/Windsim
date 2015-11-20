@@ -23,14 +23,16 @@ public:
 	void remove(int id);
 	void removeAll();
 
+	void modify(const QJsonObject& data);
+
 	// Render ALL objects at their current transformation
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	// Release the DirectX objects of ALL objects
 	void release();
 
 private:
-	std::unordered_map<int, std::unique_ptr<Object3D>> m_objects;
-	std::unordered_map<int, std::unique_ptr<Actor>> m_actors;
+	std::unordered_map<int, std::shared_ptr<Object3D>> m_objects;
+	std::unordered_map<int, std::shared_ptr<Actor>> m_actors;
 };
 
 #endif

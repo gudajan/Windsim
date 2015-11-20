@@ -22,7 +22,7 @@ class DX11Renderer : public QObject
 
 public:
 
-	DX11Renderer(WId hwnd, int width, int height);
+	DX11Renderer(WId hwnd, int width, int height, QObject* parent = nullptr);
 	 ~DX11Renderer();
 
 	bool init(); // Initialize renderer and directx11
@@ -42,6 +42,7 @@ public slots:
 	void onResize(int width, int height); // Resize viewport
 	void onControlEvent(QEvent* event);
 	void onAddObject(const QJsonObject& data);
+	void onModifyObject(const QJsonObject& data);
 	void onRemoveObject(int name);
 	void onRemoveAll();
 	bool reloadShaders(); // Recompile and load all shaders

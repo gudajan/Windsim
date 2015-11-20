@@ -11,7 +11,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	m_renderer(nullptr)
 {
 	// Create DirectX Renderer on our widget
-	m_renderer= new DX11Renderer(winId(), width(), height());
+	m_renderer= new DX11Renderer(winId(), width(), height(), this);
 
 	if (!m_renderer->init())
 		throw std::runtime_error("Failed to initialize renderer!");
@@ -27,9 +27,6 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	// Arbitrary Events Widget -> Renderer
 	connect(this, &DX11Widget::resize, m_renderer, &DX11Renderer::onResize);
 	connect(this, &DX11Widget::controlEvent, m_renderer, &DX11Renderer::onControlEvent);
-	connect(this, &DX11Widget::addObject3DTriggered, m_renderer, &DX11Renderer::onAddObject);
-	connect(this, &DX11Widget::removeObject3D, m_renderer, &DX11Renderer::onRemoveObject);
-	connect(this, &DX11Widget::removeAllObject3DTriggered, m_renderer, &DX11Renderer::onRemoveAll);
 	connect(this, &DX11Widget::reloadShadersTriggered, m_renderer, &DX11Renderer::reloadShaders);
 
 	// Arbitrary Events Renerer -> Widget
@@ -49,21 +46,6 @@ DX11Widget::~DX11Widget()
 {
 	m_renderThread.quit();
 	m_renderThread.wait();
-}
-
-void DX11Widget::addObject3D(const QJsonObject& data)
-{
-	emit addObject3DTriggered(data);
-}
-
-void DX11Widget::removeObject3D(int id)
-{
-	emit removeObject3DTriggered(id);
-}
-
-void DX11Widget::removeAllObject3D()
-{
-	emit removeAllObject3DTriggered();
 }
 
 void DX11Widget::reloadShaders()

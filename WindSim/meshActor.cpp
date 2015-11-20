@@ -3,12 +3,18 @@
 
 MeshActor::MeshActor(Mesh& mesh)
 	: Actor(),
-	m_mesh(mesh)
+	m_mesh(mesh),
+	m_flatShading(true)
 {
 }
 
 MeshActor::~MeshActor()
 {
+}
+
+void MeshActor::setAsyncShaderVariables()
+{
+	m_mesh.setShaderVariables(m_flatShading);
 }
 
 void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)

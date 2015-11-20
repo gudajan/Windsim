@@ -23,7 +23,7 @@ void ObjectItem::setData(const QVariant& value, int role)
 		QJsonObject oldInfo = data().toJsonObject();
 		QJsonObject newInfo = oldInfo;
 		newInfo.insert("name", value.toString());
-		QUndoCommand* modCmd = new ModifyObjectCmd(oldInfo, newInfo, this);
+		QUndoCommand* modCmd = new ModifyObjectCmd(oldInfo, newInfo, this, Name);
 		g_undoStack.push(modCmd);
 		return;
 	}

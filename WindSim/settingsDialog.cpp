@@ -20,6 +20,12 @@ SettingsDialog::~SettingsDialog()
 {
 }
 
+void SettingsDialog::setup(QObject* obj)
+{
+	connect(this, SIGNAL(settingsChanged()), obj, SLOT(applySettings()));
+	connect(obj, SIGNAL(settingsChanged()), this, SLOT(updateSettings()));
+}
+
 
 void SettingsDialog::updateSettings()
 {

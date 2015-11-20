@@ -2,7 +2,9 @@
 #include "logger.h"
 #include "settings.h"
 #include "settingsDialog.h"
+#include "meshProperties.h"
 #include "commands.h"
+#include "objectItem.h"
 
 #include <QKeyEvent>
 #include <QCloseEvent>
@@ -12,6 +14,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QJsonObject>
+#include <QJsonDocument>
 #include <QStandardItemModel>
 
 QUndoStack g_undoStack;
@@ -20,6 +23,7 @@ WindSim::WindSim(QWidget *parent)
 	: QMainWindow(parent),
 	m_iniFilePath(QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath("settings.ini"))),
 	m_settingsDialog(nullptr),
+	m_container(parent),
 	m_project()
 {
 	ui.setupUi(this);
@@ -33,11 +37,13 @@ WindSim::WindSim(QWidget *parent)
 	ui.menuEdit->insertAction(ui.menuCreate->menuAction(), ui.actionRedo);
 	ui.menuEdit->insertSeparator(ui.menuCreate->menuAction());
 
-	ui.objectView->setSelectionMode(QListView::ExtendedSelection); // Select multiple items (with shift and ctrl)
-
 	Logger::Setup(ui.gbLog, ui.verticalLayout_5);
 
-	ui.objectView->setModel(&m_project.getModel());
+	ui.objectView->setModel(&m_container.getModel());
+	ui.objectView->setSelectionMode(QListView::ExtendedSelection); // Select multiple items (with shift and ctrl)
+
+	m_container.setRenderer(ui.dx11Viewer->getRenderer()); // Set renderer for object container, so it can propagate changes directly to the renderer
+
 
 	// Project-actions
 	connect(ui.actionNew, SIGNAL(triggered()), this, SLOT(actionNewTriggered()));
@@ -50,13 +56,11 @@ WindSim::WindSim(QWidget *parent)
 	connect(ui.actionCreateMesh, SIGNAL(triggered()), this, SLOT(actionCreateMeshTriggered()));
 	connect(ui.actionCreateSky, SIGNAL(triggered()), this, SLOT(actionCreateSkyTriggered()));
 
-	// Propagate object changes
-	connect(&m_project.getModel(), SIGNAL(rowsInserted(const QModelIndex &, int, int)), this, SLOT(objectsInserted(const QModelIndex &, int, int)));
-	connect(&m_project.getModel(), SIGNAL(rowsAboutToBeRemoved(const QModelIndex &, int, int)), this, SLOT(objectsRemoved(const QModelIndex &, int, int)));
-	connect(&m_project.getModel(), SIGNAL(itemChanged(QStandardItem*)), this, SLOT(objectModified(QStandardItem*)));
-
-	// Settings-action
+	// Dialog actions
 	connect(ui.actionSettings, SIGNAL(triggered()), this, SLOT(showSettingsDialog()));
+	connect(ui.objectView, SIGNAL(activated(const QModelIndex&)), &m_container, SLOT(showPropertiesDialog(const QModelIndex&)));
+
+
 
 	reloadIni();
 }
@@ -71,6 +75,7 @@ void WindSim::closeEvent(QCloseEvent* event)
 	if (maybeSave())
 	{
 		ui.dx11Viewer->cleanUp();
+		g_undoStack.clear();
 		event->accept();
 	}
 	else
@@ -106,7 +111,7 @@ bool WindSim::actionNewTriggered()
 
 	// Disable, enable actions
 	projectActionsEnable(false, false, true, true, true);
-	createActionEnable(true);
+	createActionEnable(true, true);
 
 	Logger::logit("INFO: Initialized new project.");
 
@@ -130,7 +135,7 @@ bool WindSim::actionOpenTriggered()
 
 	if (filename.isEmpty()) return false;
 
-	if (!m_project.open(filename))
+	if (!m_project.open(m_container, filename))
 	{
 		Logger::logit("ERROR: Failed to open the project file '" + filename + "'.");
 		return false;
@@ -141,7 +146,7 @@ bool WindSim::actionOpenTriggered()
 
 	// Disable, enable actions
 	projectActionsEnable(false, false, true, true, true);
-	createActionEnable(true);
+	createActionEnable(true, true);
 
 	g_undoStack.clear();
 	Logger::logit("INFO: Opened project from '" + filename + "'.");
@@ -153,14 +158,13 @@ void WindSim::actionCloseTriggered()
 {
 	if (!maybeSave()) return;
 
-	m_project.close(); // This does NOT emit rowsRemoved() but rather modelReset()
-	ui.dx11Viewer->removeAllObject3D(); // Clear 3D data manually
+	m_project.close(m_container);
 
 	setWindowTitle("WindSim");
 
 	// Disable, enable actions
 	projectActionsEnable(true, true, false, false, false);
-	createActionEnable(false);
+	createActionEnable(false, false);
 
 	g_undoStack.clear();
 	Logger::logit("INFO: Closed project.");
@@ -170,7 +174,7 @@ bool WindSim::actionSaveTriggered()
 {
 	if (m_project.hasFilename())
 	{
-		if (!m_project.save())
+		if (!m_project.save(m_container))
 		{
 			Logger::logit("ERROR: Failed to save project to '" + m_project.getFilename() +"'.");
 			return false;
@@ -189,7 +193,7 @@ bool WindSim::actionSaveAsTriggered()
 	if (filename.isEmpty())
 		return false;
 
-	if (!m_project.saveAs(filename))
+	if (!m_project.saveAs(m_container, filename))
 	{
 		Logger::logit("ERROR: Failed to save project to '" + filename + "'.");
 		return false;
@@ -214,11 +218,9 @@ bool WindSim::actionCreateMeshTriggered()
 	{
 		{ "name", name },
 		{ "type", QString::fromStdString(objectTypeToString(ObjectType::Mesh)) },
-		{ "obj-file", filename }
+		{ "obj-file", filename },
 	};
-
-	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project);
-	g_undoStack.push(addCmd);
+	m_container.addCmd(json);
 
 	Logger::logit("INFO: Created new mesh '" + name + "' from OBJ-file '" + filename + "'.");
 
@@ -239,32 +241,11 @@ bool WindSim::actionCreateSkyTriggered(QString name)
 		{ "name", name },
 		{ "type", QString::fromStdString(objectTypeToString(ObjectType::Sky))}
 	};
-
-	QUndoCommand* addCmd = new AddObjectCmd(json, &m_project);
-	g_undoStack.push(addCmd);
+	m_container.addCmd(json);
 
 	Logger::logit("INFO: Created new sky '" + name + "'.");
 
 	return true;
-}
-
-void WindSim::objectsInserted(const QModelIndex & parent, int first, int last)
-{
-	// Add Object3D for every inserted Item in the object List, using the specified data
-	for (int i = first; i <= last; ++i)
-		ui.dx11Viewer->addObject3D(m_project.getModel().item(i)->data().toJsonObject());
-}
-
-void WindSim::objectsRemoved(const QModelIndex & parent, int first, int last)
-{
-	// Remove Object3D for every item, that is about to be removed
-	for (int i = first; i <= last; ++i)
-		ui.dx11Viewer->removeObject3D(m_project.getModel().item(i)->data().toJsonObject()["id"].toInt());
-
-}
-void WindSim::objectModified(QStandardItem * item)
-{
-	// TODO (currently 3D data can not be modified)
 }
 
 void WindSim::showSettingsDialog()
@@ -272,8 +253,7 @@ void WindSim::showSettingsDialog()
 	if (!m_settingsDialog)
 	{
 		m_settingsDialog = new SettingsDialog(this);
-		connect(m_settingsDialog, SIGNAL(settingsChanged()), this, SLOT(applySettings()));
-		connect(this, SIGNAL(settingsChanged()), m_settingsDialog, SLOT(updateSettings()));
+		m_settingsDialog->setup(this);
 	}
 
 	m_settingsDialog->show();
@@ -330,22 +310,9 @@ QString WindSim::getName(const QString& title, const QString& label, const QStri
 	{
 		name = QInputDialog::getText(this, tr(qPrintable(title)), tr(qPrintable(label)), QLineEdit::Normal, defaultName, &ok);
 		if (!ok) return QString(); // If pressed cancel -> abort object creation
-		if (nameAvailable(name))
-		{
-			break;
-		}
-		else
-		{
-			QMessageBox::warning(this, tr("Invalid name"), tr(qPrintable("The name '" + name + "' is already taken. Please reenter an available name.")), QMessageBox::Ok);
-		}
+		break;
 	}
 	return name;
-}
-
-bool WindSim::nameAvailable(const QString& name)
-{
-	// TODO: iterate model and check for name
-	return true;
 }
 
 void WindSim::projectActionsEnable(bool newAct, bool open, bool close, bool save, bool saveAs)
@@ -357,7 +324,8 @@ void WindSim::projectActionsEnable(bool newAct, bool open, bool close, bool save
 	ui.actionSaveAs->setEnabled(saveAs);
 }
 
-void WindSim::createActionEnable(bool mesh)
+void WindSim::createActionEnable(bool mesh, bool sky)
 {
 	ui.actionCreateMesh->setEnabled(mesh);
+	ui.actionCreateSky->setEnabled(sky);
 }
