@@ -24,7 +24,7 @@ class ObjectContainer : public QObject
 	friend class ModifyObjectCmd;
 
 public:
-	ObjectContainer(QObject* parent = nullptr);
+	ObjectContainer(QWidget* parent = nullptr);
 	~ObjectContainer();
 
 

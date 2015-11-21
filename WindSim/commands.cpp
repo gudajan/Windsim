@@ -71,8 +71,10 @@ ModifyObjectCmd::~ModifyObjectCmd()
 void ModifyObjectCmd::redo()
 {
 	// This will emit itemChanged once per setData call
-	if(m_mod.testFlag(Name)) m_item->setData(m_newData["name"].toString(), Qt::DisplayRole);
-	if(m_mod.testFlag(Visibility)) m_item->setEnabled(m_newData["disabled"].toInt() == Qt::Unchecked);
+	if(m_mod.testFlag(Name))
+		m_item->setData(m_newData["name"].toString(), Qt::DisplayRole);
+	if(m_mod.testFlag(Visibility))
+		m_item->setEnabled(m_newData["disabled"].toInt() == Qt::Unchecked);
 
 	m_item->setData(m_newData);
 }
@@ -80,8 +82,10 @@ void ModifyObjectCmd::redo()
 void ModifyObjectCmd::undo()
 {
 	// This will emit itemChanged once per setData call
-	if (m_mod.testFlag(Name)) m_item->setData(m_oldData["name"].toString(), Qt::DisplayRole);
-	if (m_mod.testFlag(Visibility)) m_item->setEnabled(m_oldData["disabled"].toInt() == Qt::Unchecked);
+	if (m_mod.testFlag(Name))
+		m_item->setData(m_oldData["name"].toString(), Qt::DisplayRole);
+	if (m_mod.testFlag(Visibility))
+		m_item->setEnabled(m_oldData["disabled"].toInt() == Qt::Unchecked);
 
 	m_item->setData(m_oldData);
 }

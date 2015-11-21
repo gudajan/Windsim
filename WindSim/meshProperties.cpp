@@ -35,7 +35,7 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	connect(ui.rbSmooth, SIGNAL(toggled(bool)), this, SLOT(shadingToggled(bool)));
 
 	// Apply changes
-	connect(ui.buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(buttonClicked(QAbstractButton*)));
+	//connect(ui.buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(buttonClicked(QAbstractButton*)));
 
 	setModal(false);
 }
@@ -53,38 +53,43 @@ void MeshProperties::setup(QObject* obj)
 
 void MeshProperties::updateProperties(const QJsonObject& properties)
 {
-	// Name
-	ui.nameEdit->setText(properties["name"].toString());
+	// We just update the dialog with the changes, made outside of it. So we do not want to create any signals because of these changes
+	// Doing so, would create annother invalid modify command
+	blockSignals();
+	{
+		// Name
+		ui.nameEdit->setText(properties["name"].toString());
 
-	// Visibility
-	ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
+		// Visibility
+		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
 
-	// Position
-	const QJsonObject& pos = properties.find("Position")->toObject();
-	ui.xP->setValue(pos.find("x")->toDouble()); // forward: z in DX11
-	ui.yP->setValue(pos.find("y")->toDouble());  // right: x in DX1
-	ui.zP->setValue(pos.find("z")->toDouble()); // up: y in DX11
+		// Position
+		const QJsonObject& pos = properties.find("Position")->toObject();
+		ui.xP->setValue(pos.find("x")->toDouble()); // forward: z in DX11
+		ui.yP->setValue(pos.find("y")->toDouble());  // right: x in DX1
+		ui.zP->setValue(pos.find("z")->toDouble()); // up: y in DX11
 
+		// Scaling
+		const QJsonObject& scale = properties.find("Scaling")->toObject();
+		ui.xS->setValue(scale.find("x")->toDouble());
+		ui.yS->setValue(scale.find("y")->toDouble());
+		ui.zS->setValue(scale.find("z")->toDouble());
 
-	// Scaling
-	const QJsonObject& scale = properties.find("Scaling")->toObject();
-	ui.xS->setValue(scale.find("x")->toDouble());
-	ui.yS->setValue(scale.find("y")->toDouble());
-	ui.zS->setValue(scale.find("z")->toDouble());
+		// Rotation
+		const QJsonObject& rot = properties.find("Rotation")->toObject();
+		ui.al->setValue(rot.find("al")->toDouble()); // Roll -> arround z in DX11
+		ui.be->setValue(rot.find("be")->toDouble()); // Pitch -> arround x in DX11
+		ui.ga->setValue(rot.find("ga")->toDouble()); // Yaw -> arround y in DX11
 
-	// Rotation
-	const QJsonObject& rot = properties.find("Rotation")->toObject();
-	ui.al->setValue(rot.find("al")->toDouble()); // Roll -> arround z in DX11
-	ui.be->setValue(rot.find("be")->toDouble()); // Pitch -> arround x in DX11
-	ui.ga->setValue(rot.find("ga")->toDouble()); // Yaw -> arround y in DX11
+		//Shading
+		if (properties.find("Shading")->toString() == "Smooth")
+			ui.rbSmooth->setChecked(true);
+		else // Flat is default
+			ui.rbFlat->setChecked(true);
 
-	//Shading
-	if (properties.find("Shading")->toString() == "Smooth")
-		ui.rbSmooth->setChecked(true);
-	else // Flat is default
-		ui.rbFlat->setChecked(true);
-
-	m_properties = properties; // Copy properties
+		m_properties = properties; // Copy properties
+	}
+	enableSignals();
 }
 
 // QJson currently is implemented for read-only. So it is not possible to get a reference to nested Json values
@@ -154,4 +159,58 @@ void MeshProperties::buttonClicked(QAbstractButton* button)
 	{
 		emit propertiesChanged(m_properties, Position|Scaling|Rotation|Visibility|Shading|Name);
 	}
+}
+
+void MeshProperties::blockSignals()
+{
+	ui.nameEdit->blockSignals(true);
+
+	// Visibility
+	ui.cbDisabled->blockSignals(true);
+
+	// Position
+	ui.xP->blockSignals(true);
+	ui.yP->blockSignals(true);
+	ui.zP->blockSignals(true);
+
+	// Scaling
+	ui.xS->blockSignals(true);
+	ui.yS->blockSignals(true);
+	ui.zS->blockSignals(true);
+
+	// Rotation
+	ui.al->blockSignals(true);
+	ui.be->blockSignals(true);
+	ui.ga->blockSignals(true);
+
+	//Shading
+	ui.rbSmooth->blockSignals(true);
+	ui.rbFlat->blockSignals(true);
+}
+
+void MeshProperties::enableSignals()
+{
+	ui.nameEdit->blockSignals(false);
+
+	// Visibility
+	ui.cbDisabled->blockSignals(false);
+
+	// Position
+	ui.xP->blockSignals(false);
+	ui.yP->blockSignals(false);
+	ui.zP->blockSignals(false);
+
+	// Scaling
+	ui.xS->blockSignals(false);
+	ui.yS->blockSignals(false);
+	ui.zS->blockSignals(false);
+
+	// Rotation
+	ui.al->blockSignals(false);
+	ui.be->blockSignals(false);
+	ui.ga->blockSignals(false);
+
+	//Shading
+	ui.rbSmooth->blockSignals(false);
+	ui.rbFlat->blockSignals(false);
 }

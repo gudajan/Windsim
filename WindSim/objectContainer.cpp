@@ -12,7 +12,7 @@ extern QUndoStack g_undoStack;
 // id 0 is the default id for an empty QJsonObject
 int ObjectContainer::s_id = 1;
 
-ObjectContainer::ObjectContainer(QObject* parent)
+ObjectContainer::ObjectContainer(QWidget* parent)
 	: QObject(parent),
 	m_meshProperties(nullptr),
 	m_model(),
@@ -33,6 +33,7 @@ void ObjectContainer::clear()
 {
 	m_model.clear();
 	m_ids.clear();
+	//m_meshProperties->close();
 	emit removeAllObject3DTriggered(); // Remove objects in renderer
 }
 
@@ -88,7 +89,7 @@ void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
 
 	if (!m_meshProperties)
 	{
-		m_meshProperties = new MeshProperties(data, nullptr);
+		m_meshProperties = new MeshProperties(data, static_cast<QWidget*>(parent())); // Save as we know our parent is a QWidget
 		m_meshProperties->setup(this);
 	}
 

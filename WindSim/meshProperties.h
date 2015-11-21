@@ -34,6 +34,9 @@ signals:
 	void propertiesChanged(const QJsonObject& data, Modifications mod);
 
 private:
+	void blockSignals();
+	void enableSignals();
+
 	Ui::meshProperties ui;
 
 	QJsonObject m_properties;

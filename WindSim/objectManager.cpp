@@ -40,7 +40,6 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, false);
-			act->setAsyncShaderVariables();
 		}
 		else if (type == ObjectType::Sky)
 		{
@@ -106,9 +105,9 @@ void ObjectManager::modify(const QJsonObject& data)
 		QJsonObject jScale = data["Scaling"].toObject();
 		XMFLOAT3 scale(jScale["x"].toDouble(), jScale["y"].toDouble(), jScale["z"].toDouble());
 
-		QJsonObject jRot = data["Rot"].toObject();
+		QJsonObject jRot = data["Rotation"].toObject();
 		XMFLOAT4 rot;
-		XMStoreFloat4(&rot, XMQuaternionRotationRollPitchYaw(jScale["be"].toDouble(), jScale["ga"].toDouble(), jScale["al"].toDouble()));
+		XMStoreFloat4(&rot, XMQuaternionRotationRollPitchYaw(degToRad(jRot["be"].toDouble()), degToRad(jRot["ga"].toDouble()), degToRad(jRot["al"].toDouble())));
 
 		bool flatShading = data["Shading"].toString() == "Smooth" ? false : true;
 
@@ -117,7 +116,6 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setScale(scale);
 		act->setRot(rot);
 		act->setFlatShading(flatShading);
-		act->setAsyncShaderVariables();
 	}
 }
 

@@ -23,7 +23,7 @@ WindSim::WindSim(QWidget *parent)
 	: QMainWindow(parent),
 	m_iniFilePath(QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath("settings.ini"))),
 	m_settingsDialog(nullptr),
-	m_container(parent),
+	m_container(this),
 	m_project()
 {
 	ui.setupUi(this);
@@ -63,6 +63,13 @@ WindSim::WindSim(QWidget *parent)
 
 
 	reloadIni();
+
+	//DEBUG
+	undoView = std::shared_ptr<QUndoView>(new QUndoView(&g_undoStack));
+	undoView->setWindowTitle(tr("Command List"));
+	undoView->show();
+	undoView->setAttribute(Qt::WA_QuitOnClose, false);
+	//DEBUG
 }
 
 WindSim::~WindSim()

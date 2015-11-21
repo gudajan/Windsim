@@ -13,6 +13,7 @@
 
 class SettingsDialog;
 
+#include <QUndoView>
 
 class WindSim : public QMainWindow
 {
@@ -62,6 +63,9 @@ private:
 	QPointer<SettingsDialog> m_settingsDialog;
 	ObjectContainer m_container;
 	Project m_project;
+
+	//DEBUG
+	std::shared_ptr<QUndoView> undoView;
 
 };
 

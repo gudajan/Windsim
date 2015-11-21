@@ -3,6 +3,7 @@
 
 #include <QUndoCommand>
 #include <QJsonObject>
+#include <QPointer>
 
 #include "common.h"
 
@@ -12,12 +13,13 @@ class ObjectItem;
 
 enum Modification
 {
-	Position,
-	Scaling,
-	Rotation,
-	Visibility,
-	Shading,
-	Name
+	Position = 0x1,
+	Scaling = 0x2,
+	Rotation = 0x4,
+	Visibility = 0x8,
+	Shading = 0x10,
+	Name = 0x20,
+	All = UINT_MAX
 };
 
 Q_DECLARE_FLAGS(Modifications, Modification);

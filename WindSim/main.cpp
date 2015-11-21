@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 #endif
 
 	// Install own logging method
-	qInstallMessageHandler(Logger::logging);
+	//qInstallMessageHandler(Logger::logging);
 	// Install ObjectType enum for enabling usage with signals/slots
 	qRegisterMetaType<ObjectType>();
 
