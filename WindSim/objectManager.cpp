@@ -6,6 +6,7 @@
 
 #include <d3d11.h>
 #include <DirectXMath.h>
+#include <DirectXPackedVector.h>
 
 using namespace DirectX;
 
@@ -111,11 +112,14 @@ void ObjectManager::modify(const QJsonObject& data)
 
 		bool flatShading = data["Shading"].toString() == "Smooth" ? false : true;
 
+		QJsonObject jCol = data["Color"].toObject();
+		PackedVector::XMCOLOR col(jCol["r"].toInt() / 255.0f, jCol["g"].toInt() / 255.0f, jCol["b"].toInt() / 255.0f, 1.0f);
+
 		std::shared_ptr<MeshActor> act = std::dynamic_pointer_cast<MeshActor>(it->second);
 		act->setPos(pos);
 		act->setScale(scale);
 		act->setRot(rot);
-		act->setFlatShading(flatShading);
+		act->setFlatShading(flatShading, col);
 	}
 }
 

@@ -1,4 +1,7 @@
 #include "meshProperties.h"
+#include "settings.h"
+
+#include <QColorDialog>
 
 MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	: QDialog(parent),
@@ -34,8 +37,8 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	connect(ui.rbFlat, SIGNAL(toggled(bool)), this, SLOT(shadingToggled(bool)));
 	connect(ui.rbSmooth, SIGNAL(toggled(bool)), this, SLOT(shadingToggled(bool)));
 
-	// Apply changes
-	//connect(ui.buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(buttonClicked(QAbstractButton*)));
+	//Color
+	connect(ui.pbCol, SIGNAL(clicked()), this, SLOT(pickColor()));
 
 	setModal(false);
 }
@@ -59,6 +62,7 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 	{
 		// Name
 		ui.nameEdit->setText(properties["name"].toString());
+		setWindowTitle("Mesh Properties: " + ui.nameEdit->text());
 
 		// Visibility
 		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
@@ -81,11 +85,15 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 		ui.be->setValue(rot.find("be")->toDouble()); // Pitch -> arround x in DX11
 		ui.ga->setValue(rot.find("ga")->toDouble()); // Yaw -> arround y in DX11
 
-		//Shading
+		// Shading
 		if (properties.find("Shading")->toString() == "Smooth")
 			ui.rbSmooth->setChecked(true);
 		else // Flat is default
 			ui.rbFlat->setChecked(true);
+
+		// Color
+		const QJsonObject& col = properties.find("Color")->toObject();
+		setColorButton(col.find("r")->toInt(), col.find("g")->toInt(), col.find("b")->toInt());
 
 		m_properties = properties; // Copy properties
 	}
@@ -151,6 +159,21 @@ void MeshProperties::shadingToggled(bool b)
 	emit propertiesChanged(m_properties, Shading);
 }
 
+void MeshProperties::pickColor()
+{
+	QJsonObject json = m_properties["Color"].toObject();
+	QColor col = QColorDialog::getColor(QColor(json["r"].toInt(), json["g"].toInt(), json["b"].toInt()), this);
+	json["r"] = col.red();
+	json["g"] = col.green();
+	json["b"] = col.blue();
+
+	m_properties["Color"] = json;
+
+	setColorButton(col.red(), col.green(), col.blue());
+
+	emit propertiesChanged(m_properties, Color);
+}
+
 void MeshProperties::buttonClicked(QAbstractButton* button)
 {
 	// Apply or Ok button was clicked
@@ -213,4 +236,11 @@ void MeshProperties::enableSignals()
 	//Shading
 	ui.rbSmooth->blockSignals(false);
 	ui.rbFlat->blockSignals(false);
+}
+
+void MeshProperties::setColorButton(int r, int g, int b)
+{
+	ui.pbCol->setStyleSheet("QPushButton {background-color: rgb(" + QString::number(r) + "," + QString::number(g) + "," + QString::number(b) + "); border-style: outset}");
+
+
 }

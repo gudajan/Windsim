@@ -3,6 +3,7 @@
 #include "meshProperties.h"
 #include "commands.h"
 #include "dx11renderer.h"
+#include "settings.h"
 
 #include <QUndoStack>
 #include <QUndoCommand>
@@ -197,6 +198,8 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["Rotation"] = QJsonObject{ { "al", 0.0 }, { "be", 0.0 }, { "ga", 0.0 } };
 		if (!object.contains("Shading"))
 			object["Shading"] = "Flat";
+		if (!object.contains("Color"))
+			object["Color"] = QJsonObject{ { "r", conf.mesh.dc.r }, { "g", conf.mesh.dc.g }, { "b", conf.mesh.dc.b } };
 	}
 
 	return true;

@@ -27,6 +27,7 @@ private slots:
 	void scalingChanged();
 	void rotationChanged();
 	void shadingToggled(bool b);
+	void pickColor();
 
 	void buttonClicked(QAbstractButton* button);
 
@@ -36,6 +37,7 @@ signals:
 private:
 	void blockSignals();
 	void enableSignals();
+	void setColorButton(int r, int g, int b);
 
 	Ui::meshProperties ui;
 

@@ -107,5 +107,6 @@ bool ModifyObjectCmd::mergeWith(const QUndoCommand* cmd)
 	if (m.testFlag(Visibility)) m_newData["Visibility"] = json["Visibility"].toInt();
 	if (m.testFlag(Shading)) m_newData["Visibility"] = json["Visibility"].toString();
 	if (m.testFlag(Name)) m_newData["name"] = json["name"].toString();
+	if (m.testFlag(Color)) m_newData["Color"] = json["Color"].toObject();
 	return true;
 }

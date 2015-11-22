@@ -17,6 +17,7 @@ cbuffer cb
 	float4x4 g_mWorldViewIT;
 	float4x4 g_mWorldViewProj;
 	bool g_bEnableFlatShading;
+	float4 g_vColor;
 }
 
 struct VSIn
@@ -49,8 +50,6 @@ float4 psBlinnPhong(PSIn inFragment) : SV_Target
 	const float ks = 0.2f; // specular
 	const float s = 30.0f; // shininess (alpha)
 
-	const float4 color = float4(0.80f, 0.80f, 0.80f, 1.0f);
-
 	float3 n;
 	if (g_bEnableFlatShading)
 	{
@@ -67,7 +66,7 @@ float4 psBlinnPhong(PSIn inFragment) : SV_Target
 	const float3 l = v; // special case: headlight
 	const float3 h = l; // still headlight
 
-	return color * (ka + kd * saturate(dot(n, l))) + ks * pow(saturate(dot(n, h)), s);
+	return g_vColor * (ka + kd * saturate(dot(n, l))) + ks * pow(saturate(dot(n, h)), s);
 }
 
 

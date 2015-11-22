@@ -27,6 +27,16 @@ struct Settings
 		CameraType type;
 
 	} cam;
+
+	struct Mesh
+	{
+		struct DefaultColor
+		{
+			int r;
+			int g;
+			int b;
+		} dc;
+	} mesh;
 };
 
 

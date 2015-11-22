@@ -19,6 +19,7 @@ enum Modification
 	Visibility = 0x8,
 	Shading = 0x10,
 	Name = 0x20,
+	Color = 0x40,
 	All = UINT_MAX
 };
 
@@ -33,7 +34,9 @@ static QString modToString(Modification mod)
 	case(Scaling) : return "Scaling";
 	case(Rotation) : return "Rotation";
 	case(Visibility) : return "Visibility";
+	case(Shading) : return "Shading";
 	case(Name) : return "Name";
+	case(Color) : return "Color";
 	}
 	return "";
 }

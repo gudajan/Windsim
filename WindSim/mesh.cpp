@@ -51,6 +51,7 @@ HRESULT Mesh::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device*
 	s_shaderVariables.worldViewIT = s_effect->GetVariableByName("g_mWorldViewIT")->AsMatrix();
 	s_shaderVariables.worldViewProj = s_effect->GetVariableByName("g_mWorldViewProj")->AsMatrix();
 	s_shaderVariables.enableFlatShading = s_effect->GetVariableByName("g_bEnableFlatShading")->AsScalar();
+	s_shaderVariables.color = s_effect->GetVariableByName("g_vColor")->AsVector();
 
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
@@ -99,15 +100,18 @@ void Mesh::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFL
 	context->DrawIndexed(m_numIndices, 0, 0);
 }
 
-void Mesh::setShaderVariables(bool flatShading)
+void Mesh::setShaderVariables(bool flatShading, PackedVector::XMCOLOR col)
 {
 	s_shaderVariables.enableFlatShading->SetBool(flatShading);
+	s_shaderVariables.color->SetFloatVector(PackedVector::XMLoadColor(&col).m128_f32); // XMLoadColor normalizes color [0-255] -> [0.0-1.0]
 }
 
 Mesh::ShaderVariables::ShaderVariables()
 	: worldView(nullptr),
 	worldViewIT(nullptr),
-	worldViewProj(nullptr)
+	worldViewProj(nullptr),
+	enableFlatShading(nullptr),
+	color(nullptr)
 {
 }
 

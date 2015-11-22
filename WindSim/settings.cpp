@@ -9,6 +9,10 @@ Settings conf = {
 		{ 0.3f, 0.0025f, 0.1f }, // ModelView
 		10.0f,
 		FirstPerson
+	},
+	// Mesh
+	{
+		{ 204, 204, 204 } // DefaultColor rgb
 	}
 };
 
@@ -30,6 +34,10 @@ void loadIni(const std::string& path)
 	std::string type = conf.cam.type == FirstPerson ? "FirstPerson" : "ModelView";
 	type = getIniVal(iniMap, "Camera", "Type", type);
 	conf.cam.type = type == "ModelView" ? ModelView : FirstPerson;
+
+	conf.mesh.dc.r = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.red", std::to_string(conf.mesh.dc.r)));
+	conf.mesh.dc.g = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.green", std::to_string(conf.mesh.dc.g)));
+	conf.mesh.dc.b = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.blue", std::to_string(conf.mesh.dc.b)));
 }
 
 const std::string& getIniVal(libini::ini_model& map, const std::string& category, const std::string& value, const std::string& default)
