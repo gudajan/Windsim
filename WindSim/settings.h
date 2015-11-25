@@ -36,7 +36,30 @@ struct Settings
 			int g;
 			int b;
 		} dc;
+		struct HoverColor
+		{
+			int r;
+			int g;
+			int b;
+		} hc;
 	} mesh;
+
+	struct Grid
+	{
+		float scale; // The overall scale of the grid
+		float step; // The size of one grid square => number of steps = scale / step
+		float col; // grey color [0.0, 1.0]
+	} grid;
+
+	struct General
+	{
+		struct SelectionColor
+		{
+			int r;
+			int g;
+			int b;
+		} sc;
+	} gen;
 };
 
 

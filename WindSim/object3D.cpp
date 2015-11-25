@@ -1,5 +1,6 @@
 #include "object3D.h"
 #include "common.h"
+#include "intersection.h"
 
 #include <d3d11.h>
 
@@ -74,6 +75,12 @@ void Object3D::release()
 {
 	SAFE_RELEASE(m_indexBuffer);
 	SAFE_RELEASE(m_vertexBuffer);
+}
+
+// Assuming the vertex layout is: { Position (3*float), Normal (3*float) }
+bool Object3D::intersect(DirectX::XMFLOAT3& origin, DirectX::XMFLOAT3& direction, DirectX::XMFLOAT3& intersection) const
+{
+	return Geometry::intersect(origin, direction, m_vertexData, m_indexData, 6, intersection);
 }
 
 

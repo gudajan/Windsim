@@ -40,10 +40,13 @@ protected:
 	void mouseReleaseEvent(QMouseEvent * event) override;
 	void wheelEvent(QWheelEvent * event) override;
 
+	void enterEvent(QEvent* event) override;
+	void leaveEvent(QEvent* event) override;
+
 signals:
 	void stopRendering();
 	void resize(int width, int height);
-	void controlEvent(QEvent* event);
+	void mouseMove(QMouseEvent* event);
 	void reloadShadersTriggered();
 
 private:

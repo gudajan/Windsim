@@ -26,7 +26,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 
 	// Arbitrary Events Widget -> Renderer
 	connect(this, &DX11Widget::resize, m_renderer, &DX11Renderer::onResize);
-	connect(this, &DX11Widget::controlEvent, m_renderer, &DX11Renderer::onControlEvent);
+	connect(this, &DX11Widget::mouseMove, m_renderer, &DX11Renderer::onMouseMove);
 	connect(this, &DX11Widget::reloadShadersTriggered, m_renderer, &DX11Renderer::reloadShaders);
 
 	// Arbitrary Events Renerer -> Widget
@@ -38,6 +38,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 
 	setFocusPolicy(Qt::StrongFocus); // Set keyboard focus on mouseclick
 	setFocus();
+	setMouseTracking(true);
 
 	m_renderThread.start();
 }
@@ -96,6 +97,7 @@ void DX11Widget::keyReleaseEvent(QKeyEvent * event)
 void DX11Widget::mouseMoveEvent(QMouseEvent * event)
 {
 	m_renderer->getCamera()->handleControlEvent(event);
+	emit mouseMove(event);
 	return QWidget::mouseMoveEvent(event);
 }
 
@@ -115,4 +117,16 @@ void DX11Widget::wheelEvent(QWheelEvent * event)
 {
 	m_renderer->getCamera()->handleControlEvent(event);
 	return QWidget::wheelEvent(event);
+}
+
+void DX11Widget::enterEvent(QEvent* event)
+{
+	m_renderer->mouseEnter();
+	return QWidget::enterEvent(event);
+}
+
+void DX11Widget::leaveEvent(QEvent* event)
+{
+	m_renderer->mouseLeave();
+	return QWidget::enterEvent(event);
 }

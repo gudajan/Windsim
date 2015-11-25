@@ -14,13 +14,17 @@ Camera::Camera(const uint32_t width, const uint32_t height)
 	m_projection(),
 	m_fov(degToRad(60.0f)),
 	m_aspectRatio(static_cast<float>(width) / static_cast<float>(height)),
+	m_width(width),
+	m_height(height),
 	m_nearZ(0.1f),
 	m_farZ(1000.0f),
 	m_rotating(false),
 	m_translating(false),
 	m_viewChanged(false),
 	m_fpi({{ 0.0f, 0.0f, -conf.cam.defaultDist }, { 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, 0.0f, false, false, false, false, false, false }),
-	m_mvi({{ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, 0.0f, false, conf.cam.defaultDist })
+	m_mvi({{ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }, 0.0f, 0.0f, false, conf.cam.defaultDist }),
+	m_gMouseCoord(),
+	m_gMouseCoordLast()
 {
 	// Compute initial transformation matrices
 	computeViewMatrix();
@@ -29,6 +33,43 @@ Camera::Camera(const uint32_t width, const uint32_t height)
 
 Camera::~Camera()
 {
+}
+
+
+XMFLOAT3 Camera::getCursorDir(QPoint windowCoord)
+{
+	// Transform cursor position from window space [0 - width/height] to screenspace [-1, 1] to viewspace to worldspace
+	QPointF ssCursor = windowToScreen(windowCoord);
+	XMVECTOR direction = XMVectorSet(ssCursor.x(), ssCursor.y(), 1.0f, 0.0f);
+
+	// Transform direction from screen space to view/camera space (inverse projection)
+	XMMATRIX proj = XMLoadFloat4x4(&m_projection);
+	direction = XMVector3Transform(direction, XMMatrixInverse(nullptr, proj));
+
+	// Transform from view/camera space to world space
+	XMMATRIX view = XMLoadFloat4x4(&m_view);
+	direction = XMVector4Transform(direction, XMMatrixInverse(nullptr, view));
+
+	direction = XMVector3Normalize(direction);
+
+	XMFLOAT3 d;
+	XMStoreFloat3(&d, direction);
+
+	return d;
+}
+
+XMFLOAT3 Camera::getCamPos()
+{
+	XMVECTOR origin = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f); // At the camera in camera space
+	XMMATRIX view = XMLoadFloat4x4(&m_view); // From world to view/camera space
+
+	// Transform origin from view/camera space to world space (inverse view)
+	origin = XMVector3Transform(origin, XMMatrixInverse(nullptr, view));
+
+	XMFLOAT3 o;
+	XMStoreFloat3(&o, origin);
+
+	return o;
 }
 
 bool Camera::handleControlEvent(QEvent* event)
@@ -96,6 +137,8 @@ void Camera::setProjectionParams(const float fov, const uint32_t width, const ui
 {
 	m_fov = fov;
 	m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+	m_width = width;
+	m_height = height;
 	m_nearZ = nearZ;
 	m_farZ = farZ;
 	computeProjectionMatrix();
@@ -323,4 +366,12 @@ void Camera::handleWheel(QWheelEvent* event)
 void Camera::computeProjectionMatrix()
 {
 	XMStoreFloat4x4(&m_projection, XMMatrixPerspectiveFovLH(m_fov, m_aspectRatio, m_nearZ, m_farZ));
+}
+
+QPointF Camera::windowToScreen(QPoint p)
+{
+	// In Qt window space (0, 0) is upper left
+	// In screen space (-1.0, -1.0) is lower left
+	// => -y
+	return QPointF(static_cast<float>(p.x()) / static_cast<float>(m_width) * 2.0f - 1.0f, - (static_cast<float>(p.y()) / static_cast<float>(m_height)* 2.0f - 1.0f));
 }

@@ -10,7 +10,6 @@
 
 #include <QJsonObject>
 
-
 class ObjectManager
 {
 public:
@@ -29,6 +28,8 @@ public:
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	// Release the DirectX objects of ALL objects
 	void release();
+
+	void update(DirectX::XMFLOAT3 origin, DirectX::XMFLOAT3 direction, bool containsCursor); // Update objects depending on ray from current mouse position
 
 private:
 	std::unordered_map<int, std::shared_ptr<Object3D>> m_objects;

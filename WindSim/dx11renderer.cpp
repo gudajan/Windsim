@@ -1,6 +1,7 @@
 #include "dx11renderer.h"
-#include "mesh.h"
+#include "mesh3D.h"
 #include "sky.h"
+#include "axes.h"
 #include "settings.h"
 
 #include <iostream>
@@ -12,6 +13,8 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QCursor>
+#include <QMouseEvent>
 
 using namespace DirectX;
 
@@ -28,6 +31,8 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_rasterizerState(nullptr),
 	m_width(width),
 	m_height(height),
+	m_containsCursor(false),
+	m_localCursorPos(),
 	m_elapsedTimer(),
 	m_renderTimer(this),
 	m_camera(width, height),
@@ -205,9 +210,9 @@ void DX11Renderer::onResize(int width, int height)
 
 }
 
-void DX11Renderer::onControlEvent(QEvent* event)
+void DX11Renderer::onMouseMove(QMouseEvent* event)
 {
-	m_camera.handleControlEvent(event);
+	m_localCursorPos = event->pos();
 }
 
 void DX11Renderer::onAddObject(const QJsonObject& data)
@@ -232,10 +237,13 @@ void DX11Renderer::onRemoveAll()
 
 bool DX11Renderer::reloadShaders()
 {
-	if (FAILED(Mesh::createShaderFromFile(L"mesh.fx", m_device, true)))
+	if (FAILED(Mesh3D::createShaderFromFile(L"mesh.fx", m_device, true)))
 		return false;
 
 	if (FAILED(Sky::createShaderFromFile(L"sky.fx", m_device, true)))
+		return false;
+
+	if (FAILED(Axes::createShaderFromFile(L"axes.fx", m_device, true)))
 		return false;
 
 	return true;
@@ -244,11 +252,15 @@ bool DX11Renderer::reloadShaders()
 bool DX11Renderer::createShaders()
 {
 	QString fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("mesh.fxo");
-	if (FAILED(Mesh::createShaderFromFile(fxoPath.toStdWString(), m_device)))
+	if (FAILED(Mesh3D::createShaderFromFile(fxoPath.toStdWString(), m_device)))
 		return false;
 
 	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("sky.fxo");
 	if (FAILED(Sky::createShaderFromFile(fxoPath.toStdWString(), m_device)))
+		return false;
+
+	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("axes.fxo");
+	if (FAILED(Axes::createShaderFromFile(fxoPath.toStdWString(), m_device)))
 		return false;
 
 	return true;
@@ -272,8 +284,9 @@ void DX11Renderer::destroy()
 	SAFE_RELEASE(m_context);
 
 	// Release all shaders
-	Mesh::releaseShader();
+	Mesh3D::releaseShader();
 	Sky::releaseShader();
+	Axes::releaseShader();
 
 	// Release all objects
 	m_manager.release();
@@ -300,6 +313,10 @@ void DX11Renderer::destroy()
 void DX11Renderer::update(double elapsedTime)
 {
 	m_camera.update(elapsedTime);
+
+	// Pass ray from Camera to cursor position in world space
+	m_manager.update(m_camera.getCamPos(), m_camera.getCursorDir(m_localCursorPos), m_containsCursor);
+
 }
 
 void DX11Renderer::render(double elapsedTime)

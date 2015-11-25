@@ -3,7 +3,7 @@
 using namespace DirectX;
 
 SkyActor::SkyActor(Sky& sky)
-	: Actor(),
+	: Actor(ObjectType::Sky),
 	m_sky(sky)
 {
 }

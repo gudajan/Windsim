@@ -12,7 +12,14 @@ Settings conf = {
 	},
 	// Mesh
 	{
-		{ 204, 204, 204 } // DefaultColor rgb
+		{ 204, 204, 204 }, // DefaultColor rgb
+		{230, 230, 230} // Hover Color rgb
+	},
+	// Grid
+	{ 16.0f, 1.0f, 0.5f}, // Scale, Stepsize, grey color
+	//General
+	{
+		{190, 150, 150} // Selection Color
 	}
 };
 
@@ -38,6 +45,18 @@ void loadIni(const std::string& path)
 	conf.mesh.dc.r = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.red", std::to_string(conf.mesh.dc.r)));
 	conf.mesh.dc.g = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.green", std::to_string(conf.mesh.dc.g)));
 	conf.mesh.dc.b = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.blue", std::to_string(conf.mesh.dc.b)));
+
+	conf.mesh.hc.r = std::stoi(getIniVal(iniMap, "Mesh", "HoverColor.red", std::to_string(conf.mesh.hc.r)));
+	conf.mesh.hc.g = std::stoi(getIniVal(iniMap, "Mesh", "HoverColor.green", std::to_string(conf.mesh.hc.g)));
+	conf.mesh.hc.b = std::stoi(getIniVal(iniMap, "Mesh", "HoverColor.blue", std::to_string(conf.mesh.hc.b)));
+
+	conf.grid.scale = std::stoi(getIniVal(iniMap, "Grid", "scale", std::to_string(conf.grid.scale)));
+	conf.grid.step = std::stoi(getIniVal(iniMap, "Grid", "stepsize", std::to_string(conf.grid.step)));
+	conf.grid.col = std::stoi(getIniVal(iniMap, "Grid", "color", std::to_string(conf.grid.col)));
+
+	conf.gen.sc.r = std::stoi(getIniVal(iniMap, "General", "SelectionColor.red", std::to_string(conf.gen.sc.r)));
+	conf.gen.sc.g = std::stoi(getIniVal(iniMap, "General", "SelectionColor.green", std::to_string(conf.gen.sc.g)));
+	conf.gen.sc.b = std::stoi(getIniVal(iniMap, "General", "SelectionColor.blue", std::to_string(conf.gen.sc.b)));
 }
 
 const std::string& getIniVal(libini::ini_model& map, const std::string& category, const std::string& value, const std::string& default)

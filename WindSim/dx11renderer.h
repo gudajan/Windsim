@@ -29,6 +29,8 @@ public:
 
 	int getWidth(){ return m_width; };
 	int getHeight(){ return m_height; };
+	void mouseEnter() { m_containsCursor = true; };
+	void mouseLeave() { m_containsCursor = false; };
 	Camera* getCamera() { return &m_camera; };
 
 public slots:
@@ -40,7 +42,7 @@ public slots:
 
 	// Arbitrary Events
 	void onResize(int width, int height); // Resize viewport
-	void onControlEvent(QEvent* event);
+	void onMouseMove(QMouseEvent* event);
 	void onAddObject(const QJsonObject& data);
 	void onModifyObject(const QJsonObject& data);
 	void onRemoveObject(int name);
@@ -72,6 +74,9 @@ private:
 	// Viewport resolution
 	int m_width;
 	int m_height;
+
+	bool m_containsCursor;
+	QPoint m_localCursorPos;
 
 	QElapsedTimer m_elapsedTimer;
 	QTimer m_renderTimer;

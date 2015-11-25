@@ -2,11 +2,12 @@
 
 using namespace DirectX;
 
-Actor::Actor()
+Actor::Actor(ObjectType type)
 	: m_pos({ 0.0, 0.0, 0.0 }),
 	m_rot({ 0.0, 0.0, 0.0, 1.0 }),
 	m_scale({ 1.0, 1.0, 1.0 }),
-	m_render(true)
+	m_render(true),
+	m_type(type)
 {
 }
 

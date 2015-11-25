@@ -88,16 +88,20 @@ void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
 {
 	QJsonObject data = m_model.data(index, Qt::UserRole + 1).toJsonObject();
 
-	if (!m_meshProperties)
+	if (stringToObjectType(data["type"].toString().toStdString()) == ObjectType::Mesh)
 	{
-		m_meshProperties = new MeshProperties(data, static_cast<QWidget*>(parent())); // Save as we know our parent is a QWidget
-		m_meshProperties->setup(this);
+
+		if (!m_meshProperties)
+		{
+			m_meshProperties = new MeshProperties(data, static_cast<QWidget*>(parent())); // Save as we know our parent is a QWidget
+			m_meshProperties->setup(this);
+		}
+
+		m_meshProperties->updateProperties(data);
+
+		m_meshProperties->show();
+		m_meshProperties->raise();
 	}
-
-	m_meshProperties->updateProperties(data);
-
-	m_meshProperties->show();
-	m_meshProperties->raise();
 }
 
 void ObjectContainer::addCmd(const QJsonObject& data)

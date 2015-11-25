@@ -124,6 +124,7 @@ bool WindSim::actionNewTriggered()
 
 	// Create default sky object
 	actionCreateSkyTriggered("Sky");
+	actionCreateAxesTriggered("Axes");
 
 	g_undoStack.clear();
 
@@ -251,6 +252,27 @@ bool WindSim::actionCreateSkyTriggered(QString name)
 	m_container.addCmd(json);
 
 	Logger::logit("INFO: Created new sky '" + name + "'.");
+
+	return true;
+}
+
+bool WindSim::actionCreateAxesTriggered(QString name)
+{
+	if (name.isEmpty())
+	{
+		name = getName("New Axes", "Axes name:", "Axes");
+		if (name.isEmpty())
+			return false;
+	}
+
+	QJsonObject json
+	{
+		{ "name", name },
+		{ "type", QString::fromStdString(objectTypeToString(ObjectType::Axes)) }
+	};
+	m_container.addCmd(json);
+
+	Logger::logit("INFO: Created new axes '" + name + "'.");
 
 	return true;
 }

@@ -1,8 +1,10 @@
 #include "objectManager.h"
-#include "mesh.h"
+#include "mesh3D.h"
 #include "MeshActor.h"
 #include "sky.h"
 #include "skyActor.h"
+#include "axes.h"
+#include "axesActor.h"
 
 #include <d3d11.h>
 #include <DirectXMath.h>
@@ -35,7 +37,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			{
 				throw std::invalid_argument("Failed to create Mesh object '" + name + "' because no OBJ-Path was given in 'data' variable!");
 			}
-			Mesh* obj = new Mesh(objIt->toString().toStdString());
+			Mesh3D* obj = new Mesh3D(objIt->toString().toStdString());
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
 			MeshActor* act = new MeshActor(*obj);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
@@ -50,6 +52,19 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, true);
+		}
+		else if (type == ObjectType::Axes)
+		{
+			Axes* obj = new Axes();
+			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
+			AxesActor* act = new AxesActor(*obj);
+			m_actors.emplace(id, std::shared_ptr<AxesActor>(act));
+
+			obj->create(device, true);
+		}
+		else
+		{
+			throw std::runtime_error("Object '" + name + "' has type Invalid!");
 		}
 		modify(data); // Set initial values from the data
 	}
@@ -119,7 +134,8 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setPos(pos);
 		act->setScale(scale);
 		act->setRot(rot);
-		act->setFlatShading(flatShading, col);
+		act->setFlatShading(flatShading);
+		act->setColor(col);
 	}
 }
 
@@ -136,5 +152,31 @@ void ObjectManager::release()
 	for (const auto& object : m_objects)
 	{
 		object.second->release();
+	}
+}
+
+void ObjectManager::update(XMFLOAT3 origin, XMFLOAT3 direction, bool containsCursor)
+{
+	for (auto& act : m_actors)
+	{
+		if (act.second->getType() == ObjectType::Mesh)
+		{
+			std::shared_ptr<MeshActor> ma = std::dynamic_pointer_cast<MeshActor>(act.second);
+			if (containsCursor)
+			{
+				if (ma->intersect(origin, direction, XMFLOAT3()))
+				{
+					ma->setHovered(true);
+				}
+				else
+				{
+					ma->setHovered(false);
+				}
+			}
+			else
+			{
+				ma->setHovered(false);
+			}
+		}
 	}
 }

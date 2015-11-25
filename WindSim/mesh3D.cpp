@@ -1,4 +1,4 @@
-#include "mesh.h"
+#include "mesh3D.h"
 #include "objLoader.h"
 #include "common.h"
 
@@ -8,7 +8,7 @@
 
 using namespace DirectX;
 
-Mesh::Mesh(const std::string& path)
+Mesh3D::Mesh3D(const std::string& path)
 	: Object3D()
 {
 	if (!readObj(path))
@@ -18,15 +18,15 @@ Mesh::Mesh(const std::string& path)
 	m_numIndices = m_indexData.size();
 }
 
-Mesh::Mesh(Mesh&& other)
+Mesh3D::Mesh3D(Mesh3D&& other)
 {
 }
 
-Mesh::~Mesh()
+Mesh3D::~Mesh3D()
 {
 }
 
-HRESULT Mesh::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device* device, const bool reload)
+HRESULT Mesh3D::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device* device, const bool reload)
 {
 	HRESULT hr;
 
@@ -67,14 +67,14 @@ HRESULT Mesh::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device*
 	return S_OK;
 }
 
-void Mesh::releaseShader()
+void Mesh3D::releaseShader()
 {
 	SAFE_RELEASE(s_inputLayout);
 	SAFE_RELEASE(s_effect);
 }
 
 
-void Mesh::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
+void Mesh3D::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
 {
 	if (s_effect == nullptr)
 	{
@@ -100,13 +100,13 @@ void Mesh::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFL
 	context->DrawIndexed(m_numIndices, 0, 0);
 }
 
-void Mesh::setShaderVariables(bool flatShading, PackedVector::XMCOLOR col)
+void Mesh3D::setShaderVariables(bool flatShading, PackedVector::XMCOLOR col)
 {
 	s_shaderVariables.enableFlatShading->SetBool(flatShading);
 	s_shaderVariables.color->SetFloatVector(PackedVector::XMLoadColor(&col).m128_f32); // XMLoadColor normalizes color [0-255] -> [0.0-1.0]
 }
 
-Mesh::ShaderVariables::ShaderVariables()
+Mesh3D::ShaderVariables::ShaderVariables()
 	: worldView(nullptr),
 	worldViewIT(nullptr),
 	worldViewProj(nullptr),
@@ -115,11 +115,11 @@ Mesh::ShaderVariables::ShaderVariables()
 {
 }
 
-Mesh::ShaderVariables::~ShaderVariables()
+Mesh3D::ShaderVariables::~ShaderVariables()
 {
 }
 
-bool Mesh::readObj(const std::string& path)
+bool Mesh3D::readObj(const std::string& path)
 {
 	// Load obj into standard vector container
 	if (!ObjLoader::loadObj(path, m_vertexData, m_indexData))
@@ -131,6 +131,6 @@ bool Mesh::readObj(const std::string& path)
 	return true;
 }
 
-ID3DX11Effect* Mesh::s_effect = nullptr;
-Mesh::ShaderVariables Mesh::s_shaderVariables;
-ID3D11InputLayout* Mesh::s_inputLayout = nullptr;
+ID3DX11Effect* Mesh3D::s_effect = nullptr;
+Mesh3D::ShaderVariables Mesh3D::s_shaderVariables;
+ID3D11InputLayout* Mesh3D::s_inputLayout = nullptr;

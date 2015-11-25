@@ -24,6 +24,10 @@ public:
 	DirectX::XMFLOAT4X4 getViewMatrix() const {	return m_view; };
 	DirectX::XMFLOAT4X4 getProjectionMatrix() const { return m_projection; };
 
+	// Get camera info in world space
+	DirectX::XMFLOAT3 getCursorDir(QPoint windowCoord);
+	DirectX::XMFLOAT3 getCamPos();
+
 	bool handleControlEvent(QEvent* event);
 	void update(double elapsedTime);
 
@@ -31,7 +35,7 @@ public:
 	void computeViewMatrix();
 
 	void setFov(const float fov) { m_fov = fov; computeProjectionMatrix(); };
-	void setAspectRatio(const uint32_t width, const uint32_t height) { m_aspectRatio = static_cast<float>(width) / static_cast<float>(height); computeProjectionMatrix(); };
+	void setAspectRatio(const uint32_t width, const uint32_t height) { m_aspectRatio = static_cast<float>(width) / static_cast<float>(height); m_width = width; m_height = height; computeProjectionMatrix(); };
 	void setNearZ(const float nearZ) { m_nearZ = nearZ; computeProjectionMatrix(); };
 	void setFarZ(const float farZ) { m_farZ = farZ; computeProjectionMatrix(); };
 
@@ -45,10 +49,14 @@ private:
 
 	void computeProjectionMatrix();
 
+	QPointF windowToScreen(QPoint p);
+
 	DirectX::XMFLOAT4X4 m_view;
 	DirectX::XMFLOAT4X4 m_projection;
 	float m_fov; // Field of view
 	float m_aspectRatio; // Width / height
+	uint32_t m_width;
+	uint32_t m_height;
 	float m_nearZ; // Near plane of view frustum
 	float m_farZ; // Far plane of view frustum
 
