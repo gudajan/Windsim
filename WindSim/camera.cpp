@@ -181,7 +181,7 @@ void Camera::handleMousePress(QMouseEvent* event)
 	}
 	else // ModelView
 	{
-		if (event->button() == Qt::LeftButton)
+		if (event->button() == Qt::LeftButton && event->modifiers() == Qt::NoModifier)
 		{
 			m_rotating = true;
 			if (m_mvi.pitch > XM_PI * 0.5 && m_mvi.pitch < XM_PI * 1.5)
@@ -193,7 +193,7 @@ void Camera::handleMousePress(QMouseEvent* event)
 				m_mvi.flippedYawDir = false;
 			}
 		}
-		if (event->button() == Qt::RightButton)
+		if (event->button() == Qt::RightButton && event->modifiers() == Qt::NoModifier)
 		{
 			m_translating = true;
 		}
@@ -218,7 +218,7 @@ void Camera::handleMouseRelease(QMouseEvent* event)
 		{
 			m_rotating = false;
 		}
-		if (event->button() == Qt::RightButton)
+		else if (event->button() == Qt::RightButton)
 		{
 			m_translating = false;
 		}

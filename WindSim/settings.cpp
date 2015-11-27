@@ -6,14 +6,14 @@ Settings conf = {
 	// Camera
 	{
 		{ 0.1f, 2.0f }, // FirstPerson
-		{ 0.3f, 0.0025f, 0.1f }, // ModelView
+		{ 0.3f, 0.0018f, 0.1f }, // ModelView
 		10.0f,
 		FirstPerson
 	},
 	// Mesh
 	{
 		{ 204, 204, 204 }, // DefaultColor rgb
-		{230, 230, 230} // Hover Color rgb
+		{ 230, 230, 230 } // Hover Color rgb
 	},
 	// Grid
 	{ 16.0f, 1.0f, 0.5f}, // Scale, Stepsize, grey color
@@ -50,9 +50,9 @@ void loadIni(const std::string& path)
 	conf.mesh.hc.g = std::stoi(getIniVal(iniMap, "Mesh", "HoverColor.green", std::to_string(conf.mesh.hc.g)));
 	conf.mesh.hc.b = std::stoi(getIniVal(iniMap, "Mesh", "HoverColor.blue", std::to_string(conf.mesh.hc.b)));
 
-	conf.grid.scale = std::stoi(getIniVal(iniMap, "Grid", "scale", std::to_string(conf.grid.scale)));
-	conf.grid.step = std::stoi(getIniVal(iniMap, "Grid", "stepsize", std::to_string(conf.grid.step)));
-	conf.grid.col = std::stoi(getIniVal(iniMap, "Grid", "color", std::to_string(conf.grid.col)));
+	conf.grid.scale = std::stof(getIniVal(iniMap, "Grid", "scale", std::to_string(conf.grid.scale)));
+	conf.grid.step = std::stof(getIniVal(iniMap, "Grid", "stepsize", std::to_string(conf.grid.step)));
+	conf.grid.col = std::stof(getIniVal(iniMap, "Grid", "color", std::to_string(conf.grid.col)));
 
 	conf.gen.sc.r = std::stoi(getIniVal(iniMap, "General", "SelectionColor.red", std::to_string(conf.gen.sc.r)));
 	conf.gen.sc.g = std::stoi(getIniVal(iniMap, "General", "SelectionColor.green", std::to_string(conf.gen.sc.g)));

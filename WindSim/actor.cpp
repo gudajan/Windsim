@@ -2,17 +2,25 @@
 
 using namespace DirectX;
 
-Actor::Actor(ObjectType type)
+Actor::Actor(ObjectType type, int id)
 	: m_pos({ 0.0, 0.0, 0.0 }),
 	m_rot({ 0.0, 0.0, 0.0, 1.0 }),
 	m_scale({ 1.0, 1.0, 1.0 }),
+	m_world(),
 	m_render(true),
-	m_type(type)
+	m_type(type),
+	m_id(id)
 {
+	computeWorld();
 }
 
 Actor::~Actor()
 {
+}
+
+bool Actor::intersect(DirectX::XMFLOAT3 origin, DirectX::XMFLOAT3 direction, float& distance) const
+{
+	return true;
 }
 
 void Actor::setPos(const DirectX::XMFLOAT3& pos)
@@ -28,6 +36,15 @@ void Actor::setRot(const DirectX::XMFLOAT4& rot)
 void Actor::setScale(const DirectX::XMFLOAT3& scale)
 {
 	m_scale = scale;
+}
+
+void Actor::computeWorld()
+{
+	XMVECTOR p = XMLoadFloat3(&m_pos);
+	XMVECTOR r = XMLoadFloat4(&m_rot);
+	XMVECTOR s = XMLoadFloat3(&m_scale);
+	XMMATRIX m = XMMatrixScalingFromVector(s) * XMMatrixRotationQuaternion(r) * XMMatrixTranslationFromVector(p);
+	XMStoreFloat4x4(&m_world, m);
 }
 
 void Actor::setRender(bool render)
@@ -58,10 +75,7 @@ const XMFLOAT3& Actor::getScale() const
 
 XMFLOAT4X4 Actor::getWorld() const
 {
-	XMVECTOR p = XMLoadFloat3(&m_pos);
-	XMVECTOR r = XMLoadFloat4(&m_rot);
-	XMVECTOR s = XMLoadFloat3(&m_scale);
-	XMFLOAT4X4 mat;
-	XMStoreFloat4x4(&mat, XMMatrixScalingFromVector(s) * XMMatrixRotationQuaternion(r) * XMMatrixTranslationFromVector(p));
-	return mat;
+	return m_world;
 }
+
+

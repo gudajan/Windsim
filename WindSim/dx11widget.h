@@ -47,6 +47,8 @@ signals:
 	void stopRendering();
 	void resize(int width, int height);
 	void mouseMove(QMouseEvent* event);
+	void mousePress(QMouseEvent* event);
+	void mouseRelease(QMouseEvent* event);
 	void reloadShadersTriggered();
 
 private:

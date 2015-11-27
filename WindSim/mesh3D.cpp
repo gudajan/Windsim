@@ -125,7 +125,7 @@ bool Mesh3D::readObj(const std::string& path)
 	if (!ObjLoader::loadObj(path, m_vertexData, m_indexData))
 		return false;
 
-	float scale = ObjLoader::normalizeSize(m_vertexData);
+	//float scale = ObjLoader::normalizeSize(m_vertexData);
 	ObjLoader::calculateNormals(m_vertexData, m_indexData);
 
 	return true;

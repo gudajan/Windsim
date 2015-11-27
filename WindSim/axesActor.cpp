@@ -2,8 +2,8 @@
 
 using namespace DirectX;
 
-AxesActor::AxesActor(Axes& axes)
-	: Actor(ObjectType::Axes),
+AxesActor::AxesActor(Axes& axes, int id)
+	: Actor(ObjectType::Axes, id),
 	m_axes(axes)
 {
 }

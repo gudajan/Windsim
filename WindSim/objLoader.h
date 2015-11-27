@@ -131,6 +131,8 @@ public:
 	// bsCenter will contain 3 floats representing the x, y and z coordinate.
 	static void findBoundingSphere(std::vector<float>& vertexData, std::vector<float>* bsCenter, float* bsRadius);
 
+	static void findBoundingBox(std::vector<float>& vertexData, std::vector<float>& center, std::vector<float>& extends);
+
 private:
 	static void addVertexToBuffer(std::vector<float>& b, const objLoader::Vertex& v);
 	static objLoader::Vec3 findGeometricCenter(const std::vector<objLoader::Vertex * const>& b);

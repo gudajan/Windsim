@@ -26,7 +26,9 @@ public:
 	// Computes intersection position in object space
 	// Returns true if intersection found, otherwise false
 	// Assumes data is a triangle list (not applicable for lines or points)
-	virtual bool intersect(DirectX::XMFLOAT3& origin, DirectX::XMFLOAT3& direction, DirectX::XMFLOAT3& intersection) const;
+	virtual bool intersect(DirectX::XMFLOAT3& origin, DirectX::XMFLOAT3& direction, float& distance) const;
+
+	virtual void getBoundingBox(DirectX::XMFLOAT3& center, DirectX::XMFLOAT3& extends);
 
 protected:
 	ID3D11Buffer* m_vertexBuffer;

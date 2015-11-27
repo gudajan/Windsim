@@ -41,6 +41,11 @@ private slots:
 	bool actionCreateAxesTriggered(QString name = QString());
 	// void actionRemoveObjectTriggered();
 
+	// Propagate changes from the 3D view to the object view (set -> QItemSelection); sets selection via QItemSelectionModel
+	void on3DSelectionChanged(std::unordered_set<int> ids);
+	// Propagate changes from the GUI object view to 3D (QItemSelection -> set); emits selectionChanged to 3D view
+	void onGUISelectionChanged();
+
 	// Dialog actions:
 	void showSettingsDialog();
 
@@ -48,6 +53,7 @@ private slots:
 
 signals:
 	void settingsChanged();
+	void selectionChanged(std::unordered_set<int> ids); // Propagate changes from the GUI to the 3D View
 
 private:
 	void reloadIni();

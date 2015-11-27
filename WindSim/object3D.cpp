@@ -1,6 +1,7 @@
 #include "object3D.h"
 #include "common.h"
 #include "intersection.h"
+#include "objLoader.h"
 
 #include <d3d11.h>
 
@@ -78,9 +79,19 @@ void Object3D::release()
 }
 
 // Assuming the vertex layout is: { Position (3*float), Normal (3*float) }
-bool Object3D::intersect(DirectX::XMFLOAT3& origin, DirectX::XMFLOAT3& direction, DirectX::XMFLOAT3& intersection) const
+bool Object3D::intersect(XMFLOAT3& origin, XMFLOAT3& direction, float& distance) const
 {
-	return Geometry::intersect(origin, direction, m_vertexData, m_indexData, 6, intersection);
+	return Geometry::intersect(origin, direction, m_vertexData, m_indexData, 6, distance);
+}
+
+void Object3D::getBoundingBox(XMFLOAT3& center, XMFLOAT3& extends)
+{
+	std::vector<float> c;
+	std::vector<float> e;
+	ObjLoader::findBoundingBox(m_vertexData, c, e);
+
+	center = { c[0], c[1], c[2] };
+	extends = { e[0], e[1], e[2] };
 }
 
 

@@ -9,11 +9,14 @@
 #include <d3d11.h>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
+#include <limits>
 
 using namespace DirectX;
 
 ObjectManager::ObjectManager()
-	: m_objects(),
+	: m_hoveredId(0),
+	m_selectedIds(),
+	m_objects(),
 	m_actors()
 {
 }
@@ -39,7 +42,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			}
 			Mesh3D* obj = new Mesh3D(objIt->toString().toStdString());
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
-			MeshActor* act = new MeshActor(*obj);
+			MeshActor* act = new MeshActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, false);
@@ -48,7 +51,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 		{
 			Sky* obj = new Sky();
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
-			SkyActor* act = new SkyActor(*obj);
+			SkyActor* act = new SkyActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, true);
@@ -57,7 +60,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 		{
 			Axes* obj = new Axes();
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
-			AxesActor* act = new AxesActor(*obj);
+			AxesActor* act = new AxesActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<AxesActor>(act));
 
 			obj->create(device, true);
@@ -134,6 +137,7 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setPos(pos);
 		act->setScale(scale);
 		act->setRot(rot);
+		act->computeWorld();
 		act->setFlatShading(flatShading);
 		act->setColor(col);
 	}
@@ -155,28 +159,109 @@ void ObjectManager::release()
 	}
 }
 
-void ObjectManager::update(XMFLOAT3 origin, XMFLOAT3 direction, bool containsCursor)
+void ObjectManager::updateCursor(const XMFLOAT3& origin, const XMFLOAT3& direction, bool containsCursor)
 {
+	float distance = std::numeric_limits<float>::infinity();
+	if (containsCursor) // Only check for intersection if cursor within 3D view
+		m_hoveredId = computeIntersection(origin, direction, distance);
+	else
+		m_hoveredId = 0;
+}
+
+bool ObjectManager::updateSelection(Selection op)
+{
+	if (m_hoveredId) // Only change selection if clicked onto an object
+	{
+		std::unordered_set<int> ids = m_selectedIds;
+		if (op == Selection::Replace) // No modifier
+		{
+			m_selectedIds.clear();
+			m_selectedIds.insert(m_hoveredId);
+		}
+		else if (op == Selection::Switch) // Ctrl key is pressed
+		{
+			// If hovered id not removed from selection: insert it; otherwise: id removed as necessary
+			if (!m_selectedIds.erase(m_hoveredId))
+				m_selectedIds.insert(m_hoveredId);
+		}
+		else if (op == Selection::Clear)
+		{
+			m_selectedIds.clear();
+		}
+		return ids != m_selectedIds;
+	}
+	return false;
+}
+
+void ObjectManager::setHovered()
+{
+	// Set all Meshes to not hovered
 	for (auto& act : m_actors)
 	{
 		if (act.second->getType() == ObjectType::Mesh)
 		{
-			std::shared_ptr<MeshActor> ma = std::dynamic_pointer_cast<MeshActor>(act.second);
-			if (containsCursor)
+			std::dynamic_pointer_cast<MeshActor>(act.second)->setHovered(false);
+		}
+	}
+
+	// If intersection found and its at a mesh -> set to be hovered
+	auto& act = m_actors.find(m_hoveredId);
+	if (act != m_actors.end() && act->second->getType() == ObjectType::Mesh)
+		std::dynamic_pointer_cast<MeshActor>(act->second)->setHovered(true);
+}
+
+int ObjectManager::computeIntersection(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float& distance) const
+{
+	float closestDist = std::numeric_limits<float>::infinity(); // The distance to the intersection, closest to the camera
+	int closestID = 0;
+
+	// Search for intersection, closes to the camera
+	for (auto& act : m_actors)
+	{
+		// Only meshes are searched for intersections
+		if (act.second->getType() == ObjectType::Mesh)
+		{
+			float dist = std::numeric_limits<float>::infinity();
+			if (std::dynamic_pointer_cast<MeshActor>(act.second)->intersect(origin, direction, dist)) // If intersected -> maybe hovered
 			{
-				if (ma->intersect(origin, direction, XMFLOAT3()))
+				if (dist < closestDist) // If new intersection is closer than closest intersection up to now
 				{
-					ma->setHovered(true);
+					closestDist = dist;
+					closestID = act.first;
 				}
-				else
-				{
-					ma->setHovered(false);
-				}
-			}
-			else
-			{
-				ma->setHovered(false);
 			}
 		}
+	}
+	distance = closestDist;
+	return closestID;
+}
+
+
+void ObjectManager::setSelected()
+{
+	// Set made selection
+	for (auto& act : m_actors)
+	{
+		if (act.second->getType() == ObjectType::Mesh)
+		{
+			std::dynamic_pointer_cast<MeshActor>(act.second)->setSelected(false);
+		}
+	}
+
+	for (int id : m_selectedIds)
+	{
+		std::dynamic_pointer_cast<MeshActor>(m_actors.find(id)->second)->setSelected(true); // All ids belong to meshes
+	}
+}
+
+const void ObjectManager::setSelection(const std::unordered_set<int>& selection)
+{
+	m_selectedIds.clear();
+
+	// Check which ids belong to meshes and add them if so
+	for (int id : selection)
+	{
+		if (m_actors.find(id)->second->getType() == ObjectType::Mesh)
+			m_selectedIds.insert(id);
 	}
 }

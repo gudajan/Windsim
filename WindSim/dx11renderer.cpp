@@ -33,6 +33,7 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_height(height),
 	m_containsCursor(false),
 	m_localCursorPos(),
+	m_pressedId(0),
 	m_elapsedTimer(),
 	m_renderTimer(this),
 	m_camera(width, height),
@@ -213,6 +214,35 @@ void DX11Renderer::onResize(int width, int height)
 void DX11Renderer::onMouseMove(QMouseEvent* event)
 {
 	m_localCursorPos = event->pos();
+	m_camera.handleControlEvent(event);
+}
+
+void DX11Renderer::onMousePress(QMouseEvent* event)
+{
+	m_camera.handleControlEvent(event);
+	if (event->button() == Qt::LeftButton)
+	{
+		m_pressedId = m_manager.getHoveredId();
+	}
+}
+
+void DX11Renderer::onMouseRelease(QMouseEvent* event)
+{
+	m_camera.handleControlEvent(event);
+	if (m_pressedId == m_manager.getHoveredId()) // Hovered id did not change since mouse press -> change selection
+	{
+		if (event->button() == Qt::LeftButton)
+		{
+			bool changed = false;
+			if (event->modifiers() == Qt::NoModifier)
+				changed = m_manager.updateSelection(Selection::Replace);
+			else if (event->modifiers() == Qt::ControlModifier)
+				changed = m_manager.updateSelection(Selection::Switch);
+
+			if (changed)
+				emit selectionChanged(m_manager.getSelection());
+		}
+	}
 }
 
 void DX11Renderer::onAddObject(const QJsonObject& data)
@@ -233,6 +263,12 @@ void DX11Renderer::onRemoveObject(int id)
 void DX11Renderer::onRemoveAll()
 {
 	m_manager.removeAll();
+}
+
+void DX11Renderer::onSelectionChanged(std::unordered_set<int> ids)
+{
+	m_manager.setSelection(ids); // Set selected ids
+	m_manager.setSelected(); // Set selection states of objects
 }
 
 bool DX11Renderer::reloadShaders()
@@ -315,8 +351,8 @@ void DX11Renderer::update(double elapsedTime)
 	m_camera.update(elapsedTime);
 
 	// Pass ray from Camera to cursor position in world space
-	m_manager.update(m_camera.getCamPos(), m_camera.getCursorDir(m_localCursorPos), m_containsCursor);
-
+	m_manager.updateCursor(m_camera.getCamPos(), m_camera.getCursorDir(m_localCursorPos), m_containsCursor);
+	m_manager.setHovered();
 }
 
 void DX11Renderer::render(double elapsedTime)

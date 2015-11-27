@@ -211,6 +211,44 @@ void ObjLoader::findBoundingSphere(std::vector<float>& vertexData, std::vector<f
 	*bsRadius = (*std::max_element(vd.begin(), vd.end(), [](const Vertex*  const a, const Vertex*  const b){return a->p.lengthSquared() < b->p.lengthSquared();}))->p.length();
 }
 
+void ObjLoader::findBoundingBox(std::vector<float>& vertexData, std::vector<float>& center, std::vector<float>& extends)
+{
+	center.clear();
+	extends.clear();
+	center.reserve(3);
+	extends.reserve(3);
+
+	std::vector<Vertex * const> vd;
+	convertVertexData(vertexData, &vd);
+
+	Vec3 c = findGeometricCenter(vd);
+	center.push_back(c.x);
+	center.push_back(c.y);
+	center.push_back(c.z);
+
+
+	//Find scale, which fits the component into a box
+	float maxX = 0;
+	float maxY = 0;
+	float maxZ = 0;
+	for (auto it = vd.begin(); it != vd.end(); ++it)
+	{
+		float extendX = abs((*it)->p.x - c.x);
+		if (extendX > maxX)
+			maxX = extendX;
+		float extendY = abs((*it)->p.y - c.y);
+		if (extendY > maxY)
+			maxY = extendY;
+		float extendZ = abs((*it)->p.z - c.z);
+		if (extendZ > maxZ)
+			maxZ = extendZ;
+	}
+
+	extends.push_back(maxX);
+	extends.push_back(maxY);
+	extends.push_back(maxZ);
+}
+
 
 Vec3 ObjLoader::findGeometricCenter(const std::vector<Vertex * const>& b)
 {

@@ -11,11 +11,11 @@ namespace Geometry
 
 	// Assuming a vertex in the vertexBuffer has the size vertexSize in bytes and the position consists of 3 floats at the beginning of each vertex
 	// TODO perhabs solve with lambda for getting vertex position to allow arbitrary layouts
-	static bool intersect(const DirectX::XMFLOAT3&  origin, const DirectX::XMFLOAT3& direction, const std::vector<float>& vb, const std::vector<uint32_t>& ib, int vertexSize, DirectX::XMFLOAT3& intersection)
+	static bool intersect(const DirectX::XMFLOAT3&  origin, const DirectX::XMFLOAT3& direction, const std::vector<float>& vb, const std::vector<uint32_t>& ib, int vertexSize, float& distance)
 	{
 		using namespace DirectX;
 
-		float distance = std::numeric_limits<float>::infinity();
+		distance = std::numeric_limits<float>::infinity();
 
 		const XMVECTOR dir = XMLoadFloat3(&direction);
 		const XMVECTOR ori = XMLoadFloat3(&origin);
@@ -42,8 +42,6 @@ namespace Geometry
 		if (std::isinf<float>(distance))
 			return false;
 
-		XMVECTOR position = ori + distance * dir;
-		XMStoreFloat3(&intersection, position);
 		return true;
 	}
 }

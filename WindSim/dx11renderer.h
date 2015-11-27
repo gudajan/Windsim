@@ -43,14 +43,18 @@ public slots:
 	// Arbitrary Events
 	void onResize(int width, int height); // Resize viewport
 	void onMouseMove(QMouseEvent* event);
+	void onMousePress(QMouseEvent* event);
+	void onMouseRelease(QMouseEvent* event);
 	void onAddObject(const QJsonObject& data);
 	void onModifyObject(const QJsonObject& data);
 	void onRemoveObject(int name);
 	void onRemoveAll();
+	void onSelectionChanged(std::unordered_set<int> ids);
 	bool reloadShaders(); // Recompile and load all shaders
 
 signals:
 	void logit(const QString& str);
+	void selectionChanged(std::unordered_set<int> ids);
 
 private:
 	bool createShaders(); // Load all shaders
@@ -77,6 +81,7 @@ private:
 
 	bool m_containsCursor;
 	QPoint m_localCursorPos;
+	int m_pressedId; // Id of the object, which was hovered during last mouse press
 
 	QElapsedTimer m_elapsedTimer;
 	QTimer m_renderTimer;

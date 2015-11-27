@@ -60,7 +60,12 @@ WindSim::WindSim(QWidget *parent)
 	connect(ui.actionSettings, SIGNAL(triggered()), this, SLOT(showSettingsDialog()));
 	connect(ui.objectView, SIGNAL(activated(const QModelIndex&)), &m_container, SLOT(showPropertiesDialog(const QModelIndex&)));
 
-
+	// Selection model to WindSim
+	connect(ui.objectView->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)), this, SLOT(onGUISelectionChanged()));
+	// WindSim to 3D Renderer (in another thread)
+	connect(this, &WindSim::selectionChanged, ui.dx11Viewer->getRenderer(), &DX11Renderer::onSelectionChanged);
+	// 3D Renderer to WindSim
+	connect(ui.dx11Viewer->getRenderer(), &DX11Renderer::selectionChanged, this, &WindSim::on3DSelectionChanged);
 
 	reloadIni();
 
@@ -275,6 +280,28 @@ bool WindSim::actionCreateAxesTriggered(QString name)
 	Logger::logit("INFO: Created new axes '" + name + "'.");
 
 	return true;
+}
+
+void WindSim::on3DSelectionChanged(std::unordered_set<int> ids)
+{
+	QItemSelection selection;
+	for (const int id : ids)
+	{
+		QModelIndex index = m_container.getItem(id)->index();
+		selection.select(index, index);
+	}
+	ui.objectView->selectionModel()->select(selection, QItemSelectionModel::ClearAndSelect);
+}
+
+void WindSim::onGUISelectionChanged()
+{
+	QItemSelection currentSelection = ui.objectView->selectionModel()->selection();
+	std::unordered_set<int> ids;
+	for (auto& index : currentSelection.indexes())
+	{
+		ids.insert(m_container.getModel().itemFromIndex(index)->data().toJsonObject()["id"].toInt());
+	}
+	emit selectionChanged(ids);
 }
 
 void WindSim::showSettingsDialog()
