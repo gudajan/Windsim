@@ -82,6 +82,7 @@ private:
 	bool m_containsCursor;
 	QPoint m_localCursorPos;
 	int m_pressedId; // Id of the object, which was hovered during last mouse press
+	bool m_modifying;
 
 	QElapsedTimer m_elapsedTimer;
 	QTimer m_renderTimer;

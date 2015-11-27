@@ -13,8 +13,6 @@ class QKeyEvent;
 class QWheelEvent;
 class QEvent;
 
-enum CameraType {FirstPerson, ModelView};
-
 class Camera
 {
 public:

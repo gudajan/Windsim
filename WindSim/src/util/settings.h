@@ -4,7 +4,7 @@
 #include <string>
 
 #include "libini.hpp"
-#include "camera.h"
+#include "common.h"
 
 struct Settings
 {

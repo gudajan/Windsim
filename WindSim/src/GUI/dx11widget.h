@@ -2,7 +2,7 @@
 #define DX11_WIDGET_H
 
 #include "common.h"
-#include "dx11renderer.h"
+#include "..\3D\dx11renderer.h"
 
 #include <QWidget>
 #include <QThread>

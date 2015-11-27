@@ -3,8 +3,8 @@
 
 #include "objectItem.h"
 #include "common.h"
-#include "dx11renderer.h"
 #include "commands.h"
+#include "..\3D\dx11renderer.h"
 
 #include <QObject>
 #include <QPointer>

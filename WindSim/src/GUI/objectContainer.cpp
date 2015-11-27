@@ -2,7 +2,6 @@
 #include "logger.h"
 #include "meshProperties.h"
 #include "commands.h"
-#include "dx11renderer.h"
 #include "settings.h"
 
 #include <QUndoStack>

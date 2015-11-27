@@ -34,6 +34,7 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_containsCursor(false),
 	m_localCursorPos(),
 	m_pressedId(0),
+	m_modifying(false),
 	m_elapsedTimer(),
 	m_renderTimer(this),
 	m_camera(width, height),
@@ -273,13 +274,13 @@ void DX11Renderer::onSelectionChanged(std::unordered_set<int> ids)
 
 bool DX11Renderer::reloadShaders()
 {
-	if (FAILED(Mesh3D::createShaderFromFile(L"mesh.fx", m_device, true)))
+	if (FAILED(Mesh3D::createShaderFromFile(L"src\\3D\\shaders\\mesh.fx", m_device, true)))
 		return false;
 
-	if (FAILED(Sky::createShaderFromFile(L"sky.fx", m_device, true)))
+	if (FAILED(Sky::createShaderFromFile(L"src\\3D\\shaders\\sky.fx", m_device, true)))
 		return false;
 
-	if (FAILED(Axes::createShaderFromFile(L"axes.fx", m_device, true)))
+	if (FAILED(Axes::createShaderFromFile(L"src\\3D\\shaders\\axes.fx", m_device, true)))
 		return false;
 
 	return true;

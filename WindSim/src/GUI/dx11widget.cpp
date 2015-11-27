@@ -1,6 +1,5 @@
 #include "dx11widget.h"
 #include "logger.h"
-#include "dx11renderer.h"
 
 #include <QResizeEvent>
 #include <QApplication>

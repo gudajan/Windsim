@@ -1,5 +1,4 @@
 #include "settings.h"
-#include "common.h"
 
 // Default values:
 Settings conf = {

@@ -1,6 +1,4 @@
-#include "windsim.h"
-#include "logger.h"
-#include "common.h"
+#include "GUI\windsim.h"
 
 #include <QtWidgets/QApplication>
 #include <QMetaType>
@@ -13,8 +11,6 @@ int main(int argc, char *argv[])
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
-	// Install own logging method
-	//qInstallMessageHandler(Logger::logging);
 	// Install ObjectType enum for enabling usage with signals/slots
 	qRegisterMetaType<ObjectType>();
 

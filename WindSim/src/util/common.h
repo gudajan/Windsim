@@ -41,6 +41,8 @@ static inline ObjectType stringToObjectType(const std::string& str)
 	return ObjectType::Invalid;
 }
 
+enum CameraType { FirstPerson, ModelView };
+
 enum class Shading{ Smooth, Flat }; // Mesh Shading type
 
 static inline float degToRad(float degree)

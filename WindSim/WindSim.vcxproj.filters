@@ -33,12 +33,27 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="Header Files\3D">
+      <UniqueIdentifier>{6a82d16e-0a04-485d-8ccd-66ee8cfb3a90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\GUI">
+      <UniqueIdentifier>{850b4ed7-7587-463c-96e1-a27d812eb580}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3D">
+      <UniqueIdentifier>{65a1ac49-30e0-4ab1-8812-2f20b5c7211b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\GUI">
+      <UniqueIdentifier>{9fd4a4aa-d6b1-4e80-a35b-183988cfa60c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{87a6056b-bbc1-41fd-82f2-2250d2fbbfc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{35a1c641-ce8c-4db5-88d1-e82b37bb2d65}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="windsim.cpp">
+    <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_windsim.cpp">
@@ -56,50 +71,11 @@
     <ClCompile Include="GeneratedFiles\Release\moc_dx11widget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="dx11widget.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dx11renderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="logger.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_dx11renderer.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_dx11renderer.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="object3D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="objLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="actor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="settings.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="project.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="objectManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="meshActor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="skyActor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="sky.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_settingsDialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -107,26 +83,11 @@
     <ClCompile Include="GeneratedFiles\Release\moc_settingsDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="settingsDialog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="commands.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="objectItem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="meshProperties.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_meshProperties.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_meshProperties.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="objectContainer.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_objectContainer.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -134,125 +95,182 @@
     <ClCompile Include="GeneratedFiles\Release\moc_objectContainer.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="mesh3D.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\3D\actor.cpp">
+      <Filter>Source Files\3D</Filter>
     </ClCompile>
-    <ClCompile Include="axes.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\3D\axes.cpp">
+      <Filter>Source Files\3D</Filter>
     </ClCompile>
-    <ClCompile Include="axesActor.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\3D\axesActor.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\camera.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\dx11renderer.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\mesh3D.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\meshActor.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\object3D.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\objectManager.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\objLoader.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\sky.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\skyActor.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\commands.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\dx11widget.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\logger.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\meshProperties.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\objectContainer.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\objectItem.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\project.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\settingsDialog.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\windsim.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\settings.cpp">
+      <Filter>util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="windsim.h">
-      <Filter>Header Files</Filter>
+    <CustomBuild Include="src\GUI\ui\windsim.ui">
+      <Filter>Form Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="windsim.ui">
+    <CustomBuild Include="src\GUI\ui\settings.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\ui\meshProperties.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
     <CustomBuild Include="windsim.qrc">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="dx11widget.h">
-      <Filter>Header Files</Filter>
+    <CustomBuild Include="src\3D\dx11renderer.h">
+      <Filter>Header Files\3D</Filter>
     </CustomBuild>
-    <CustomBuild Include="dx11renderer.h">
-      <Filter>Header Files</Filter>
+    <CustomBuild Include="src\GUI\dx11widget.h">
+      <Filter>Header Files\GUI</Filter>
     </CustomBuild>
-    <CustomBuild Include="settings.ui">
-      <Filter>Form Files</Filter>
+    <CustomBuild Include="src\GUI\meshProperties.h">
+      <Filter>Header Files\GUI</Filter>
     </CustomBuild>
-    <CustomBuild Include="settingsDialog.h">
-      <Filter>Header Files</Filter>
+    <CustomBuild Include="src\GUI\objectContainer.h">
+      <Filter>Header Files\GUI</Filter>
     </CustomBuild>
-    <CustomBuild Include="meshProperties.ui">
-      <Filter>Form Files</Filter>
+    <CustomBuild Include="src\GUI\settingsDialog.h">
+      <Filter>Header Files\GUI</Filter>
     </CustomBuild>
-    <CustomBuild Include="meshProperties.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="objectContainer.h">
-      <Filter>Header Files</Filter>
+    <CustomBuild Include="src\GUI\windsim.h">
+      <Filter>Header Files\GUI</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_windsim.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="logger.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="common.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="object3D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="objLoader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="actor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="camera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="libini.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="settings.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="project.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="objectManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="meshActor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="skyActor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sky.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_settings.h">
       <Filter>Generated Files</Filter>
-    </ClInclude>
-    <ClInclude Include="commands.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="objectItem.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_meshProperties.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="mesh3D.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\3D\actor.h">
+      <Filter>Header Files\3D</Filter>
     </ClInclude>
-    <ClInclude Include="axes.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\3D\axes.h">
+      <Filter>Header Files\3D</Filter>
     </ClInclude>
-    <ClInclude Include="axesActor.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\3D\axesActor.h">
+      <Filter>Header Files\3D</Filter>
     </ClInclude>
-    <ClInclude Include="intersection.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\3D\camera.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\intersection.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\mesh3D.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\meshActor.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\object3D.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\objectManager.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\objLoader.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\sky.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\skyActor.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\commands.h">
+      <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\logger.h">
+      <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\objectItem.h">
+      <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\project.h">
+      <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\common.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\libini.hpp">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\settings.h">
+      <Filter>util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="sky.fx">
-      <Filter>Source Files</Filter>
+    <FxCompile Include="src\3D\shaders\axes.fx">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="mesh.fx">
-      <Filter>Source Files</Filter>
+    <FxCompile Include="src\3D\shaders\sky.fx">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="axes.fx">
-      <Filter>Source Files</Filter>
+    <FxCompile Include="src\3D\shaders\mesh.fx">
+      <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>
