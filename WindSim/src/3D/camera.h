@@ -21,10 +21,13 @@ public:
 
 	DirectX::XMFLOAT4X4 getViewMatrix() const {	return m_view; };
 	DirectX::XMFLOAT4X4 getProjectionMatrix() const { return m_projection; };
+	bool isMoving() const { return m_rotating || m_translating; };
 
 	// Get camera info in world space
 	DirectX::XMFLOAT3 getCursorDir(QPoint windowCoord);
 	DirectX::XMFLOAT3 getCamPos();
+	DirectX::XMFLOAT3 getUpVector();
+	DirectX::XMFLOAT3 getRightVector();
 
 	bool handleControlEvent(QEvent* event);
 	void update(double elapsedTime);

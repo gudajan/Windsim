@@ -28,6 +28,8 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	connect(this, &DX11Widget::mouseMove, m_renderer, &DX11Renderer::onMouseMove);
 	connect(this, &DX11Widget::mousePress, m_renderer, &DX11Renderer::onMousePress);
 	connect(this, &DX11Widget::mouseRelease, m_renderer, &DX11Renderer::onMouseRelease);
+	connect(this, &DX11Widget::keyPress, m_renderer, &DX11Renderer::onKeyPress);
+	connect(this, &DX11Widget::keyRelease, m_renderer, &DX11Renderer::onKeyRelease);
 	connect(this, &DX11Widget::reloadShadersTriggered, m_renderer, &DX11Renderer::reloadShaders);
 
 	// Arbitrary Events Renerer -> Widget
@@ -85,13 +87,15 @@ void DX11Widget::resizeEvent(QResizeEvent* event)
 
 void DX11Widget::keyPressEvent(QKeyEvent * event)
 {
-	m_renderer->getCamera()->handleControlEvent(event);
+	emit keyPress(event);
+
 	return QWidget::keyPressEvent(event);
 }
 
 void DX11Widget::keyReleaseEvent(QKeyEvent * event)
 {
-	m_renderer->getCamera()->handleControlEvent(event);
+	emit keyRelease(event);
+
 	return QWidget::keyReleaseEvent(event);
 }
 

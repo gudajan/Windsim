@@ -34,11 +34,12 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_containsCursor(false),
 	m_localCursorPos(),
 	m_pressedId(0),
-	m_modifying(false),
+	m_state(State::Default),
 	m_elapsedTimer(),
 	m_renderTimer(this),
 	m_camera(width, height),
-	m_manager()
+	m_manager(),
+	m_transformer(&m_manager, &m_camera)
 {
 	connect(&m_renderTimer, &QTimer::timeout, this, &DX11Renderer::frame);
 }
@@ -215,21 +216,70 @@ void DX11Renderer::onResize(int width, int height)
 void DX11Renderer::onMouseMove(QMouseEvent* event)
 {
 	m_localCursorPos = event->pos();
-	m_camera.handleControlEvent(event);
+
+	switch (m_state)
+	{
+	case(State::Default) :
+		break;
+	case(State::CameraMove):
+		m_camera.handleControlEvent(event);
+		break;
+	case(State::Modifying) :
+		m_transformer.handleMouseMove(event);
+		break;
+	}
+
 }
 
 void DX11Renderer::onMousePress(QMouseEvent* event)
 {
-	m_camera.handleControlEvent(event);
-	if (event->button() == Qt::LeftButton)
+	switch (m_state)
 	{
-		m_pressedId = m_manager.getHoveredId();
+	case(State::Default):
+		m_camera.handleControlEvent(event);
+		if (m_camera.isMoving())
+			m_state = State::CameraMove; // Default -> CameraMove;
+		break;
+	case(State::CameraMove) :
+		m_camera.handleControlEvent(event);
+		break;
+	case(State::Modifying) :
+		// (righclick -> abort, leftclick -> ok -> create modify cmd
+		m_transformer.handleMousePress(event);
+		if (!m_transformer.isModifying())
+		{
+			m_state = State::Default; // Modifying -> Default;
+			if (!m_transformer.isAborted())
+				emit modify(m_transformer.getTransformation());
+			m_transformer.reset();
+		}
+		break;
 	}
+
+	if (event->button() == Qt::LeftButton)
+		m_pressedId = m_manager.getHoveredId();
 }
 
 void DX11Renderer::onMouseRelease(QMouseEvent* event)
 {
-	m_camera.handleControlEvent(event);
+	switch (m_state)
+	{
+	case(State::Default) :
+		break;
+	case(State::CameraMove) :
+		m_camera.handleControlEvent(event);
+		if (!m_camera.isMoving())
+		{
+			m_state = State::Default; // CameraMove -> Default
+		}
+
+		break;
+	case(State::Modifying) : // State is left on mouse press -> nothing to do
+		break;
+	}
+
+	// This is in the CameraMove State, as we think of a very small camera movement, while hovering over an object
+	// to select an object -> The camera must have been moving during mouse press and release
 	if (m_pressedId == m_manager.getHoveredId()) // Hovered id did not change since mouse press -> change selection
 	{
 		if (event->button() == Qt::LeftButton)
@@ -243,6 +293,54 @@ void DX11Renderer::onMouseRelease(QMouseEvent* event)
 			if (changed)
 				emit selectionChanged(m_manager.getSelection());
 		}
+	}
+}
+
+void DX11Renderer::onKeyPress(QKeyEvent* event)
+{
+	switch (m_state)
+	{
+	case(State::Default) :
+		m_camera.handleControlEvent(event);
+		if (m_camera.isMoving())
+		{
+			m_state = State::CameraMove; // Default -> CameraMove
+			break;
+		}
+
+		m_transformer.handleKeyPress(event, m_localCursorPos);
+		if (m_transformer.isModifying())
+			m_state = State::Modifying; // Default -> Modifying
+		break;
+	case(State::CameraMove) :
+		m_camera.handleControlEvent(event);
+		break;
+	case(State::Modifying) :
+		m_transformer.handleKeyPress(event, m_localCursorPos);
+		if (!m_transformer.isModifying())
+		{
+			m_state = State::Default; // Modifying -> Default;
+			if (!m_transformer.isAborted())
+				emit modify(m_transformer.getTransformation());
+			m_transformer.reset();
+		}
+		break;
+	}
+}
+
+void DX11Renderer::onKeyRelease(QKeyEvent* event)
+{
+	switch (m_state)
+	{
+	case(State::Default) :
+		break;
+	case(State::CameraMove) :
+		m_camera.handleControlEvent(event);
+		if (!m_camera.isMoving())
+			m_state = State::Default; // CameraMove -> Default
+		break;
+	case(State::Modifying) : // States within transform machine are changed on key press -> nothing to do
+		break;
 	}
 }
 

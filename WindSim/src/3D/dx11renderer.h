@@ -4,6 +4,7 @@
 #include "common.h"
 #include "camera.h"
 #include "objectManager.h"
+#include "transformMachine.h"
 
 // Qt
 #include <QWidget> // for WId
@@ -15,6 +16,11 @@
 // DirectX
 #include <d3d11.h>
 #include <d3dx11effect.h>
+
+namespace State
+{
+	enum RendererState { CameraMove, Modifying, Default };
+}
 
 class DX11Renderer : public QObject
 {
@@ -45,6 +51,10 @@ public slots:
 	void onMouseMove(QMouseEvent* event);
 	void onMousePress(QMouseEvent* event);
 	void onMouseRelease(QMouseEvent* event);
+	void onKeyPress(QKeyEvent* event);
+	void onKeyRelease(QKeyEvent* event);
+
+
 	void onAddObject(const QJsonObject& data);
 	void onModifyObject(const QJsonObject& data);
 	void onRemoveObject(int name);
@@ -55,6 +65,7 @@ public slots:
 signals:
 	void logit(const QString& str);
 	void selectionChanged(std::unordered_set<int> ids);
+	void modify(std::vector<QJsonObject> data);
 
 private:
 	bool createShaders(); // Load all shaders
@@ -82,13 +93,14 @@ private:
 	bool m_containsCursor;
 	QPoint m_localCursorPos;
 	int m_pressedId; // Id of the object, which was hovered during last mouse press
-	bool m_modifying;
+	State::RendererState m_state;
 
 	QElapsedTimer m_elapsedTimer;
 	QTimer m_renderTimer;
 
 	Camera m_camera;
 	ObjectManager m_manager;
+	TransformMachine m_transformer;
 
 };
 

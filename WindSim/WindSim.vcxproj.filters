@@ -161,6 +161,9 @@
     <ClCompile Include="src\util\settings.cpp">
       <Filter>util</Filter>
     </ClCompile>
+    <ClCompile Include="src\3D\transformMachine.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\ui\windsim.ui">
@@ -260,6 +263,9 @@
     </ClInclude>
     <ClInclude Include="src\util\settings.h">
       <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\transformMachine.h">
+      <Filter>Header Files\3D</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -72,6 +72,24 @@ XMFLOAT3 Camera::getCamPos()
 	return o;
 }
 
+XMFLOAT3 Camera::getUpVector()
+{
+	const XMVECTOR rot = conf.cam.type == ModelView ? XMLoadFloat4(&m_mvi.rot) : XMLoadFloat4(&m_fpi.rot);
+	const XMVECTOR up = XMVector3Normalize(XMVector3Rotate(XMVectorSet(0.0, 1.0, 0.0, 0.0), rot));
+	XMFLOAT3 u;
+	XMStoreFloat3(&u, up);
+	return u;
+}
+
+XMFLOAT3 Camera::getRightVector()
+{
+	const XMVECTOR rot = conf.cam.type == ModelView ? XMLoadFloat4(&m_mvi.rot) : XMLoadFloat4(&m_fpi.rot);
+	const XMVECTOR right = XMVector3Normalize(XMVector3Rotate(XMVectorSet(1.0, 0.0, 0.0, 0.0), rot));
+	XMFLOAT3 r;
+	XMStoreFloat3(&r, right);
+	return r;
+}
+
 bool Camera::handleControlEvent(QEvent* event)
 {
 	switch (event->type())

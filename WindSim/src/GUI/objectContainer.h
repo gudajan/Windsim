@@ -44,6 +44,7 @@ public slots:
 	void removeCmd(int id);
 	// Update the data of the object with id data["id"] => data MUST contain object id
 	void modifyCmd(const QJsonObject& data, Modifications mod); // Properties Dialogs and Renderer connect to this
+	void rendererModification(std::vector<QJsonObject> data); // Create modify command for each QJsonObject and combine them in group
 
 private slots:
 	// Propagate object changes in Object Model to other Views (i.e. 3D Representation and dialogs)

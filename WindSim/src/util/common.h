@@ -45,6 +45,21 @@ enum CameraType { FirstPerson, ModelView };
 
 enum class Shading{ Smooth, Flat }; // Mesh Shading type
 
+enum Modification
+{
+	Position = 0x1,
+	Scaling = 0x2,
+	Rotation = 0x4,
+	Visibility = 0x8,
+	Shading = 0x10,
+	Name = 0x20,
+	Color = 0x40,
+	All = UINT_MAX
+};
+
+Q_DECLARE_FLAGS(Modifications, Modification);
+Q_DECLARE_OPERATORS_FOR_FLAGS(Modifications);
+
 static inline float degToRad(float degree)
 {
 	return degree / 180.0f * DirectX::XM_PI;

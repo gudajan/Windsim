@@ -49,6 +49,8 @@ signals:
 	void mouseMove(QMouseEvent* event);
 	void mousePress(QMouseEvent* event);
 	void mouseRelease(QMouseEvent* event);
+	void keyPress(QKeyEvent* event);
+	void keyRelease(QKeyEvent* event);
 	void reloadShadersTriggered();
 
 private:

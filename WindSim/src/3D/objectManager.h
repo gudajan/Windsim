@@ -44,6 +44,8 @@ public:
 	int getHoveredId() const { return m_hoveredId; };
 	const std::unordered_set<int>& getSelection(){ return m_selectedIds; };
 	const void setSelection(const std::unordered_set<int>& selection);
+	std::shared_ptr<Actor> getActor(int id) { return m_actors[id]; }
+	std::unordered_map<int, std::shared_ptr<Actor>>& getActors() { return m_actors; };
 
 private:
 	// Get ID of object with intersection

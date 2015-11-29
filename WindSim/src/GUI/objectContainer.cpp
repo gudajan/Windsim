@@ -75,12 +75,14 @@ void ObjectContainer::setRenderer(DX11Renderer* renderer)
 {
 	m_renderer = renderer;
 
+	// Connect changes in GUI to renderer
 	connect(this, &ObjectContainer::addObject3DTriggered, m_renderer, &DX11Renderer::onAddObject);
 	connect(this, &ObjectContainer::modifyObject3DTriggered, m_renderer, &DX11Renderer::onModifyObject);
 	connect(this, &ObjectContainer::removeObject3DTriggered, m_renderer, &DX11Renderer::onRemoveObject);
 	connect(this, &ObjectContainer::removeAllObject3DTriggered, m_renderer, &DX11Renderer::onRemoveAll);
 
-	// TODO connect changes from renderer to this container(and the properties dialogs)
+	// Connect changes from renderer to this container(and the properties dialogs)
+	connect(m_renderer, &DX11Renderer::modify, this, &ObjectContainer::rendererModification);
 }
 
 void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
@@ -123,6 +125,18 @@ void ObjectContainer::modifyCmd(const QJsonObject& data, Modifications mod)
 	g_undoStack.push(cmd);
 }
 
+void ObjectContainer::rendererModification(std::vector<QJsonObject> data)
+{
+	QUndoCommand * transformation = new QUndoCommand();
+
+	for (const auto& json : data)
+	{
+		ObjectItem* item = getItem(json["id"].toInt());
+		QUndoCommand* cmd = new ModifyObjectCmd(item->data().toJsonObject(), json, item, Position | Scaling | Rotation, transformation); // Add command to command group
+	}
+
+	g_undoStack.push(transformation);
+}
 
 void ObjectContainer::objectsInserted(const QModelIndex & parent, int first, int last)
 {

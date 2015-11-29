@@ -175,6 +175,7 @@
     <ClCompile Include="src\3D\axes.cpp" />
     <ClCompile Include="src\3D\axesActor.cpp" />
     <ClCompile Include="src\3D\camera.cpp" />
+    <ClCompile Include="src\3D\transformMachine.cpp" />
     <ClCompile Include="src\GUI\commands.cpp" />
     <ClCompile Include="src\3D\dx11renderer.cpp" />
     <ClCompile Include="src\GUI\dx11widget.cpp" />
@@ -298,6 +299,7 @@
     <ClInclude Include="src\3D\axes.h" />
     <ClInclude Include="src\3D\axesActor.h" />
     <ClInclude Include="src\3D\camera.h" />
+    <ClInclude Include="src\3D\transformMachine.h" />
     <ClInclude Include="src\GUI\commands.h" />
     <ClInclude Include="src\util\common.h" />
     <ClInclude Include="GeneratedFiles\ui_meshProperties.h" />
@@ -443,7 +445,7 @@
     <FxCompile Include="src\3D\shaders\sky.fx">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Effect</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Effect</ShaderType>
-		<ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Effect</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Effect</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Effect</ShaderType>
     </FxCompile>
   </ItemGroup>

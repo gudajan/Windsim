@@ -10,22 +10,6 @@
 class ObjectContainer;
 class ObjectItem;
 
-
-enum Modification
-{
-	Position = 0x1,
-	Scaling = 0x2,
-	Rotation = 0x4,
-	Visibility = 0x8,
-	Shading = 0x10,
-	Name = 0x20,
-	Color = 0x40,
-	All = UINT_MAX
-};
-
-Q_DECLARE_FLAGS(Modifications, Modification);
-Q_DECLARE_OPERATORS_FOR_FLAGS(Modifications);
-
 static QString modToString(Modification mod)
 {
 	switch (mod)
