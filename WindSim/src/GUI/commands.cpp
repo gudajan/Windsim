@@ -3,6 +3,8 @@
 #include "dx11widget.h"
 #include "objectItem.h"
 
+#include <QJsonArray>
+
 //=================================================================================
 AddObjectCmd::AddObjectCmd(QJsonObject data, ObjectContainer* container, QUndoCommand* parent)
 	: QUndoCommand(parent),
@@ -57,10 +59,20 @@ void RemoveObjectCmd::undo()
 ModifyObjectCmd::ModifyObjectCmd(QJsonObject oldData, QJsonObject newData, ObjectItem* item, Modifications mod, QUndoCommand* parent)
 	: QUndoCommand(parent),
 	m_oldData(oldData),
-	m_newData(newData),
+	m_newData(oldData), // Set newData to oldData for the time being, update it later with the newData
 	m_item(item),
 	m_mod(mod)
 {
+	// Overwrite the old data with the new data if available
+	for (auto it = newData.constBegin(); it != newData.constEnd(); ++it)
+	{
+		if (it->isDouble()) m_newData[it.key()] = it->toDouble(); // This includes integers
+		else if (it->isObject()) m_newData[it.key()] = it->toObject();
+		else if (it->isArray()) m_newData[it.key()] = it->toArray();
+		else if (it->isString()) m_newData[it.key()] = it->toString();
+		else if (it->isBool()) m_newData[it.key()] = it->toBool();
+	}
+
 	setText(QObject::tr(qPrintable("Modify " + newData["type"].toString() + " " + newData["name"].toString())));
 }
 

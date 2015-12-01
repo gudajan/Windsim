@@ -128,11 +128,12 @@ void ObjectContainer::modifyCmd(const QJsonObject& data, Modifications mod)
 void ObjectContainer::rendererModification(std::vector<QJsonObject> data)
 {
 	QUndoCommand * transformation = new QUndoCommand();
+	transformation->setText("Modify via 3D view");
 
 	for (const auto& json : data)
 	{
 		ObjectItem* item = getItem(json["id"].toInt());
-		QUndoCommand* cmd = new ModifyObjectCmd(item->data().toJsonObject(), json, item, Position | Scaling | Rotation, transformation); // Add command to command group
+		new ModifyObjectCmd(item->data().toJsonObject(), json, item, Position | Scaling | Rotation, transformation); // Add command to command group
 	}
 
 	g_undoStack.push(transformation);
