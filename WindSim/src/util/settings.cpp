@@ -12,13 +12,13 @@ Settings conf = {
 	// Mesh
 	{
 		{ 204, 204, 204 }, // DefaultColor rgb
-		{ 230, 230, 230 } // Hover Color rgb
+		{ 170, 255, 255 } // Hover Color rgb
 	},
 	// Grid
 	{ 16.0f, 1.0f, 0.5f}, // Scale, Stepsize, grey color
 	//General
 	{
-		{190, 150, 150} // Selection Color
+		{255, 170, 50} // Selection Color
 	}
 };
 

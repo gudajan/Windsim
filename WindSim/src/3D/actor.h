@@ -21,6 +21,8 @@ public:
 	virtual void setPos(const DirectX::XMFLOAT3& pos);
 	virtual void setRot(const DirectX::XMFLOAT4& rot);
 	virtual void setScale(const DirectX::XMFLOAT3& scale);
+	virtual void setWorld(const DirectX::XMFLOAT4X4& matrix);
+	virtual void transform(const DirectX::XMFLOAT4X4& matrix);
 	virtual void computeWorld();
 	virtual void setRender(bool render);
 	virtual void toggleRender();

@@ -90,6 +90,17 @@ XMFLOAT3 Camera::getRightVector()
 	return r;
 }
 
+QPoint Camera::worldToWindow(XMFLOAT4 v)
+{
+	XMVECTOR vec = XMLoadFloat4(&v);
+	vec = XMVector4Transform(vec, XMLoadFloat4x4(&m_view)); // World -> view
+	vec = XMVector4Transform(vec, XMLoadFloat4x4(&m_projection)); // view -> projection
+	vec /= XMVectorGetW(vec);// homogenous division: projection -> screen [-1, 1]
+
+	QPointF screen(XMVectorGetX(vec), XMVectorGetY(vec)); // Ignore z and w coordinate as unimportand for window coordinates
+	return screenToWindow(screen);
+}
+
 bool Camera::handleControlEvent(QEvent* event)
 {
 	switch (event->type())
@@ -392,4 +403,9 @@ QPointF Camera::windowToScreen(QPoint p)
 	// In screen space (-1.0, -1.0) is lower left
 	// => -y
 	return QPointF(static_cast<float>(p.x()) / static_cast<float>(m_width) * 2.0f - 1.0f, - (static_cast<float>(p.y()) / static_cast<float>(m_height)* 2.0f - 1.0f));
+}
+
+QPoint Camera::screenToWindow(QPointF p)
+{
+	return QPoint((p.x() + 1.0f) * 0.5f * m_width, -((p.y() - 1.0f) * 0.5f * m_height));
 }

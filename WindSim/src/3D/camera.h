@@ -29,6 +29,8 @@ public:
 	DirectX::XMFLOAT3 getUpVector();
 	DirectX::XMFLOAT3 getRightVector();
 
+	QPoint worldToWindow(DirectX::XMFLOAT4 v);
+
 	bool handleControlEvent(QEvent* event);
 	void update(double elapsedTime);
 
@@ -51,6 +53,7 @@ private:
 	void computeProjectionMatrix();
 
 	QPointF windowToScreen(QPoint p);
+	QPoint screenToWindow(QPointF p);
 
 	DirectX::XMFLOAT4X4 m_view;
 	DirectX::XMFLOAT4X4 m_projection;

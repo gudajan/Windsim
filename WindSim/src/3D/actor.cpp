@@ -38,6 +38,32 @@ void Actor::setScale(const DirectX::XMFLOAT3& scale)
 	m_scale = scale;
 }
 
+void Actor::setWorld(const XMFLOAT4X4& matrix)
+{
+	XMMATRIX newWorld = XMLoadFloat4x4(&matrix);
+	XMVECTOR scale;
+	XMVECTOR rot;
+	XMVECTOR pos;
+	XMMatrixDecompose(&scale, &rot, &pos, newWorld);
+	XMStoreFloat3(&m_pos, pos);
+	XMStoreFloat3(&m_scale, scale);
+	XMStoreFloat4(&m_rot, rot);
+	m_world = matrix;
+}
+
+void Actor::transform(const XMFLOAT4X4& matrix)
+{
+	XMMATRIX newWorld = XMLoadFloat4x4(&m_world) * XMLoadFloat4x4(&matrix);
+	XMVECTOR scale;
+	XMVECTOR rot;
+	XMVECTOR pos;
+	XMMatrixDecompose(&scale, &rot, &pos, newWorld);
+	XMStoreFloat3(&m_pos, pos);
+	XMStoreFloat3(&m_scale, scale);
+	XMStoreFloat4(&m_rot, rot);
+	XMStoreFloat4x4(&m_world, newWorld);
+}
+
 void Actor::computeWorld()
 {
 	XMVECTOR p = XMLoadFloat3(&m_pos);
