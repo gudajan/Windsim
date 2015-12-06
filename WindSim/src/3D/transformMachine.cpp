@@ -362,124 +362,141 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 
 void TransformMachine::scale(QPoint currentMousePos, Qt::KeyboardModifiers mods)
 {
-	switch (m_state)
+	float scaleFactor = static_cast<float>((currentMousePos - m_oldObjWindowPos).manhattanLength()) / static_cast<float>((m_oldCursorPos - m_oldObjWindowPos).manhattanLength());
+
+	if (mods == Qt::ControlModifier)
 	{
-	case(Scale):
+		float stepInv = 1.0f / conf.gen.scalingStep;
+		float step = conf.gen.scalingStep;
+		scaleFactor *= stepInv;
+		scaleFactor = std::roundf(scaleFactor);
+		scaleFactor *= step;
+	}
 
-		float scaleFactor = static_cast<float>((currentMousePos - m_oldObjWindowPos).manhattanLength()) / static_cast<float>((m_oldCursorPos - m_oldObjWindowPos).manhattanLength());
+	XMVECTOR objPos = XMLoadFloat3(&m_oldObjWorldPos);
 
-		if (mods == Qt::ControlModifier)
+	for (const auto& act : m_oldActors)
+	{
+		// Calculate overall scaling wrt the averaged object position
+		//===========================================================
+		XMVECTOR pos = XMLoadFloat3(&act.second->getPos());
+		XMVECTOR scale = XMLoadFloat3(&act.second->getScale());
+		std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
+
+		// Only one object, or the object positions are all equal:
+		// In this case the transformation becomes simpler
+		if (XMVector3Equal(pos, objPos))
 		{
-			float stepInv = 1.0f / conf.gen.scalingStep;
-			float step = conf.gen.scalingStep;
-			scaleFactor *= stepInv;
-			scaleFactor = std::roundf(scaleFactor);
-			scaleFactor *= step;
-		}
-
-		for (const auto& act : m_oldActors)
-		{
-			// Calculate overall scaling wrt the averaged object position
-			//===========================================================
-			XMVECTOR pos = XMLoadFloat3(&act.second->getPos());
-			XMVECTOR scale = XMLoadFloat3(&act.second->getScale());
-			XMVECTOR objPos = XMLoadFloat3(&m_oldObjWorldPos);
-			std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
-
-			// Only one object, or the object positions are all equal:
-			// In this case the transformation becomes simpler
-			if (XMVector3Equal(pos, objPos))
-			{
-				// Simply apply local scaling
-				XMFLOAT3 newScale;
+			// Simply apply local scaling
+			XMFLOAT3 newScale;
+			if (m_state == Scale)
 				XMStoreFloat3(&newScale, scale * scaleFactor);
-				a->setScale(newScale);
-				a->computeWorld();
-			}
+			else if (m_state == ScaleX)
+				XMStoreFloat3(&newScale, scale * XMVectorSet(scaleFactor, 1.0f, 1.0f, 1.0f));
+			else if (m_state == ScaleY)
+				XMStoreFloat3(&newScale, scale * XMVectorSet(1.0f, scaleFactor, 1.0f, 1.0f));
+			else if (m_state == ScaleZ)
+				XMStoreFloat3(&newScale, scale * XMVectorSet(1.0f, 1.0f, scaleFactor, 1.0f));
 			else
-			{
-				// In this case the scaling center is different to the origin of the object space
-				// -> The translation of the object changes too
-				// -> We have to decompose the transformation and have to apply its different parts in the correct order
-				XMVECTOR rot = XMLoadFloat4(&act.second->getRot());
-
-				// Build new world matrix
-				XMMATRIX newWorld = XMMatrixScalingFromVector(scale); // Local scaling (from oldWorld)
-				newWorld *= XMMatrixRotationQuaternion(rot); // Local rotation (from oldWorld)
-				newWorld *= XMMatrixTranslationFromVector((pos - objPos)); // Move transformation center to averaged object position (includes oldWorld translation)
-				newWorld *= XMMatrixScaling(scaleFactor, scaleFactor, scaleFactor); // Perform scaling, dependent on mouse movement (scaling center is averaged object position (located at the origin))
-				newWorld *= XMMatrixTranslationFromVector(objPos); // Move object to its final world position (as objPos is currently at origin -> move about objPos to get to world position)
-
-				XMFLOAT4X4 nw;
-				XMStoreFloat4x4(&nw, newWorld);
-				a->setWorld(nw);
-			}
+				throw std::runtime_error("Invalid scaling state!");
+			a->setScale(newScale);
+			a->computeWorld();
 		}
-		break;
+		else
+		{
+			// In this case the scaling center is different to the origin of the object space
+			// -> The translation of the object changes too
+			// -> We have to decompose the transformation and have to apply its different parts in the correct order
+			XMVECTOR rot = XMLoadFloat4(&act.second->getRot());
+
+			// Build new world matrix
+			XMMATRIX newWorld = XMMatrixScalingFromVector(scale); // Local scaling (from oldWorld)
+			newWorld *= XMMatrixRotationQuaternion(rot); // Local rotation (from oldWorld)
+			newWorld *= XMMatrixTranslationFromVector((pos - objPos)); // Move transformation center to averaged object position (includes oldWorld translation)
+			// Perform scaling, dependent on mouse movement (scaling center is averaged object position (located at the origin))
+			if (m_state == Scale)
+				newWorld *= XMMatrixScaling(scaleFactor, scaleFactor, scaleFactor);
+			else if (m_state == ScaleX)
+				newWorld *= XMMatrixScaling(scaleFactor, 1.0f, 1.0f);
+			else if (m_state == ScaleY)
+				newWorld *= XMMatrixScaling(1.0f, scaleFactor, 1.0f);
+			else if (m_state == ScaleZ)
+				newWorld *= XMMatrixScaling(1.0f, 1.0f, scaleFactor);
+			else
+				throw std::runtime_error("Invalid scaling state!");
+			newWorld *= XMMatrixTranslationFromVector(objPos); // Move object to its final world position (as objPos is currently at origin -> move about objPos to get to world position)
+
+			XMFLOAT4X4 nw;
+			XMStoreFloat4x4(&nw, newWorld);
+			a->setWorld(nw);
+		}
 	}
 }
 
 void TransformMachine::rotate(QPoint currentMousePos, Qt::KeyboardModifiers mods)
 {
-	switch (m_state)
+	// Angle between the lines from the averaged object position to current and old cursor positions
+	float angle = QLineF(QLine(m_oldObjWindowPos, currentMousePos)).angleTo(QLineF(QLine(m_oldObjWindowPos, m_oldCursorPos)));
+
+	if (mods == Qt::ControlModifier)
 	{
-	case(Rotate) :
+		float stepInv = 1.0f / conf.gen.rotationStep;
+		float step = conf.gen.rotationStep;
+		angle *= stepInv;
+		angle = std::roundf(angle);
+		angle *= step;
+	}
+	angle = degToRad(angle);
 
-		// Angle between the lines from the averaged object position to current and old cursor positions
-		float angle = QLineF(QLine(m_oldObjWindowPos, currentMousePos)).angleTo(QLineF(QLine(m_oldObjWindowPos, m_oldCursorPos)));
+	XMVECTOR axis;
+	if (m_state == Rotate)
+		axis = XMVector3Normalize(XMLoadFloat3(&m_camera->getCamPos()) - XMLoadFloat3(&m_oldObjWorldPos)); // Perpendicular to view plane
+	else if (m_state == RotateX)
+		axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+	else if (m_state == RotateY)
+		axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	else if (m_state == RotateZ)
+		axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+	else
+		throw std::runtime_error("Invalid rotating state!");
 
-		if (mods == Qt::ControlModifier)
+	for (const auto& act : m_oldActors)
+	{
+		// Calculate overall rotation wrt the averaged object position
+		//===========================================================
+		XMVECTOR pos = XMLoadFloat3(&act.second->getPos());
+		XMVECTOR rot = XMLoadFloat4(&act.second->getRot());
+		XMVECTOR objPos = XMLoadFloat3(&m_oldObjWorldPos);
+		std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
+
+		// Only one object, or the object positions are all equal:
+		// In this case the transformation becomes simpler
+		if (XMVector3Equal(pos, objPos))
 		{
-			float stepInv = 1.0f / conf.gen.rotationStep;
-			float step = conf.gen.rotationStep;
-			angle *= stepInv;
-			angle = std::roundf(angle);
-			angle *= step;
+			// Simply apply local rotation
+			XMFLOAT4 newRot;
+			XMStoreFloat4(&newRot, XMQuaternionMultiply(rot, XMQuaternionRotationNormal(axis, angle)));
+			a->setRot(newRot);
+			a->computeWorld();
 		}
-		angle = degToRad(angle);
-
-		//XMVECTOR axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);  // Rotation plane is parallel to view plane
-		XMVECTOR axis = XMVector3Normalize(XMLoadFloat3(&m_camera->getCamPos()) - XMLoadFloat3(&m_oldObjWorldPos));
-
-		for (const auto& act : m_oldActors)
+		else
 		{
-			// Calculate overall rotation wrt the averaged object position
-			//===========================================================
-			XMVECTOR pos = XMLoadFloat3(&act.second->getPos());
-			XMVECTOR rot = XMLoadFloat4(&act.second->getRot());
-			XMVECTOR objPos = XMLoadFloat3(&m_oldObjWorldPos);
-			std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
+			// In this case the rotation axis does not run through the origin of the object space
+			// -> The translation of the object changes too
+			// -> We have to decompose the transformation and have to apply its different parts in the correct order
+			XMVECTOR scale = XMLoadFloat3(&act.second->getScale());
 
-			// Only one object, or the object positions are all equal:
-			// In this case the transformation becomes simpler
-			if (XMVector3Equal(pos, objPos))
-			{
-				// Simply apply local rotation
-				XMFLOAT4 newRot;
-				XMStoreFloat4(&newRot, XMQuaternionMultiply(rot, XMQuaternionRotationNormal(axis, angle)));
-				a->setRot(newRot);
-				a->computeWorld();
-			}
-			else
-			{
-				// In this case the rotation axis does not run through the origin of the object space
-				// -> The translation of the object changes too
-				// -> We have to decompose the transformation and have to apply its different parts in the correct order
-				XMVECTOR scale = XMLoadFloat3(&act.second->getScale());
+			// Build new world matrix
+			XMMATRIX newWorld = XMMatrixScalingFromVector(scale); // Local scaling (from oldWorld)
+			newWorld *= XMMatrixRotationQuaternion(rot); // Local rotation (from oldWorld)
+			newWorld *= XMMatrixTranslationFromVector((pos - objPos)); // Move transformation center to averaged object position (includes oldWorld translation)
+			newWorld *= XMMatrixRotationNormal(axis, angle); // Perform rotation, dependent on mouse movement (rotation axis runs from camera position through averaged object position (located at the origin))
+			newWorld *= XMMatrixTranslationFromVector(objPos); // Move object to its final world position (as objPos is currently at origin -> move about objPos to get to world position)
 
-				// Build new world matrix
-				XMMATRIX newWorld = XMMatrixScalingFromVector(scale); // Local scaling (from oldWorld)
-				newWorld *= XMMatrixRotationQuaternion(rot); // Local rotation (from oldWorld)
-				newWorld *= XMMatrixTranslationFromVector((pos - objPos)); // Move transformation center to averaged object position (includes oldWorld translation)
-				newWorld *= XMMatrixRotationNormal(axis, angle); // Perform rotation, dependent on mouse movement (rotation axis runs from camera position through averaged object position (located at the origin))
-				newWorld *= XMMatrixTranslationFromVector(objPos); // Move object to its final world position (as objPos is currently at origin -> move about objPos to get to world position)
-
-				XMFLOAT4X4 nw;
-				XMStoreFloat4x4(&nw, newWorld);
-				a->setWorld(nw);
-			}
+			XMFLOAT4X4 nw;
+			XMStoreFloat4x4(&nw, newWorld);
+			a->setWorld(nw);
 		}
-		break;
 	}
 }
 
