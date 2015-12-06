@@ -18,7 +18,10 @@ Settings conf = {
 	{ 16.0f, 1.0f, 0.5f}, // Scale, Stepsize, grey color
 	//General
 	{
-		{255, 170, 50} // Selection Color
+		{ 255, 170, 50 }, // Selection Color
+		0.5, // translationStep
+		0.5, // scalingStep
+		10 // RotationStep
 	}
 };
 
@@ -56,6 +59,10 @@ void loadIni(const std::string& path)
 	conf.gen.sc.r = std::stoi(getIniVal(iniMap, "General", "SelectionColor.red", std::to_string(conf.gen.sc.r)));
 	conf.gen.sc.g = std::stoi(getIniVal(iniMap, "General", "SelectionColor.green", std::to_string(conf.gen.sc.g)));
 	conf.gen.sc.b = std::stoi(getIniVal(iniMap, "General", "SelectionColor.blue", std::to_string(conf.gen.sc.b)));
+
+	conf.gen.translationStep = std::stof(getIniVal(iniMap, "General", "translationStep", std::to_string(conf.gen.translationStep)));
+	conf.gen.scalingStep = std::stof(getIniVal(iniMap, "General", "scalingStep", std::to_string(conf.gen.scalingStep)));
+	conf.gen.rotationStep = std::stof(getIniVal(iniMap, "General", "rotationStep", std::to_string(conf.gen.rotationStep)));
 }
 
 const std::string& getIniVal(libini::ini_model& map, const std::string& category, const std::string& value, const std::string& default)

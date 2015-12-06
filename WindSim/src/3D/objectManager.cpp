@@ -126,7 +126,11 @@ void ObjectManager::modify(const QJsonObject& data)
 
 		QJsonObject jRot = data["Rotation"].toObject();
 		XMFLOAT4 rot;
-		XMStoreFloat4(&rot, XMQuaternionRotationRollPitchYaw(degToRad(jRot["be"].toDouble()), degToRad(jRot["ga"].toDouble()), degToRad(jRot["al"].toDouble())));
+		XMVECTOR axis = XMVectorSet(jRot["ax"].toDouble(), jRot["ay"].toDouble(), jRot["az"].toDouble(), 0.0);
+		if (XMVector3Equal(axis, XMVectorZero()))
+			XMStoreFloat4(&rot, XMQuaternionIdentity());
+		else
+			XMStoreFloat4(&rot, XMQuaternionRotationAxis(axis, degToRad(jRot["angle"].toDouble())));
 
 		bool flatShading = data["Shading"].toString() == "Smooth" ? false : true;
 

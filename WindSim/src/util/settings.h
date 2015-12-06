@@ -59,6 +59,10 @@ struct Settings
 			int g;
 			int b;
 		} sc;
+		// Step size when transforming in the 3D view with steps
+		float translationStep;
+		float scalingStep;
+		float rotationStep;
 	} gen;
 };
 

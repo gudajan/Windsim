@@ -154,7 +154,7 @@ void ObjectContainer::objectsRemoved(const QModelIndex & parent, int first, int 
 	{
 		int id = m_model.item(i)->data().toJsonObject()["id"].toInt();
 		emit removeObject3DTriggered(id);
-		if (id == m_meshProperties->getCurrentID())
+		if (m_meshProperties && id == m_meshProperties->getCurrentID()) // Dialog already exists and is for removed object
 			m_meshProperties->hide();
 	}
 }
@@ -213,7 +213,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		if (!object.contains("Scaling"))
 			object["Scaling"] = QJsonObject{ { "x", 1.0 }, { "y", 1.0 }, { "z", 1.0 } };
 		if (!object.contains("Rotation"))
-			object["Rotation"] = QJsonObject{ { "al", 0.0 }, { "be", 0.0 }, { "ga", 0.0 } };
+			object["Rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
 		if (!object.contains("Shading"))
 			object["Shading"] = "Flat";
 		if (!object.contains("Color"))

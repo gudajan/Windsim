@@ -29,9 +29,10 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	connect(ui.zS, SIGNAL(valueChanged(double)), this, SLOT(scalingChanged()));
 
 	// Rotation
-	connect(ui.al, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
-	connect(ui.be, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
-	connect(ui.ga, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
+	connect(ui.ax, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
+	connect(ui.ay, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
+	connect(ui.az, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
+	connect(ui.angle, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
 
 	// Shading
 	connect(ui.rbFlat, SIGNAL(toggled(bool)), this, SLOT(shadingToggled(bool)));
@@ -69,9 +70,9 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 
 		// Position
 		const QJsonObject& pos = properties.find("Position")->toObject();
-		ui.xP->setValue(pos.find("x")->toDouble()); // forward: z in DX11
-		ui.yP->setValue(pos.find("y")->toDouble());  // right: x in DX1
-		ui.zP->setValue(pos.find("z")->toDouble()); // up: y in DX11
+		ui.xP->setValue(pos.find("x")->toDouble()); // right: x in DX1
+		ui.yP->setValue(pos.find("y")->toDouble()); // up: y in DX11
+		ui.zP->setValue(pos.find("z")->toDouble()); // forward: z in DX11
 
 		// Scaling
 		const QJsonObject& scale = properties.find("Scaling")->toObject();
@@ -81,9 +82,14 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 
 		// Rotation
 		const QJsonObject& rot = properties.find("Rotation")->toObject();
-		ui.al->setValue(rot.find("al")->toDouble()); // Roll -> arround z in DX11
-		ui.be->setValue(rot.find("be")->toDouble()); // Pitch -> arround x in DX11
-		ui.ga->setValue(rot.find("ga")->toDouble()); // Yaw -> arround y in DX11
+		double debug1 = rot.find("ax")->toDouble();
+		double debug2 = rot.find("ay")->toDouble();
+		double debug3 = rot.find("az")->toDouble();
+		double debug4 = rot.find("angle")->toDouble();
+		ui.ax->setValue(rot.find("ax")->toDouble());
+		ui.ay->setValue(rot.find("ay")->toDouble());
+		ui.az->setValue(rot.find("az")->toDouble());
+		ui.angle->setValue(rot.find("angle")->toDouble());
 
 		// Shading
 		if (properties.find("Shading")->toString() == "Smooth")
@@ -143,10 +149,12 @@ void MeshProperties::rotationChanged()
 {
 	QJsonObject rot
 	{
-		{ "al", ui.al->value() },
-		{ "be", ui.be->value() },
-		{ "ga", ui.ga->value() }
+		{ "ax", ui.ax->value() },
+		{ "ay", ui.ay->value() },
+		{ "az", ui.az->value() },
+		{ "angle", ui.angle->value() }
 	};
+
 	m_properties["Rotation"] = rot;
 	emit propertiesChanged(m_properties, Rotation);
 }
@@ -202,9 +210,10 @@ void MeshProperties::blockSignals()
 	ui.zS->blockSignals(true);
 
 	// Rotation
-	ui.al->blockSignals(true);
-	ui.be->blockSignals(true);
-	ui.ga->blockSignals(true);
+	ui.ax->blockSignals(true);
+	ui.ay->blockSignals(true);
+	ui.az->blockSignals(true);
+	ui.angle->blockSignals(true);
 
 	//Shading
 	ui.rbSmooth->blockSignals(true);
@@ -229,9 +238,10 @@ void MeshProperties::enableSignals()
 	ui.zS->blockSignals(false);
 
 	// Rotation
-	ui.al->blockSignals(false);
-	ui.be->blockSignals(false);
-	ui.ga->blockSignals(false);
+	ui.ax->blockSignals(false);
+	ui.ay->blockSignals(false);
+	ui.az->blockSignals(false);
+	ui.angle->blockSignals(false);
 
 	//Shading
 	ui.rbSmooth->blockSignals(false);

@@ -41,9 +41,12 @@ private:
 	void abort(); // Restore saved actors; reset machine;
 	void finish(); // Save current actor data in QJsonObjects (transfromed data);
 
-	void translate(QPoint currentCursorPos);
-	void scale(QPoint currentCursorPos);
-	void rotate(QPoint currentCursorPos);
+	void translate(QPoint currentCursorPos, Qt::KeyboardModifiers mods);
+	void scale(QPoint currentCursorPos, Qt::KeyboardModifiers mods);
+	void rotate(QPoint currentCursorPos, Qt::KeyboardModifiers mods);
+
+	static void toEuler(DirectX::XMFLOAT4 q, float& al, float& be, float& ga);
+
 
 	State::ModificationState m_state;
 	std::unordered_map<int, std::shared_ptr<MeshActor>> m_oldActors; // The selected actors at the start of the transformation
@@ -51,6 +54,9 @@ private:
 	QPoint m_oldObjWindowPos; // The averaged position of all objects in window/widget space [0 - width/height]
 	QPoint m_oldCursorPos; // The cursor position at the start of the transformation
 	DirectX::XMFLOAT3 m_oldCursorDir; // The vector throug the cursor positon in world space at the start of the transformation
+	DirectX::XMFLOAT3 m_oldXZInt; // The intersection of the original cursor ray and the xz plane
+	DirectX::XMFLOAT3 m_oldXYInt; // same but xy plane
+	DirectX::XMFLOAT3 m_oldYZInt; // same but yz plane
 	std::vector<QJsonObject> m_transformation; // Holds the finished transformation
 
 	ObjectManager* m_manager;

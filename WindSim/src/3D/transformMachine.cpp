@@ -21,6 +21,9 @@ TransformMachine::TransformMachine(ObjectManager* manager, Camera* camera)
 	m_oldObjWindowPos(0, 0),
 	m_oldCursorPos(0, 0),
 	m_oldCursorDir(1, 0, 0),
+	m_oldXZInt(0.0, 0.0, 0.0),
+	m_oldXYInt(0.0, 0.0, 0.0),
+	m_oldYZInt(0.0, 0.0, 0.0),
 	m_transformation(),
 	m_manager(manager),
 	m_camera(camera)
@@ -73,6 +76,7 @@ void TransformMachine::handleKeyPress(QKeyEvent* event, QPoint currentMousePos)
 		case(RotateZ) : m_state = RotateX; break;
 		default: return;
 		}
+		break;
 	case(Qt::Key_Y) :
 		switch (m_state)
 		{
@@ -90,6 +94,7 @@ void TransformMachine::handleKeyPress(QKeyEvent* event, QPoint currentMousePos)
 		case(RotateZ) : m_state = RotateY; break;
 		default: return;
 		}
+		break;
 	case(Qt::Key_Z) :
 		switch (m_state)
 		{
@@ -107,6 +112,7 @@ void TransformMachine::handleKeyPress(QKeyEvent* event, QPoint currentMousePos)
 		case(RotateY) : m_state = RotateZ; break;
 		default: return;
 		}
+		break;
 	case(Qt::Key_Escape) :
 		if (m_state != Start && m_state != Aborted && m_state != Finished)
 		{
@@ -158,19 +164,19 @@ void TransformMachine::handleMouseMove(QMouseEvent* event)
 	case(TranslateX):
 	case(TranslateY):
 	case(TranslateZ):
-		translate(currentMousePos);
+		translate(currentMousePos, event->modifiers());
 		break;
 	case(Scale) : // Move object parallel to camera view plane
 	case(ScaleX) :
 	case(ScaleY) :
 	case(ScaleZ) :
-		scale(currentMousePos);
+		scale(currentMousePos, event->modifiers());
 		break;
 	case(Rotate) : // Move object parallel to camera view plane
 	case(RotateX) :
 	case(RotateY) :
 	case(RotateZ) :
-		rotate(currentMousePos);
+		rotate(currentMousePos, event->modifiers());
 		break;
 	}
 }
@@ -208,6 +214,21 @@ void TransformMachine::start(QPoint currentMousePos)
 	XMStoreFloat4(&objPos, groupPos);
 	objPos.w = 1.0f;
 	m_oldObjWindowPos = m_camera->worldToWindow(objPos);
+
+	// Calculate intersections with xz, xy and yz plane
+	XMVECTOR xzPlane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+	XMVECTOR xyPlane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f));
+	XMVECTOR yzPlane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f));
+	XMVECTOR camPos = XMLoadFloat3(&m_camera->getCamPos());
+	XMVECTOR cursorDir = XMLoadFloat3(&m_oldCursorDir);
+
+	XMVECTOR xzInt = XMPlaneIntersectLine(xzPlane, camPos, camPos + cursorDir);
+	XMVECTOR xyInt = XMPlaneIntersectLine(xyPlane, camPos, camPos + cursorDir);
+	XMVECTOR yzInt = XMPlaneIntersectLine(yzPlane, camPos, camPos + cursorDir);
+
+	XMStoreFloat3(&m_oldXZInt, xzInt);
+	XMStoreFloat3(&m_oldXYInt, xyInt);
+	XMStoreFloat3(&m_oldYZInt, yzInt);
 }
 
 void TransformMachine::abort()
@@ -235,53 +256,22 @@ void TransformMachine::finish()
 		XMVECTOR axis;
 		float angle;
 		XMQuaternionToAxisAngle(&axis, &angle, XMLoadFloat4(&r));
-		XMFLOAT3 ax;
-		XMStoreFloat3(&ax, XMVector3Normalize(axis));
-		float al;
-		float be;
-		float ga;
-		toEuler(ax, angle, al, be, ga);
 
 		QJsonObject pos = { { "x", p.x }, { "y", p.y }, { "z", p.z } };
 		QJsonObject scale = { { "x", s.x }, { "y", s.y }, { "z", s.z } };
-		QJsonObject rot = { { "al", radToDeg(al) }, { "be", radToDeg(be) }, { "ga", radToDeg(ga) } };
+		QJsonObject rot = { { "ax", XMVectorGetX(axis) }, { "ay", XMVectorGetY(axis) }, { "az", XMVectorGetZ(axis) }, { "angle", radToDeg(angle) } };
 		m_transformation.push_back({ { "id", id }, { "Position", pos }, { "Scaling", scale }, { "Rotation", rot } });
 	}
 }
 
-void TransformMachine::translate(QPoint currentCursorPos)
+void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers mods)
 {
-	switch (m_state)
+	XMVECTOR moveVec;
+	if (m_state == Translate)  // Move object parallel to camera view plane
 	{
-	case(Translate) :  // Move object parallel to camera view plane
 		// The transformation is calculated from the old actor position(at the beginning of the transformation) and the mouse move vector(since the beginning of the transformation)
-		//
-		// Option 1:
-		// Use camera up and right vector in world space together with screen space coordinates of the mouse move to move the object
-		// Additionally we have to use a small magic number to adjust the amount of translation to the mouse cursor movement. This should differ dependent on the distance to the translated object.
-		// Option 2 (more exact):
 		// Calculate the two rays through the mouse cursor positions (old and current) in world space. Compute a plane, parallel to the view plane at the averaged position of the translated objects
 		// Compute the two intersections of the mouse rays and the move plane and calculate the translation vector from these two intersections
-
-		//// Option 1:
-		//XMVECTOR up = XMLoadFloat3(&m_camera->getUpVector());
-		//XMVECTOR right = XMLoadFloat3(&m_camera->getRightVector());
-		//QPoint move = currentCursorPos - m_oldCursorPos;
-		//float magicNumber = 0.03;
-		//for (const auto& act : m_oldActors)
-		//{
-		//	XMVECTOR pos = XMLoadFloat3(&act.second->getPos());
-		//	pos += right * move.x() * magicNumber;
-		//	pos += up * move.y() * magicNumber;
-		//	XMFLOAT3 position;
-		//	XMStoreFloat3(&position, pos);
-		//	std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
-		//	a->setPos(position);
-		//	a->computeWorld();
-		//}
-
-
-		// Option 2:
 		XMVECTOR up = XMLoadFloat3(&m_camera->getUpVector());
 		XMVECTOR right = XMLoadFloat3(&m_camera->getRightVector());
 		XMVECTOR ncd = XMLoadFloat3(&m_camera->getCursorDir(currentCursorPos)); // New cursor direction vector
@@ -290,28 +280,102 @@ void TransformMachine::translate(QPoint currentCursorPos)
 
 		XMVECTOR movePlane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVector3Cross(up, right)); // The move plane, which is parallel two the viewing plane
 
-		XMVECTOR moveVec = XMPlaneIntersectLine(movePlane, origin, origin + ncd) - XMPlaneIntersectLine(movePlane, origin, origin + ocd); // The translation vector in world space
+		moveVec = XMPlaneIntersectLine(movePlane, origin, origin + ncd) - XMPlaneIntersectLine(movePlane, origin, origin + ocd); // The translation vector in world space
 
-		for (const auto& act : m_oldActors)
+	}
+	else if (m_state == TranslateX || m_state == TranslateY || m_state == TranslateZ)
+	{
+		XMVECTOR camPos = XMLoadFloat3(&m_camera->getCamPos());
+		XMVECTOR cursorDir = XMLoadFloat3(&m_camera->getCursorDir(currentCursorPos));
+		XMVECTOR axis;
+		XMVECTOR plane;
+		XMVECTOR oldInt;
+
+		if (m_state == TranslateX)
 		{
-			XMFLOAT3 position;
-			XMStoreFloat3(&position, XMLoadFloat3(&act.second->getPos()) + moveVec);
-			std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
-			a->setPos(position);
-			a->computeWorld();
+			axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+			plane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // XZ plane
+			oldInt = XMLoadFloat3(&m_oldXZInt);
 		}
+		else if (m_state == TranslateY)
+		{
+			axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			// Choose plane dependent on the current angle of the camera to this plane
+			// If cosine of cursor ray to plane normal is bigger -> plane has a "better" angle to the camera
+			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(cursorDir, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(cursorDir, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
+			{
+				plane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)); // XY plane
+				oldInt = XMLoadFloat3(&m_oldXYInt);
+			}
+			else
+			{
+				plane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)); // YZ plane
+				oldInt = XMLoadFloat3(&m_oldYZInt);
+			}
 
-		break;
+		}
+		else if (m_state == TranslateZ)
+		{
+			axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+			plane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // XZ plane
+			oldInt = XMLoadFloat3(&m_oldXZInt);
+		}
+		else
+			throw std::runtime_error("Invalid translation state!");
+
+
+		XMVECTOR newInt= XMPlaneIntersectLine(plane, camPos, camPos + cursorDir);
+
+		if (XMVectorGetIntX(XMVectorIsNaN(oldInt)) || XMVectorGetIntX(XMVectorIsNaN(newInt)))
+			return;
+
+		float distance = 0.0f;
+
+		if (m_state == TranslateX)
+			distance = XMVectorGetX(newInt) - XMVectorGetX(oldInt);
+		else if (m_state == TranslateY)
+			distance = XMVectorGetY(newInt) - XMVectorGetY(oldInt);
+		else if (m_state == TranslateZ)
+			distance = XMVectorGetZ(newInt) - XMVectorGetZ(oldInt);
+
+		moveVec = distance * axis;
+	}
+
+	if (mods == Qt::ControlModifier)
+	{
+		float stepInv = 1.0f / conf.gen.translationStep;
+		float step = conf.gen.translationStep;
+		moveVec = XMVectorMultiply(moveVec, XMVectorSet(stepInv, stepInv, stepInv, stepInv));
+		moveVec = XMVectorRound(moveVec);
+		moveVec = XMVectorMultiply(moveVec, XMVectorSet(step, step, step, step));
+	}
+
+	for (const auto& act : m_oldActors)
+	{
+		XMFLOAT3 position;
+		XMStoreFloat3(&position, XMLoadFloat3(&act.second->getPos()) + moveVec);
+		std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
+		a->setPos(position);
+		a->computeWorld();
 	}
 }
 
-void TransformMachine::scale(QPoint currentMousePos)
+void TransformMachine::scale(QPoint currentMousePos, Qt::KeyboardModifiers mods)
 {
 	switch (m_state)
 	{
 	case(Scale):
 
 		float scaleFactor = static_cast<float>((currentMousePos - m_oldObjWindowPos).manhattanLength()) / static_cast<float>((m_oldCursorPos - m_oldObjWindowPos).manhattanLength());
+
+		if (mods == Qt::ControlModifier)
+		{
+			float stepInv = 1.0f / conf.gen.scalingStep;
+			float step = conf.gen.scalingStep;
+			scaleFactor *= stepInv;
+			scaleFactor = std::roundf(scaleFactor);
+			scaleFactor *= step;
+		}
 
 		for (const auto& act : m_oldActors)
 		{
@@ -355,14 +419,24 @@ void TransformMachine::scale(QPoint currentMousePos)
 	}
 }
 
-void TransformMachine::rotate(QPoint currentMousePos)
+void TransformMachine::rotate(QPoint currentMousePos, Qt::KeyboardModifiers mods)
 {
 	switch (m_state)
 	{
 	case(Rotate) :
 
 		// Angle between the lines from the averaged object position to current and old cursor positions
-		float angle = degToRad(QLineF(QLine(m_oldObjWindowPos, currentMousePos)).angleTo(QLineF(QLine(m_oldObjWindowPos, m_oldCursorPos))));
+		float angle = QLineF(QLine(m_oldObjWindowPos, currentMousePos)).angleTo(QLineF(QLine(m_oldObjWindowPos, m_oldCursorPos)));
+
+		if (mods == Qt::ControlModifier)
+		{
+			float stepInv = 1.0f / conf.gen.rotationStep;
+			float step = conf.gen.rotationStep;
+			angle *= stepInv;
+			angle = std::roundf(angle);
+			angle *= step;
+		}
+		angle = degToRad(angle);
 
 		//XMVECTOR axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);  // Rotation plane is parallel to view plane
 		XMVECTOR axis = XMVector3Normalize(XMLoadFloat3(&m_camera->getCamPos()) - XMLoadFloat3(&m_oldObjWorldPos));
@@ -407,4 +481,46 @@ void TransformMachine::rotate(QPoint currentMousePos)
 		}
 		break;
 	}
+}
+
+void TransformMachine::toEuler(DirectX::XMFLOAT4 q, float& al, float& be, float& ga)
+{
+	// The angle sequence phi1, phi2, phi3
+	float theta1;
+	float theta2;
+	float theta3;
+
+	// Angle sequence in directx11 is z -> x -> y
+	float q0 = q.w;
+	float q1 = q.z;
+	float q2 = q.x;
+	float q3 = q.y;
+
+	double sq0 = q0 * q0;
+	double sq1 = q1*q1;
+	double sq2 = q2*q2;
+	double sq3 = q3*q3;
+	double unit = sq1 + sq2 + sq3 + sq0;
+	double test = q0*q2 + q1*q3;
+
+	if (test > 0.49999999 * unit) { // singularity at north pole
+		theta1 = 2 * std::atan2(q1, q0);
+		theta2 = DirectX::XM_PI / 2;
+		theta3 = 0;
+		return;
+	}
+	if (test < -0.49999999 * unit) { // singularity at south pole
+		theta1 = 2 * std::atan2(q1, q0);
+		theta2 = -DirectX::XM_PI / 2;
+		theta3 = 0;
+		return;
+	}
+
+	theta1 = std::atan2(2 * q0*q1 - 2 * q2*q3, 1 - 2 * sq1 - 2 * sq2);
+	theta2 = std::asin(2 * test / unit);
+	theta3 = std::atan2(2 * q0*q3 - 2 * q1*q2, 1 - 2 * sq2 - 2 * sq3);
+
+	al = theta2; // pitch is x in DirectX
+	be = theta3; // yaw is y in directX
+	ga = theta1; // roll is z in directX
 }

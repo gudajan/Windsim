@@ -60,13 +60,13 @@ enum Modification
 Q_DECLARE_FLAGS(Modifications, Modification);
 Q_DECLARE_OPERATORS_FOR_FLAGS(Modifications);
 
-static inline float degToRad(float degree)
+static inline float degToRad(float degrees)
 {
-	return degree / 180.0f * DirectX::XM_PI;
+	return degrees * DirectX::XM_PI / 180.0f;
 }
 static inline float radToDeg(float radians)
 {
-	return radians / DirectX::XM_PI * 180.0f;
+	return radians * 180.0f / DirectX::XM_PI;
 }
 
 // Normalize the given angle in radians to [0°, 360°], respectively returning a value between [0 - 2*PI]
@@ -76,39 +76,6 @@ static inline float normalizeRad(float rad)
 }
 
 
-static void toEuler(DirectX::XMFLOAT3 axis, float angle, float& al, float& be, float& ga) {
-	float s = std::sin(angle);
-	float c = std::cos(angle);
-	float t = 1.0f - c;
-
-	if (DirectX::XMVector3Equal(DirectX::XMVectorZero(), DirectX::XMLoadFloat3(&axis)))
-	{
-		al = be = ga = 0.0f;
-		return;
-	}
-	assert(DirectX::XMVectorGetX(DirectX::XMVector3Length(DirectX::XMLoadFloat3(&axis))) > 1.0f - 1.0e-4f &&
-		DirectX::XMVectorGetX(DirectX::XMVector3Length(DirectX::XMLoadFloat3(&axis))) < 1.0f + 1.0e-4f);
-
-	float x = axis.x;
-	float y = axis.y;
-	float z = axis.z;
-
-	if ((x * y * t + z  *s) > 0.998f) { // north pole singularity detected
-		ga = 2 * std::atan2( x * std::sin( angle / 2.0f ), std::cos( angle / 2.0f )); // yaw
-		al = DirectX::XM_PI / 2; // pitch
-		be = 0; // roll
-		return;
-	}
-	if ((x * y * t + z * s) < -0.998f) { // south pole singularity detected
-		ga = -2.0f * std::atan2(x* std::sin(angle / 2.0f), std::cos(angle / 2.0f));
-		al = -DirectX::XM_PI / 2.0f;
-		be = 0;
-		return;
-	}
-	ga = std::atan2(y * s - x * z * t, 1.0f - (y * y + z * z) * t);
-	al = std::asin(x * y * t + z * s);
-	be = std::atan2(x * s - y * z * t, 1.0f - (x * x + z * z) * t);
-}
 
 static std::string loadFile(const std::string& path)
 {
