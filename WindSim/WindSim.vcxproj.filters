@@ -167,6 +167,9 @@
     <ClCompile Include="src\3D\marker.cpp">
       <Filter>Source Files\3D</Filter>
     </ClCompile>
+    <ClCompile Include="src\3D\markerActor.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\ui\windsim.ui">
@@ -271,6 +274,9 @@
       <Filter>Header Files\3D</Filter>
     </ClInclude>
     <ClInclude Include="src\3D\marker.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\markerActor.h">
       <Filter>Header Files\3D</Filter>
     </ClInclude>
   </ItemGroup>

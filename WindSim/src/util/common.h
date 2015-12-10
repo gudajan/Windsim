@@ -18,7 +18,7 @@
 #define SAFE_RELEASE(p) { if (p) { (p)->Release(); (p) = nullptr; } }
 #endif
 
-enum class ObjectType {Invalid, Mesh, Sky, Axes };
+enum class ObjectType {Invalid, Mesh, Sky, Axes, Marker };
 
 Q_DECLARE_METATYPE(ObjectType) // Necessary for qRegisterMetaType() and to pass ObjectType via signals/slots
 

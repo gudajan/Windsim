@@ -20,7 +20,6 @@ class ObjectManager
 {
 public:
 	ObjectManager();
-	~ObjectManager();
 
 	// Add one object, which is rendered
 	void add(ID3D11Device* device, const QJsonObject& data);
@@ -47,6 +46,9 @@ public:
 	std::shared_ptr<Actor> getActor(int id) { return m_actors[id]; }
 	std::unordered_map<int, std::shared_ptr<Actor>>& getActors() { return m_actors; };
 
+	void addAccessoryObject(const std::string& name, std::shared_ptr<Object3D> obj, std::shared_ptr<Actor> act);
+	std::shared_ptr<Actor> getAccessory(const std::string& name) { return m_accessoryActors[name]; };
+
 private:
 	// Get ID of object with intersection
 	int computeIntersection(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float& distance) const;
@@ -54,8 +56,13 @@ private:
 	int m_hoveredId; // ID of object which is currently hovered by the mouse
 	std::unordered_set<int> m_selectedIds; // Contains all ids of objects, that are currently selected
 
+	// Dynamic objects, included in the project
 	std::unordered_map<int, std::shared_ptr<Object3D>> m_objects;
 	std::unordered_map<int, std::shared_ptr<Actor>> m_actors;
+
+	// Additionally needed objects (e.g. Transform marker, Text displays etc)
+	std::unordered_map<std::string, std::shared_ptr<Object3D>> m_accessoryObjects;
+	std::unordered_map<std::string, std::shared_ptr<Actor>> m_accessoryActors;
 };
 
 #endif

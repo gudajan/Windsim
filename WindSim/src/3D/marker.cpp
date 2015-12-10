@@ -10,11 +10,7 @@ using namespace DirectX;
 
 Marker::Marker()
 	: Object3D(),
-	m_renderPosition(true),
-	m_renderX(true),
-	m_renderY(true),
-	m_renderZ(true),
-	m_renderLarge(false)
+	m_renderPosition(true)
 {
 	m_vertexData.insert(m_vertexData.end(), { 0.0f, 0.0f, 0.0f }); // Push pack origin position
 	m_indexData.push_back(0); // One point
@@ -96,10 +92,6 @@ void Marker::render(ID3D11Device* device, ID3D11DeviceContext* context, const XM
 	s_shaderVariables.worldView->SetMatrix(reinterpret_cast<float*>(worldView.r));
 	s_shaderVariables.projection->SetMatrix(reinterpret_cast<float*>(proj.r));
 	s_shaderVariables.worldViewProj->SetMatrix(reinterpret_cast<float*>(worldViewProj.r));
-	s_shaderVariables.renderX->SetBool(m_renderX);
-	s_shaderVariables.renderY->SetBool(m_renderY);
-	s_shaderVariables.renderZ->SetBool(m_renderZ);
-	s_shaderVariables.renderLarge->SetBool(m_renderLarge);
 
 	const unsigned int strides[] = { sizeof(float) * 3 }; // 3 floats postion
 	const unsigned int offsets[] = { 0 };
@@ -117,6 +109,14 @@ void Marker::render(ID3D11Device* device, ID3D11DeviceContext* context, const XM
 
 	s_effect->GetTechniqueByIndex(0)->GetPassByName("Axes")->Apply(0, context);
 	context->DrawIndexed(m_numIndices, 0, 0);
+}
+
+void Marker::setShaderVariables(bool renderX, bool renderY, bool renderZ, bool renderLarge)
+{
+	s_shaderVariables.renderX->SetBool(renderX);
+	s_shaderVariables.renderY->SetBool(renderY);
+	s_shaderVariables.renderZ->SetBool(renderZ);
+	s_shaderVariables.renderLarge->SetBool(renderLarge);
 }
 
 Marker::ShaderVariables::ShaderVariables()

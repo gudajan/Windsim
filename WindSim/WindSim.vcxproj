@@ -176,6 +176,7 @@
     <ClCompile Include="src\3D\axesActor.cpp" />
     <ClCompile Include="src\3D\camera.cpp" />
     <ClCompile Include="src\3D\marker.cpp" />
+    <ClCompile Include="src\3D\markerActor.cpp" />
     <ClCompile Include="src\3D\transformMachine.cpp" />
     <ClCompile Include="src\GUI\commands.cpp" />
     <ClCompile Include="src\3D\dx11renderer.cpp" />
@@ -301,6 +302,7 @@
     <ClInclude Include="src\3D\axesActor.h" />
     <ClInclude Include="src\3D\camera.h" />
     <ClInclude Include="src\3D\marker.h" />
+    <ClInclude Include="src\3D\markerActor.h" />
     <ClInclude Include="src\3D\transformMachine.h" />
     <ClInclude Include="src\GUI\commands.h" />
     <ClInclude Include="src\util\common.h" />

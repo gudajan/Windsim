@@ -124,6 +124,8 @@ bool DX11Renderer::init()
 	// Initialize rendertargets and set viewport
 	onResize(m_width, m_height);
 
+	m_transformer.initDX11(m_device);
+
 	OutputDebugStringA("Initialized DirectX 11\n");
 
 	return createShaders();

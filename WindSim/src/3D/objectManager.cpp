@@ -17,11 +17,9 @@ ObjectManager::ObjectManager()
 	: m_hoveredId(0),
 	m_selectedIds(),
 	m_objects(),
-	m_actors()
-{
-}
-
-ObjectManager::~ObjectManager()
+	m_actors(),
+	m_accessoryObjects(),
+	m_accessoryActors()
 {
 }
 
@@ -74,7 +72,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 	}
 	else
 	{
-		throw std::runtime_error("Failed to add object '" + name + "' as identically named object already exists!");
+		throw std::runtime_error("Failed to add object '" + name + "' with id " + std::to_string(id) + " as object with identical id already exists!");
 	}
 }
 
@@ -154,6 +152,10 @@ void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, c
 	{
 		actor.second->render(device, context, view, projection);
 	}
+	for (const auto& actor : m_accessoryActors)
+	{
+		actor.second->render(device, context, view, projection);
+	}
 }
 
 void ObjectManager::release()
@@ -168,6 +170,11 @@ void ObjectManager::release()
 		{
 			std::dynamic_pointer_cast<MeshActor>(actor.second)->release();
 		}
+	}
+
+	for (const auto& object : m_accessoryObjects)
+	{
+		object.second->release();
 	}
 }
 
@@ -220,6 +227,14 @@ void ObjectManager::setHovered()
 	auto& act = m_actors.find(m_hoveredId);
 	if (act != m_actors.end() && act->second->getType() == ObjectType::Mesh)
 		std::dynamic_pointer_cast<MeshActor>(act->second)->setHovered(true);
+}
+
+void ObjectManager::addAccessoryObject(const std::string& name, std::shared_ptr<Object3D> obj, std::shared_ptr<Actor> act)
+{
+	bool inserted = m_accessoryObjects.emplace(name, obj).second;
+	if (!inserted)
+		throw std::runtime_error("Failed to add accessory object '" + name + "' as identically named object already exists!");
+	m_accessoryActors.emplace(name, act);
 }
 
 int ObjectManager::computeIntersection(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float& distance) const

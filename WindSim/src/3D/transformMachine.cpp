@@ -4,6 +4,8 @@
 #include "camera.h"
 #include "settings.h"
 #include "actor.h"
+#include "marker.h"
+#include "markerActor.h"
 
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -12,11 +14,15 @@
 
 #include <DirectXMath.h>
 
+#include <memory>
+#include <string>
+
 using namespace State;
 using namespace DirectX;
 
 TransformMachine::TransformMachine(ObjectManager* manager, Camera* camera)
 	: m_state(Start),
+	m_marker(nullptr),
 	m_oldActors(),
 	m_oldObjWorldPos(0.0f, 0.0f, 0.0f),
 	m_oldObjWindowPos(0, 0),
@@ -31,8 +37,21 @@ TransformMachine::TransformMachine(ObjectManager* manager, Camera* camera)
 {
 }
 
-TransformMachine::~TransformMachine()
+void TransformMachine::initDX11(ID3D11Device* device)
 {
+	// Create transformation marker
+	Marker* m = new Marker();
+	m_marker = std::shared_ptr<MarkerActor>(new MarkerActor(*m, 0)); // ID is not necessary
+
+	m_marker->setRender(false);
+	m_marker->setXAxisRendered(false);
+	m_marker->setYAxisRendered(false);
+	m_marker->setZAxisRendered(false);
+	m_marker->setLarge(true);
+
+	m_manager->addAccessoryObject("transformMarker", std::shared_ptr<Object3D>(m), m_marker);
+
+	m->create(device, true);
 }
 
 void TransformMachine::handleKeyPress(QKeyEvent* event, QPoint currentMousePos)
@@ -63,54 +82,54 @@ void TransformMachine::handleKeyPress(QKeyEvent* event, QPoint currentMousePos)
 	case(Qt::Key_X):
 		switch (m_state)
 		{
-		case(Translate) : m_state = TranslateX; break;
-		case(TranslateX) : m_state = Translate; break;
-		case(TranslateY) : m_state = TranslateX; break;
-		case(TranslateZ) : m_state = TranslateX; break;
-		case(Scale) : m_state = ScaleX; break;
-		case(ScaleX) : m_state = Scale; break;
-		case(ScaleY) : m_state = ScaleX; break;
-		case(ScaleZ) : m_state = ScaleX; break;
-		case(Rotate) : m_state = RotateX; break;
-		case(RotateX) : m_state = Rotate; break;
-		case(RotateY) : m_state = RotateX; break;
-		case(RotateZ) : m_state = RotateX; break;
+		case(Translate)  : m_state = TranslateX; switchToX();    break;
+		case(TranslateX) : m_state = Translate;  switchToNone(); break;
+		case(TranslateY) : m_state = TranslateX; switchToX();    break;
+		case(TranslateZ) : m_state = TranslateX; switchToX();    break;
+		case(Scale)      : m_state = ScaleX;     switchToX();    break;
+		case(ScaleX)     : m_state = Scale;      switchToNone(); break;
+		case(ScaleY)     : m_state = ScaleX;     switchToX();    break;
+		case(ScaleZ)     : m_state = ScaleX;     switchToX();    break;
+		case(Rotate)     : m_state = RotateX;    switchToX();    break;
+		case(RotateX)    : m_state = Rotate;     switchToNone(); break;
+		case(RotateY)    : m_state = RotateX;    switchToX();    break;
+		case(RotateZ)    : m_state = RotateX;    switchToX();    break;
 		default: return;
 		}
 		break;
 	case(Qt::Key_Y) :
 		switch (m_state)
 		{
-		case(Translate) : m_state = TranslateY; break;
-		case(TranslateY) : m_state = Translate; break;
-		case(TranslateX) : m_state = TranslateY; break;
-		case(TranslateZ) : m_state = TranslateY; break;
-		case(Scale) : m_state = ScaleY; break;
-		case(ScaleY) : m_state = Scale; break;
-		case(ScaleX) : m_state = ScaleY; break;
-		case(ScaleZ) : m_state = ScaleY; break;
-		case(Rotate) : m_state = RotateY; break;
-		case(RotateY) : m_state = Rotate; break;
-		case(RotateX) : m_state = RotateY; break;
-		case(RotateZ) : m_state = RotateY; break;
+		case(Translate)  : m_state = TranslateY; switchToY();    break;
+		case(TranslateY) : m_state = Translate;  switchToNone(); break;
+		case(TranslateX) : m_state = TranslateY; switchToY();    break;
+		case(TranslateZ) : m_state = TranslateY; switchToY();    break;
+		case(Scale)      : m_state = ScaleY;     switchToY();    break;
+		case(ScaleY)     : m_state = Scale;      switchToNone(); break;
+		case(ScaleX)     : m_state = ScaleY;     switchToY();    break;
+		case(ScaleZ)     : m_state = ScaleY;     switchToY();    break;
+		case(Rotate)     : m_state = RotateY;    switchToY();    break;
+		case(RotateY)    : m_state = Rotate;     switchToNone(); break;
+		case(RotateX)    : m_state = RotateY;    switchToY();    break;
+		case(RotateZ)    : m_state = RotateY;    switchToY();    break;
 		default: return;
 		}
 		break;
 	case(Qt::Key_Z) :
 		switch (m_state)
 		{
-		case(Translate) : m_state = TranslateZ; break;
-		case(TranslateZ) : m_state = Translate; break;
-		case(TranslateX) : m_state = TranslateZ; break;
-		case(TranslateY) : m_state = TranslateZ; break;
-		case(Scale) : m_state = ScaleZ; break;
-		case(ScaleZ) : m_state = Scale; break;
-		case(ScaleX) : m_state = ScaleZ; break;
-		case(ScaleY) : m_state = ScaleZ; break;
-		case(Rotate) : m_state = RotateZ; break;
-		case(RotateZ) : m_state = Rotate; break;
-		case(RotateX) : m_state = RotateZ; break;
-		case(RotateY) : m_state = RotateZ; break;
+		case(Translate)  : m_state = TranslateZ; switchToZ();    break;
+		case(TranslateZ) : m_state = Translate;  switchToNone(); break;
+		case(TranslateX) : m_state = TranslateZ; switchToZ();    break;
+		case(TranslateY) : m_state = TranslateZ; switchToZ();    break;
+		case(Scale)      : m_state = ScaleZ;     switchToZ();    break;
+		case(ScaleZ)     : m_state = Scale;      switchToNone(); break;
+		case(ScaleX)     : m_state = ScaleZ;     switchToZ();    break;
+		case(ScaleY)     : m_state = ScaleZ;     switchToZ();    break;
+		case(Rotate)     : m_state = RotateZ;    switchToZ();    break;
+		case(RotateZ)    : m_state = Rotate;     switchToNone(); break;
+		case(RotateX)    : m_state = RotateZ;    switchToZ();    break;
+		case(RotateY)    : m_state = RotateZ;    switchToZ();    break;
 		default: return;
 		}
 		break;
@@ -162,18 +181,18 @@ void TransformMachine::handleMouseMove(QMouseEvent* event)
 	switch (m_state)
 	{
 	case(Translate) :
-	case(TranslateX):
-	case(TranslateY):
-	case(TranslateZ):
+	case(TranslateX) :
+	case(TranslateY) :
+	case(TranslateZ) :
 		translate(currentMousePos, event->modifiers());
 		break;
-	case(Scale) : // Move object parallel to camera view plane
+	case(Scale) :
 	case(ScaleX) :
 	case(ScaleY) :
 	case(ScaleZ) :
 		scale(currentMousePos, event->modifiers());
 		break;
-	case(Rotate) : // Move object parallel to camera view plane
+	case(Rotate) :
 	case(RotateX) :
 	case(RotateY) :
 	case(RotateZ) :
@@ -194,7 +213,7 @@ void TransformMachine::start(QPoint currentMousePos)
 	{
 		// Copy the data of the actor (so it will not be overwritten by our temporary transformations
 		Actor* a = m_manager->getActor(id)->clone();
-		m_oldActors.emplace(std::make_pair(id, std::shared_ptr<Actor>(a)));
+		m_oldActors.emplace(id, std::shared_ptr<Actor>(a));
 	}
 
 	m_oldCursorPos = currentMousePos;
@@ -230,6 +249,12 @@ void TransformMachine::start(QPoint currentMousePos)
 	XMStoreFloat3(&m_oldXZInt, xzInt);
 	XMStoreFloat3(&m_oldXYInt, xyInt);
 	XMStoreFloat3(&m_oldYZInt, yzInt);
+
+	// Start rendering the transformation marker
+	m_marker->setRender(true);
+	m_marker->setPos(m_oldObjWorldPos);
+	m_marker->computeWorld();
+	switchToNone();
 }
 
 void TransformMachine::abort()
@@ -243,6 +268,9 @@ void TransformMachine::abort()
 		act->setRot(a.second->getRot());
 		act->computeWorld();
 	}
+
+	// Stop rendering the transformation marker
+	m_marker->setRender(false);
 }
 
 void TransformMachine::finish()
@@ -263,6 +291,9 @@ void TransformMachine::finish()
 		QJsonObject rot = { { "ax", XMVectorGetX(axis) }, { "ay", XMVectorGetY(axis) }, { "az", XMVectorGetZ(axis) }, { "angle", radToDeg(angle) } };
 		m_transformation.push_back({ { "id", id }, { "Position", pos }, { "Scaling", scale }, { "Rotation", rot } });
 	}
+
+	// Stop rendering the transformation marker
+	m_marker->setRender(false);
 }
 
 void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers mods)
@@ -284,8 +315,11 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		moveVec = XMPlaneIntersectLine(movePlane, origin, origin + ncd) - XMPlaneIntersectLine(movePlane, origin, origin + ocd); // The translation vector in world space
 
 	}
-	else if (m_state == TranslateX || m_state == TranslateY || m_state == TranslateZ)
+	else if (m_state == TranslateX || m_state == TranslateY || m_state == TranslateZ) // Move object along global coordinate axes
 	{
+		// Calculate intersection with corresponding global plane and check the distance in the specified direction (x,y,z) (i.e. check that coordinate of the intersection point)
+		// This corresponds to the distanec on the specified axis
+		// Refer to intersection point at start of the transformation
 		XMVECTOR camPos = XMLoadFloat3(&m_camera->getCamPos());
 		XMVECTOR cursorDir = XMLoadFloat3(&m_camera->getCursorDir(currentCursorPos));
 		XMVECTOR axis;
@@ -359,6 +393,12 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		a->setPos(position);
 		a->computeWorld();
 	}
+
+	// Update transformation marker
+	XMFLOAT3 position;
+	XMStoreFloat3(&position, XMLoadFloat3(&m_oldObjWorldPos) + moveVec);
+	m_marker->setPos(position);
+	m_marker->computeWorld();
 }
 
 void TransformMachine::scale(QPoint currentMousePos, Qt::KeyboardModifiers mods)
@@ -499,6 +539,34 @@ void TransformMachine::rotate(QPoint currentMousePos, Qt::KeyboardModifiers mods
 			a->setWorld(nw);
 		}
 	}
+}
+
+void TransformMachine::switchToNone()
+{
+	m_marker->setXAxisRendered(false);
+	m_marker->setYAxisRendered(false);
+	m_marker->setZAxisRendered(false);
+}
+
+void TransformMachine::switchToX()
+{
+	m_marker->setXAxisRendered(true);
+	m_marker->setYAxisRendered(false);
+	m_marker->setZAxisRendered(false);
+}
+
+void TransformMachine::switchToY()
+{
+	m_marker->setXAxisRendered(false);
+	m_marker->setYAxisRendered(true);
+	m_marker->setZAxisRendered(false);
+}
+
+void TransformMachine::switchToZ()
+{
+	m_marker->setXAxisRendered(false);
+	m_marker->setYAxisRendered(false);
+	m_marker->setZAxisRendered(true);
 }
 
 void TransformMachine::toEuler(DirectX::XMFLOAT4 q, float& al, float& be, float& ga)

@@ -53,7 +53,10 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			m_mesh.setShaderVariables(m_flatShading, m_color);
 		m_mesh.render(device, context, m_world, view, projection);
 		if (m_selected || m_hovered)
+		{
+			m_marker.setShaderVariables(true, true, true, false);
 			m_marker.render(device, context, m_world, view, projection);
+		}
 	}
 }
 

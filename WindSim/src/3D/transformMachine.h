@@ -16,16 +16,20 @@ namespace State
 }
 
 class Actor;
+class MarkerActor;
 class ObjectManager;
 class Camera;
 class QKeyEvent;
 class QMouseEvent;
 
+struct ID3D11Device;
+
 class TransformMachine
 {
 public:
 	TransformMachine(ObjectManager* manager, Camera* camera);
-	~TransformMachine();
+
+	void initDX11(ID3D11Device* device);
 
 	void handleKeyPress(QKeyEvent* event, QPoint currentMousePos = QPoint(-1, -1)); // Change states
 	void handleMousePress(QMouseEvent* event); // Abort(right)/Finish(left)/Nothing(middelbutton)
@@ -46,10 +50,16 @@ private:
 	void scale(QPoint currentCursorPos, Qt::KeyboardModifiers mods);
 	void rotate(QPoint currentCursorPos, Qt::KeyboardModifiers mods);
 
+	void switchToNone();
+	void switchToX();
+	void switchToY();
+	void switchToZ();
+
 	static void toEuler(DirectX::XMFLOAT4 q, float& al, float& be, float& ga);
 
 
 	State::ModificationState m_state;
+	std::shared_ptr<MarkerActor> m_marker;
 	std::unordered_map<int, std::shared_ptr<Actor>> m_oldActors; // The selected actors at the start of the transformation
 	DirectX::XMFLOAT3 m_oldObjWorldPos; // The averaged position of all objects in world space
 	QPoint m_oldObjWindowPos; // The averaged position of all objects in window/widget space [0 - width/height]
