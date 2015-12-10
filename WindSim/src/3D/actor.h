@@ -5,14 +5,16 @@
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
 
-class ID3D11Device;
-class ID3D11DeviceContext;
+struct ID3D11Device;
+struct ID3D11DeviceContext;
 
 class Actor
 {
 public:
 	Actor(ObjectType type, int id);
-	virtual ~Actor();
+	virtual ~Actor() = default;
+
+	virtual Actor* clone() = 0;
 
 	virtual void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection) = 0;
 

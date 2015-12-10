@@ -8,7 +8,8 @@ class AxesActor : public Actor
 {
 public:
 	AxesActor(Axes& axes, int id);
-	~AxesActor();
+
+	AxesActor* clone() override;
 
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection) override;
 

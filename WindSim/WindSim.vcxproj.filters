@@ -164,6 +164,9 @@
     <ClCompile Include="src\3D\transformMachine.cpp">
       <Filter>Source Files\3D</Filter>
     </ClCompile>
+    <ClCompile Include="src\3D\marker.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\ui\windsim.ui">
@@ -267,6 +270,9 @@
     <ClInclude Include="src\3D\transformMachine.h">
       <Filter>Header Files\3D</Filter>
     </ClInclude>
+    <ClInclude Include="src\3D\marker.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\3D\shaders\axes.fx">
@@ -276,6 +282,12 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\mesh.fx">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\3D\shaders\marker.fx">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\3D\shaders\common.fx">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

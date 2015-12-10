@@ -1,15 +1,4 @@
-RasterizerState CullNone
-{
-	CullMode = None;
-};
-
-DepthStencilState DepthDefault
-{
-};
-
-BlendState BlendDisable
-{
-};
+#include "common.fx"
 
 cbuffer cb
 {
@@ -61,12 +50,7 @@ float4 psBlinnPhong(PSIn inFragment) : SV_Target
 		n = -normalize(inFragment.normalView);
 	}
 
-	// this will all get inlined anyway, might as well make it pretty
-	const float3 v = -normalize(inFragment.posView);
-	const float3 l = v; // special case: headlight
-	const float3 h = l; // still headlight
-
-	return g_vColor * (ka + kd * saturate(dot(n, l))) + ks * pow(saturate(dot(n, h)), s);
+	return BlinnPhongIllumination(n, -normalize(inFragment.posView), g_vColor.xyz, ka, kd, ks, s);
 }
 
 

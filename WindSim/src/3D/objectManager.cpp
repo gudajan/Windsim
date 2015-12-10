@@ -46,6 +46,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, false);
+			act->create(device);
 		}
 		else if (type == ObjectType::Sky)
 		{
@@ -160,6 +161,13 @@ void ObjectManager::release()
 	for (const auto& object : m_objects)
 	{
 		object.second->release();
+	}
+	for (const auto& actor : m_actors)
+	{
+		if (actor.second->getType() == ObjectType::Mesh)
+		{
+			std::dynamic_pointer_cast<MeshActor>(actor.second)->release();
+		}
 	}
 }
 

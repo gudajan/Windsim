@@ -46,7 +46,6 @@ HRESULT Axes::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device*
 
 	s_worldViewProj = s_effect->GetVariableByName("g_mWorldViewProj")->AsMatrix();
 
-	// One float3, used as postion and cubetexture coordinate
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA },
@@ -95,15 +94,16 @@ void Axes::createAxesData()
 	float step = conf.grid.step;
 	float col = conf.grid.col;
 
+	// Axes
 	m_vertexData =
 	{
-		// Positon         | Color
-		-scale,  0.0f,  0.0f, scale, 0.0f, 0.0f, // left x; red
-		 scale,  0.0f,  0.0f, scale, 0.0f, 0.0f, // right x
-		 0.0f, -scale,  0.0f, 0.0f, scale, 0.0f, // down y; green
-		 0.0f,  scale,  0.0f, 0.0f, scale, 0.0f, // up y
-		 0.0f,  0.0f, -scale, 0.0f, 0.0f, scale, // front z; blue
-		 0.0f,  0.0f,  scale, 0.0f, 0.0f, scale  // back z
+		// Positon           | Color
+		-scale,  0.0f,  0.0f, 1.0f, 0.0f, 0.0f, // left x; red
+		 scale,  0.0f,  0.0f, 1.0f, 0.0f, 0.0f, // right x
+		 0.0f, -scale,  0.0f, 0.0f, 1.0f, 0.0f, // down y; green
+		 0.0f,  scale,  0.0f, 0.0f, 1.0f, 0.0f, // up y
+		 0.0f,  0.0f, -scale, 0.0f, 0.0f, 1.0f, // front z; blue
+		 0.0f,  0.0f,  scale, 0.0f, 0.0f, 1.0f  // back z
 	};
 
 	m_indexData =

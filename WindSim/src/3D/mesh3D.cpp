@@ -35,7 +35,7 @@ HRESULT Mesh3D::createShaderFromFile(const std::wstring& shaderPath, ID3D11Devic
 	if (reload)
 	{
 		ID3DBlob* blob;
-		if (D3DX11CompileEffectFromFile(shaderPath.c_str(), nullptr, nullptr, D3DCOMPILE_DEBUG, 0, device, &s_effect, &blob) != S_OK)
+		if (D3DX11CompileEffectFromFile(shaderPath.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, D3DCOMPILE_DEBUG, 0, device, &s_effect, &blob) != S_OK)
 		{
 			char* buffer = reinterpret_cast<char*>(blob->GetBufferPointer());
 			OutputDebugStringA(buffer);
@@ -74,7 +74,7 @@ void Mesh3D::releaseShader()
 }
 
 
-void Mesh3D::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
+void Mesh3D::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
 {
 	if (s_effect == nullptr)
 	{

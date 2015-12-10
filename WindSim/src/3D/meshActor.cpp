@@ -1,11 +1,13 @@
 #include "meshActor.h"
 #include "mesh3D.h"
+#include "marker.h"
 #include "settings.h"
 
 using namespace DirectX;
 
 MeshActor::MeshActor(Mesh3D& mesh, int id)
 	: Actor(ObjectType::Mesh, id),
+	m_marker(),
 	m_mesh(mesh),
 	m_boundingBox(),
 	m_flatShading(true),
@@ -19,16 +21,27 @@ MeshActor::MeshActor(Mesh3D& mesh, int id)
 	setBoundingBox(center, extends);
 }
 
-MeshActor::~MeshActor()
+MeshActor* MeshActor::clone()
 {
+	return new MeshActor(*this);
 }
 
-void MeshActor::setBoundingBox(const DirectX::XMFLOAT3& center, const DirectX::XMFLOAT3& extends)
+void MeshActor::setBoundingBox(const XMFLOAT3& center, const XMFLOAT3& extends)
 {
 	m_boundingBox = BoundingBox(center, extends);
 }
 
-void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
+void MeshActor::create(ID3D11Device* device)
+{
+	m_marker.create(device, true);
+}
+
+void MeshActor::release()
+{
+	m_marker.release();
+}
+
+void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
 {
 	if (m_render)
 	{
@@ -38,7 +51,9 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			m_mesh.setShaderVariables(m_flatShading, PackedVector::XMCOLOR(conf.gen.sc.r / 255.0f, conf.gen.sc.g / 255.0f, conf.gen.sc.b / 255.0f, 1.0f));
 		else
 			m_mesh.setShaderVariables(m_flatShading, m_color);
-		m_mesh.render(device, context, getWorld(), view, projection);
+		m_mesh.render(device, context, m_world, view, projection);
+		if (m_selected || m_hovered)
+			m_marker.render(device, context, m_world, view, projection);
 	}
 }
 
@@ -49,7 +64,7 @@ bool MeshActor::intersect(XMFLOAT3 origin, XMFLOAT3 direction, float& distance) 
 	XMVECTOR dir = XMLoadFloat3(&direction);
 	dir = XMVectorSetW(dir, 0.0f);
 
-	XMMATRIX world = XMLoadFloat4x4(&getWorld());
+	XMMATRIX world = XMLoadFloat4x4(&m_world);
 
 	XMMATRIX invWorld = XMMatrixInverse(nullptr, world);
 	if (XMMatrixIsInfinite(invWorld) || XMMatrixIsNaN(invWorld)) // Matrix not invertible or arithmetric errors occured

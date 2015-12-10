@@ -3,6 +3,7 @@
 #include "objectManager.h"
 #include "camera.h"
 #include "settings.h"
+#include "actor.h"
 
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -192,8 +193,8 @@ void TransformMachine::start(QPoint currentMousePos)
 	for (auto id : m_manager->getSelection())
 	{
 		// Copy the data of the actor (so it will not be overwritten by our temporary transformations
-		MeshActor* a = new MeshActor(*std::dynamic_pointer_cast<MeshActor>(m_manager->getActor(id)));
-		m_oldActors.emplace(std::make_pair(id, std::shared_ptr<MeshActor>(a)));
+		Actor* a = m_manager->getActor(id)->clone();
+		m_oldActors.emplace(std::make_pair(id, std::shared_ptr<Actor>(a)));
 	}
 
 	m_oldCursorPos = currentMousePos;
@@ -249,7 +250,7 @@ void TransformMachine::finish()
 	// Iterate all selected (and therefore currently transformed) objects
 	for (auto id : m_manager->getSelection())
 	{
-		std::shared_ptr<MeshActor> act = std::dynamic_pointer_cast<MeshActor>(m_manager->getActor(id));
+		std::shared_ptr<Actor> act = m_manager->getActor(id);
 		XMFLOAT3 p = act->getPos();
 		XMFLOAT3 s = act->getScale();
 		XMFLOAT4 r = act->getRot();
@@ -354,7 +355,7 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 	{
 		XMFLOAT3 position;
 		XMStoreFloat3(&position, XMLoadFloat3(&act.second->getPos()) + moveVec);
-		std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
+		std::shared_ptr<Actor> a = m_manager->getActor(act.second->getId());
 		a->setPos(position);
 		a->computeWorld();
 	}
@@ -381,7 +382,7 @@ void TransformMachine::scale(QPoint currentMousePos, Qt::KeyboardModifiers mods)
 		//===========================================================
 		XMVECTOR pos = XMLoadFloat3(&act.second->getPos());
 		XMVECTOR scale = XMLoadFloat3(&act.second->getScale());
-		std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
+		std::shared_ptr<Actor> a = m_manager->getActor(act.second->getId());
 
 		// Only one object, or the object positions are all equal:
 		// In this case the transformation becomes simpler
@@ -467,7 +468,7 @@ void TransformMachine::rotate(QPoint currentMousePos, Qt::KeyboardModifiers mods
 		XMVECTOR pos = XMLoadFloat3(&act.second->getPos());
 		XMVECTOR rot = XMLoadFloat4(&act.second->getRot());
 		XMVECTOR objPos = XMLoadFloat3(&m_oldObjWorldPos);
-		std::shared_ptr<Actor> a = m_manager->getActors()[act.second->getId()];
+		std::shared_ptr<Actor> a = m_manager->getActor(act.second->getId());
 
 		// Only one object, or the object positions are all equal:
 		// In this case the transformation becomes simpler

@@ -14,10 +14,6 @@ Actor::Actor(ObjectType type, int id)
 	computeWorld();
 }
 
-Actor::~Actor()
-{
-}
-
 bool Actor::intersect(DirectX::XMFLOAT3 origin, DirectX::XMFLOAT3 direction, float& distance) const
 {
 	return true;

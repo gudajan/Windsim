@@ -8,13 +8,14 @@
 #include <QJsonObject>
 #include <QPoint>
 
-#include "meshActor.h"
+#include <DirectXMath.h>
 
 namespace State
 {
 	enum ModificationState { Start, Translate, TranslateX, TranslateY, TranslateZ, Scale, ScaleX, ScaleY, ScaleZ, Rotate, RotateX, RotateY, RotateZ, Aborted, Finished };
 }
 
+class Actor;
 class ObjectManager;
 class Camera;
 class QKeyEvent;
@@ -49,7 +50,7 @@ private:
 
 
 	State::ModificationState m_state;
-	std::unordered_map<int, std::shared_ptr<MeshActor>> m_oldActors; // The selected actors at the start of the transformation
+	std::unordered_map<int, std::shared_ptr<Actor>> m_oldActors; // The selected actors at the start of the transformation
 	DirectX::XMFLOAT3 m_oldObjWorldPos; // The averaged position of all objects in world space
 	QPoint m_oldObjWindowPos; // The averaged position of all objects in window/widget space [0 - width/height]
 	QPoint m_oldCursorPos; // The cursor position at the start of the transformation

@@ -6,9 +6,9 @@
 
 #include <vector>
 
-class ID3D11Buffer;
-class ID3D11Device;
-class ID3D11DeviceContext;
+struct ID3D11Buffer;
+struct ID3D11Device;
+struct ID3D11DeviceContext;
 
 class Object3D
 {

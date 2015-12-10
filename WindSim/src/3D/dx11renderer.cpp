@@ -2,6 +2,7 @@
 #include "mesh3D.h"
 #include "sky.h"
 #include "axes.h"
+#include "marker.h"
 #include "settings.h"
 
 #include <iostream>
@@ -381,6 +382,9 @@ bool DX11Renderer::reloadShaders()
 	if (FAILED(Axes::createShaderFromFile(L"src\\3D\\shaders\\axes.fx", m_device, true)))
 		return false;
 
+	if (FAILED(Marker::createShaderFromFile(L"src\\3D\\shaders\\marker.fx", m_device, true)))
+		return false;
+
 	return true;
 }
 
@@ -396,6 +400,10 @@ bool DX11Renderer::createShaders()
 
 	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("axes.fxo");
 	if (FAILED(Axes::createShaderFromFile(fxoPath.toStdWString(), m_device)))
+		return false;
+
+	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("marker.fxo");
+	if (FAILED(Marker::createShaderFromFile(fxoPath.toStdWString(), m_device)))
 		return false;
 
 	return true;
@@ -422,6 +430,7 @@ void DX11Renderer::destroy()
 	Mesh3D::releaseShader();
 	Sky::releaseShader();
 	Axes::releaseShader();
+	Marker::releaseShader();
 
 	// Release all objects
 	m_manager.release();
