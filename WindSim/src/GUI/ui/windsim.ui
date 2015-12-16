@@ -286,7 +286,7 @@
       <string>Create</string>
      </property>
      <addaction name="actionCreateMesh"/>
-     <addaction name="actionCreateSky"/>
+     <addaction name="actionCreateVoxelGrid"/>
     </widget>
     <addaction name="menuCreate"/>
     <addaction name="separator"/>
@@ -305,6 +305,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionCreateMesh"/>
+   <addaction name="actionCreateVoxelGrid"/>
    <addaction name="separator"/>
    <addaction name="actionSettings"/>
   </widget>
@@ -368,14 +369,6 @@
     <string>Create Mesh</string>
    </property>
   </action>
-  <action name="actionCreateSky">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Creat Sky</string>
-   </property>
-  </action>
   <action name="actionUndo">
    <property name="text">
     <string>Undo</string>
@@ -384,6 +377,14 @@
   <action name="actionRedo">
    <property name="text">
     <string>Redo</string>
+   </property>
+  </action>
+  <action name="actionCreateVoxelGrid">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Create Voxel Grid</string>
    </property>
   </action>
  </widget>
@@ -397,7 +398,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="windsim.qrc"/>
+  <include location="../../../windsim.qrc"/>
  </resources>
  <connections/>
 </ui>

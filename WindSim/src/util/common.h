@@ -18,7 +18,7 @@
 #define SAFE_RELEASE(p) { if (p) { (p)->Release(); (p) = nullptr; } }
 #endif
 
-enum class ObjectType {Invalid, Mesh, Sky, Axes, Marker };
+enum class ObjectType {Invalid, Mesh, Sky, Axes, Marker, VoxelGrid };
 
 Q_DECLARE_METATYPE(ObjectType) // Necessary for qRegisterMetaType() and to pass ObjectType via signals/slots
 
@@ -29,6 +29,8 @@ static inline std::string objectTypeToString(ObjectType type)
 	case(ObjectType::Mesh) : return "Mesh";
 	case(ObjectType::Sky) : return "Sky";
 	case(ObjectType::Axes) : return "Axes";
+	case(ObjectType::Marker) : return "Marker";
+	case(ObjectType::VoxelGrid) : return "VoxelGrid";
 	}
 	return "Invalid";
 }
@@ -38,6 +40,8 @@ static inline ObjectType stringToObjectType(const std::string& str)
 	if(str == "Mesh") return ObjectType::Mesh;
 	else if (str == "Sky") return ObjectType::Sky;
 	else if (str == "Axes") return ObjectType::Axes;
+	else if (str == "Marker") return ObjectType::Marker;
+	else if (str == "VoxelGrid") return ObjectType::VoxelGrid;
 	return ObjectType::Invalid;
 }
 
@@ -54,6 +58,8 @@ enum Modification
 	Shading = 0x10,
 	Name = 0x20,
 	Color = 0x40,
+	Resolution = 0x80,
+	VoxelSize = 0x100,
 	All = UINT_MAX
 };
 

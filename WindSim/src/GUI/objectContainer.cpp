@@ -1,6 +1,7 @@
 #include "objectContainer.h"
 #include "logger.h"
 #include "meshProperties.h"
+#include "voxelGridProperties.h"
 #include "commands.h"
 #include "settings.h"
 
@@ -15,6 +16,7 @@ int ObjectContainer::s_id = 1;
 ObjectContainer::ObjectContainer(QWidget* parent)
 	: QObject(parent),
 	m_meshProperties(nullptr),
+	m_voxelGridProperties(nullptr),
 	m_model(),
 	m_ids(),
 	m_renderer(nullptr)
@@ -88,8 +90,9 @@ void ObjectContainer::setRenderer(DX11Renderer* renderer)
 void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
 {
 	QJsonObject data = m_model.data(index, Qt::UserRole + 1).toJsonObject();
+	ObjectType type = stringToObjectType(data["type"].toString().toStdString());
 
-	if (stringToObjectType(data["type"].toString().toStdString()) == ObjectType::Mesh)
+	if (type == ObjectType::Mesh)
 	{
 
 		if (!m_meshProperties)
@@ -97,11 +100,20 @@ void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
 			m_meshProperties = new MeshProperties(data, static_cast<QWidget*>(parent())); // Save as we know our parent is a QWidget
 			m_meshProperties->setup(this);
 		}
-
 		m_meshProperties->updateProperties(data);
-
 		m_meshProperties->show();
 		m_meshProperties->raise();
+	}
+	else if (type == ObjectType::VoxelGrid)
+	{
+		if (!m_voxelGridProperties)
+		{
+			m_voxelGridProperties = new VoxelGridProperties(data, static_cast<QWidget*>(parent()));
+			m_voxelGridProperties->setup(this);
+		}
+		m_voxelGridProperties->updateProperties(data);
+		m_voxelGridProperties->show();
+		m_voxelGridProperties->raise();
 	}
 }
 
@@ -156,6 +168,8 @@ void ObjectContainer::objectsRemoved(const QModelIndex & parent, int first, int 
 		emit removeObject3DTriggered(id);
 		if (m_meshProperties && id == m_meshProperties->getCurrentID()) // Dialog already exists and is for removed object
 			m_meshProperties->hide();
+		if (m_voxelGridProperties && id == m_voxelGridProperties->getCurrentID()) // Dialog already exists and is for removed object
+			m_voxelGridProperties->hide();
 	}
 }
 
@@ -218,6 +232,28 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["Shading"] = "Flat";
 		if (!object.contains("Color"))
 			object["Color"] = QJsonObject{ { "r", conf.mesh.dc.r }, { "g", conf.mesh.dc.g }, { "b", conf.mesh.dc.b } };
+	}
+	if (type == ObjectType::VoxelGrid)
+	{
+		// Verify mandatory keys for meshes
+		if (!object.contains("resolution"))
+		{
+			Logger::logit("WARNING: Found no resolution for Voxel Grid '" + name + "' in project file!");
+			return false;
+		}
+		if (!object.contains("voxelSize"))
+		{
+			Logger::logit("WARNING: Found no voxel size for Voxel Grid '" + name + "' in project file!");
+			return false;
+		}
+
+		// Insert all non-existent keys for meshes with default values
+		if (!object.contains("Position"))
+			object["Position"] = QJsonObject{ { "x", 0.0 }, { "y", 0.0 }, { "z", 0.0 } };
+		if (!object.contains("Scaling"))
+			object["Scaling"] = QJsonObject{ { "x", 1.0 }, { "y", 1.0 }, { "z", 1.0 } };
+		if (!object.contains("Rotation"))
+			object["Rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
 	}
 
 	return true;

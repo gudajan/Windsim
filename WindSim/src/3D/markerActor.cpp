@@ -1,4 +1,5 @@
 #include "markerActor.h"
+#include "marker.h"
 
 using namespace DirectX;
 

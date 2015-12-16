@@ -2,7 +2,7 @@
 #include "logger.h"
 #include "settings.h"
 #include "settingsDialog.h"
-#include "meshProperties.h"
+#include "voxelGridInputDialog.h"
 #include "commands.h"
 #include "objectItem.h"
 
@@ -14,8 +14,6 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QJsonObject>
-#include <QJsonDocument>
-#include <QStandardItemModel>
 
 QUndoStack g_undoStack;
 
@@ -54,7 +52,7 @@ WindSim::WindSim(QWidget *parent)
 
 	// Create-actions
 	connect(ui.actionCreateMesh, SIGNAL(triggered()), this, SLOT(actionCreateMeshTriggered()));
-	connect(ui.actionCreateSky, SIGNAL(triggered()), this, SLOT(actionCreateSkyTriggered()));
+	connect(ui.actionCreateVoxelGrid, SIGNAL(triggered()), this, SLOT(actionCreateVoxelGridTriggered()));
 
 	// Dialog actions
 	connect(ui.actionSettings, SIGNAL(triggered()), this, SLOT(showSettingsDialog()));
@@ -240,6 +238,48 @@ bool WindSim::actionCreateMeshTriggered()
 	return true;
 }
 
+bool WindSim::actionCreateVoxelGridTriggered()
+{
+	QString name = getName("New Voxel Grid", "Voxel Grid name:", "VoxelGrid");
+	if (name.isEmpty())
+		return false;
+
+	VoxelGridInputDialog dialog(this);
+
+	int ret = dialog.exec();
+	if (ret == QDialog::Rejected)
+		return false;
+
+	std::vector<int> res = dialog.getGridResolution();
+	std::vector<double> size = dialog.getVoxelSize();
+
+	QJsonObject resolution
+	{
+		{ "x", res[0] },
+		{ "y", res[1] },
+		{ "z", res[2] }
+	};
+	QJsonObject voxelSize
+	{
+		{ "x", size[0] },
+		{ "y", size[1] },
+		{ "z", size[2] }
+	};
+	QJsonObject json
+	{
+		{ "name", name },
+		{ "type", QString::fromStdString(objectTypeToString(ObjectType::VoxelGrid)) },
+		{ "resolution", resolution },
+		{ "voxelSize", voxelSize }
+	};
+
+	m_container.addCmd(json);
+
+	Logger::logit("INFO: Created new voxel grid '" + name + "' with resolution (" + QString::number(res[0]) + ", " + QString::number(res[1]) + ", " + QString::number(res[2]) + ") and voxel size (" + QString::number(size[0]) + ", " + QString::number(size[1]) + ", " + QString::number(size[2]) + ").");
+
+	return true;
+}
+
 bool WindSim::actionCreateSkyTriggered(QString name)
 {
 	if (name.isEmpty())
@@ -380,8 +420,8 @@ void WindSim::projectActionsEnable(bool newAct, bool open, bool close, bool save
 	ui.actionSaveAs->setEnabled(saveAs);
 }
 
-void WindSim::createActionEnable(bool mesh, bool sky)
+void WindSim::createActionEnable(bool mesh, bool grid)
 {
 	ui.actionCreateMesh->setEnabled(mesh);
-	ui.actionCreateSky->setEnabled(sky);
+	ui.actionCreateVoxelGrid->setEnabled(grid);
 }

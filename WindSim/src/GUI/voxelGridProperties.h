@@ -1,32 +1,29 @@
-#ifndef MESH_PROPERTIES_H
-#define MESH_PROPERTIES_H
+#ifndef VOXEL_GRID_PROPERTIES_H
+#define VOXEL_GRID_PROPERTIES_H
 
-#include "ui_meshProperties.h"
+#include "ui_voxelGridProperties.h"
 #include "common.h"
 
 #include <QDialog>
 #include <QJsonObject>
 
-class MeshProperties : public QDialog
+class VoxelGridProperties : public QDialog
 {
 	Q_OBJECT
 public:
-	MeshProperties(QJsonObject properties, QWidget* parent = nullptr);
+	VoxelGridProperties(QJsonObject properties, QWidget* parent = nullptr);
 
 	void setup(QObject* obj);
 	int getCurrentID() { return m_properties["id"].toInt(); };
 
-public slots:
-	void updateProperties(const QJsonObject& properties); // If properties changed outsite of the dialog (e.g. via interactions in the 3D view)
+	void updateProperties(const QJsonObject& properties);
 
 private slots:
 	void nameChanged(const QString & text);
 	void disabledChanged(int state);
 	void positionChanged();
-	void scalingChanged();
-	void rotationChanged();
-	void shadingToggled(bool b);
-	void pickColor();
+	void resolutionChanged();
+	void voxelSizeChanged();
 
 	void buttonClicked(QAbstractButton* button);
 
@@ -34,14 +31,12 @@ signals:
 	void propertiesChanged(const QJsonObject& data, Modifications mod);
 
 private:
+
 	void blockSignals();
 	void enableSignals();
-	void setColorButton(int r, int g, int b);
 
-	Ui::meshProperties ui;
+	Ui::voxelGridProperties ui;
 
 	QJsonObject m_properties;
-
 };
-
 #endif

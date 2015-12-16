@@ -170,6 +170,24 @@
     <ClCompile Include="src\3D\markerActor.cpp">
       <Filter>Source Files\3D</Filter>
     </ClCompile>
+    <ClCompile Include="src\3D\voxelGridActor.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\voxelGrid.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\voxelGridInputDialog.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_voxelGridProperties.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_voxelGridProperties.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\voxelGridProperties.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\ui\windsim.ui">
@@ -200,6 +218,15 @@
       <Filter>Header Files\GUI</Filter>
     </CustomBuild>
     <CustomBuild Include="src\GUI\windsim.h">
+      <Filter>Header Files\GUI</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\ui\voxelGridInput.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\ui\voxelGridProperties.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\voxelGridProperties.h">
       <Filter>Header Files\GUI</Filter>
     </CustomBuild>
   </ItemGroup>
@@ -279,6 +306,21 @@
     <ClInclude Include="src\3D\markerActor.h">
       <Filter>Header Files\3D</Filter>
     </ClInclude>
+    <ClInclude Include="src\3D\voxelGrid.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\voxelGridActor.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneratedFiles\ui_voxelGridInput.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\voxelGridInputDialog.h">
+      <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneratedFiles\ui_voxelGridProperties.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\3D\shaders\axes.fx">
@@ -294,6 +336,9 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\common.fx">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\3D\shaders\voxelGrid.fx">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

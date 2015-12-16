@@ -9,7 +9,6 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 {
 	ui.setupUi(this);
 
-	// Update here, where signal/slots are not yet connected to avoid unnecessary slot invocation
 	updateProperties(m_properties);
 
 	// Name
@@ -42,10 +41,6 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	connect(ui.pbCol, SIGNAL(clicked()), this, SLOT(pickColor()));
 
 	setModal(false);
-}
-
-MeshProperties::~MeshProperties()
-{
 }
 
 void MeshProperties::setup(QObject* obj)

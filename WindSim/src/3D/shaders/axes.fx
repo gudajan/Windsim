@@ -1,15 +1,4 @@
-RasterizerState CullNone
-{
-	CullMode = None;
-};
-
-DepthStencilState DepthDefault
-{
-};
-
-BlendState BlendDisable
-{
-};
+#include "common.fx"
 
 cbuffer cb
 {

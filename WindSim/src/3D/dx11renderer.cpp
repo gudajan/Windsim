@@ -3,6 +3,7 @@
 #include "sky.h"
 #include "axes.h"
 #include "marker.h"
+#include "voxelGrid.h"
 #include "settings.h"
 
 #include <iostream>
@@ -58,12 +59,13 @@ bool DX11Renderer::init()
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
+	const D3D_FEATURE_LEVEL required[] = { D3D_FEATURE_LEVEL_11_1 };
 	D3D_FEATURE_LEVEL featureLevel;
 
-	if (FAILED(D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, 0, 0, D3D11_SDK_VERSION, &m_device, &featureLevel, &m_context)))
+	if (FAILED(D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, required, 1, D3D11_SDK_VERSION, &m_device, &featureLevel, &m_context)))
 		return false;
 
-	if (featureLevel != D3D_FEATURE_LEVEL_11_0)
+	if (featureLevel != D3D_FEATURE_LEVEL_11_1)
 		return false;
 
 	// Create rasterizerstate
@@ -387,6 +389,9 @@ bool DX11Renderer::reloadShaders()
 	if (FAILED(Marker::createShaderFromFile(L"src\\3D\\shaders\\marker.fx", m_device, true)))
 		return false;
 
+	if (FAILED(VoxelGrid::createShaderFromFile(L"src\\3D\\shaders\\voxelGrid.fx", m_device, true)))
+		return false;
+
 	return true;
 }
 
@@ -406,6 +411,10 @@ bool DX11Renderer::createShaders()
 
 	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("marker.fxo");
 	if (FAILED(Marker::createShaderFromFile(fxoPath.toStdWString(), m_device)))
+		return false;
+
+	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("voxelGrid.fxo");
+	if (FAILED(VoxelGrid::createShaderFromFile(fxoPath.toStdWString(), m_device)))
 		return false;
 
 	return true;
@@ -433,6 +442,7 @@ void DX11Renderer::destroy()
 	Sky::releaseShader();
 	Axes::releaseShader();
 	Marker::releaseShader();
+	VoxelGrid::releaseShader();
 
 	// Release all objects
 	m_manager.release();

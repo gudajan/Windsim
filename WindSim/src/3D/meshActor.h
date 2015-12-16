@@ -27,6 +27,8 @@ public:
 
 	bool intersect(DirectX::XMFLOAT3 origin, DirectX::XMFLOAT3 direction, float& distance) const override;
 
+	Mesh3D& getMesh() { return m_mesh; };
+
 private:
 	Marker m_marker;
 	Mesh3D& m_mesh;

@@ -7,6 +7,17 @@ DepthStencilState DepthDefault
 {
 };
 
+DepthStencilState DepthDisable
+{
+	DEPTHENABLE = FALSE;
+};
+
+DepthStencilState DepthEqual
+{
+	DepthFunc = LESS_EQUAL;
+};
+
+
 BlendState BlendDisable
 {
 };

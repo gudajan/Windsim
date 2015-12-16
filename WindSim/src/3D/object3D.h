@@ -30,6 +30,10 @@ public:
 
 	virtual void getBoundingBox(DirectX::XMFLOAT3& center, DirectX::XMFLOAT3& extends);
 
+	virtual ID3D11Buffer* getVertexBuffer() { return m_vertexBuffer; };
+	virtual ID3D11Buffer* getIndexBuffer() { return m_indexBuffer; };
+	virtual uint32_t getNumIndices() const { return m_numIndices; };
+
 protected:
 	ID3D11Buffer* m_vertexBuffer;
 	ID3D11Buffer* m_indexBuffer;

@@ -2,7 +2,8 @@
 #define SKY_ACTOR_H
 
 #include "actor.h"
-#include "marker.h"
+
+class Marker;
 
 class MarkerActor : public Actor
 {

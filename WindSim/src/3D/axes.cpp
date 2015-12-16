@@ -32,7 +32,7 @@ HRESULT Axes::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device*
 	if (reload)
 	{
 		ID3DBlob* blob;
-		if (D3DX11CompileEffectFromFile(shaderPath.c_str(), nullptr, nullptr, D3DCOMPILE_DEBUG, 0, device, &s_effect, &blob) != S_OK)
+		if (D3DX11CompileEffectFromFile(shaderPath.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, D3DCOMPILE_DEBUG, 0, device, &s_effect, &blob) != S_OK)
 		{
 			char* buffer = reinterpret_cast<char*>(blob->GetBufferPointer());
 			OutputDebugStringA(buffer);

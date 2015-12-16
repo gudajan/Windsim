@@ -59,6 +59,7 @@ HRESULT Marker::createShaderFromFile(const std::wstring& shaderPath, ID3D11Devic
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA }
 	};
 
+	// As all passes use the same Input layout, it is sufficient to create only one with the info of one of the passes
 	D3DX11_PASS_DESC pd;
 	s_effect->GetTechniqueByIndex(0)->GetPassByIndex(0)->GetDesc(&pd);
 

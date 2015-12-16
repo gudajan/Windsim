@@ -13,6 +13,7 @@
 #include <unordered_set>
 
 class MeshProperties;
+class VoxelGridProperties;
 
 // Contains the object model, which contains the gui objects (e.g. GUI representation of meshes with their own properties)
 class ObjectContainer : public QObject
@@ -68,6 +69,7 @@ private:
 	bool modify(QJsonObject& data);
 
 	QPointer<MeshProperties> m_meshProperties;
+	QPointer<VoxelGridProperties> m_voxelGridProperties;
 
 	std::unordered_set<int> m_ids;
 	QStandardItemModel m_model; // Contains the object items

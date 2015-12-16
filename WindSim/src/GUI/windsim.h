@@ -37,6 +37,7 @@ private slots:
 
 	// Create actions:
 	bool actionCreateMeshTriggered();
+	bool actionCreateVoxelGridTriggered();
 	bool actionCreateSkyTriggered(QString name = QString());
 	bool actionCreateAxesTriggered(QString name = QString());
 	// void actionRemoveObjectTriggered();
@@ -61,7 +62,7 @@ private:
 	QString getName(const QString& title, const QString& label, const QString& defaultName);
 
 	void projectActionsEnable(bool newAct, bool open, bool close, bool save, bool saveAs);
-	void createActionEnable(bool mesh, bool sky);
+	void createActionEnable(bool mesh, bool grid);
 
 	Ui::WindSimClass ui;
 

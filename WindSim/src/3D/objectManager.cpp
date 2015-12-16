@@ -5,6 +5,8 @@
 #include "skyActor.h"
 #include "axes.h"
 #include "axesActor.h"
+#include "voxelGrid.h"
+#include "voxelGridActor.h"
 
 #include <d3d11.h>
 #include <DirectXMath.h>
@@ -60,9 +62,26 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			Axes* obj = new Axes();
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
 			AxesActor* act = new AxesActor(*obj, id);
-			m_actors.emplace(id, std::shared_ptr<AxesActor>(act));
+			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, true);
+		}
+		else if (type == ObjectType::VoxelGrid)
+		{
+			if (!data.contains("resolution") || !data.contains("voxelSize"))
+				throw std::invalid_argument("Failed to create VoxelGrid object '" + name + "' because no resolution or voxelSize was given in 'data' variable!");
+
+			QJsonObject resolution = data["resolution"].toObject();
+			XMUINT3 res(resolution["x"].toInt(), resolution["y"].toInt(), resolution["z"].toInt());
+			QJsonObject voxelSize = data["voxelSize"].toObject();
+			XMFLOAT3 vs(voxelSize["x"].toDouble(), voxelSize["y"].toDouble(), voxelSize["z"].toDouble());
+
+			VoxelGrid* obj = new VoxelGrid(this, res, vs);
+			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
+			VoxelGridActor* act = new VoxelGridActor(*obj, id);
+			m_actors.emplace(id, std::shared_ptr<Actor>(act));
+
+			obj->create(device, false);
 		}
 		else
 		{
@@ -143,6 +162,22 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->computeWorld();
 		act->setFlatShading(flatShading);
 		act->setColor(col);
+	}
+	else if (type == ObjectType::VoxelGrid)
+	{
+		QJsonObject jPos = data["Position"].toObject();
+		XMFLOAT3 pos(jPos["x"].toDouble(), jPos["y"].toDouble(), jPos["z"].toDouble());
+
+		QJsonObject jRes = data["resolution"].toObject();
+		XMUINT3 res(jRes["x"].toInt(), jRes["y"].toInt(), jRes["z"].toInt());
+
+		QJsonObject jVs = data["voxelSize"].toObject();
+		XMFLOAT3 vs(jVs["x"].toDouble(), jVs["y"].toDouble(), jVs["z"].toDouble());
+
+		std::shared_ptr<VoxelGridActor> act = std::dynamic_pointer_cast<VoxelGridActor>(it->second);
+		act->setPos(pos);
+		act->computeWorld();
+		act->resize(res, vs);
 	}
 }
 
