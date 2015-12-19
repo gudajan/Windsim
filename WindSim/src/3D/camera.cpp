@@ -2,11 +2,6 @@
 #include "common.h"
 #include "settings.h"
 
-#include <QEvent>
-#include <QMouseEvent>
-#include <QKeyEvent>
-#include <QWheelEvent>
-
 using namespace DirectX;
 
 Camera::Camera(const uint32_t width, const uint32_t height)
@@ -101,34 +96,6 @@ QPoint Camera::worldToWindow(XMFLOAT4 v)
 	return screenToWindow(screen);
 }
 
-bool Camera::handleControlEvent(QEvent* event)
-{
-	switch (event->type())
-	{
-	case(QEvent::MouseButtonPress) :
-		handleMousePress(static_cast<QMouseEvent*>(event));
-		break;
-	case(QEvent::MouseButtonRelease) :
-		handleMouseRelease(static_cast<QMouseEvent*>(event));
-		break;
-	case(QEvent::MouseMove) :
-		handleMouseMove(static_cast<QMouseEvent*>(event));
-		break;
-	case(QEvent::KeyPress) :
-		handleKeyPress(static_cast<QKeyEvent*>(event));
-		break;
-	case(QEvent::KeyRelease) :
-		handleKeyRelease(static_cast<QKeyEvent*>(event));
-		break;
-	case(QEvent::Wheel) :
-		handleWheel(static_cast<QWheelEvent*>(event));
-		break;
-	default:
-		return false;
-	}
-	return true;
-}
-
 void Camera::update(double elapsedTime)
 {
 	if (conf.cam.type == FirstPerson)
@@ -196,21 +163,21 @@ void Camera::computeViewMatrix()
 	XMStoreFloat4x4(&m_view, XMMatrixInverse(nullptr, XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos)));
 }
 
-void Camera::handleMousePress(QMouseEvent* event)
+void Camera::handleMousePress(QPoint globalPos, Qt::MouseButton button, Qt::KeyboardModifiers modifiers)
 {
 	m_gMouseCoordLast = m_gMouseCoord;
-	m_gMouseCoord = event->globalPos();
+	m_gMouseCoord = globalPos;
 
 	if (conf.cam.type == FirstPerson)
 	{
-		if (event->button() == Qt::LeftButton)
+		if (button == Qt::LeftButton)
 		{
 			m_rotating = true;
 		}
 	}
 	else // ModelView
 	{
-		if (event->button() == Qt::LeftButton && event->modifiers() == Qt::NoModifier)
+		if (button == Qt::LeftButton && modifiers == Qt::NoModifier)
 		{
 			m_rotating = true;
 			if (m_mvi.pitch > XM_PI * 0.5 && m_mvi.pitch < XM_PI * 1.5)
@@ -222,42 +189,42 @@ void Camera::handleMousePress(QMouseEvent* event)
 				m_mvi.flippedYawDir = false;
 			}
 		}
-		if (event->button() == Qt::RightButton && event->modifiers() == Qt::NoModifier)
+		if (button == Qt::RightButton && modifiers == Qt::NoModifier)
 		{
 			m_translating = true;
 		}
 	}
 }
 
-void Camera::handleMouseRelease(QMouseEvent* event)
+void Camera::handleMouseRelease(QPoint globalPos, Qt::MouseButton button)
 {
 	m_gMouseCoordLast = m_gMouseCoord;
-	m_gMouseCoord = event->globalPos();
+	m_gMouseCoord = globalPos;
 
 	if (conf.cam.type == FirstPerson)
 	{
-		if (event->button() == Qt::LeftButton)
+		if (button == Qt::LeftButton)
 		{
 			m_rotating = false;
 		}
 	}
 	else // ModelView
 	{
-		if (event->button() == Qt::LeftButton)
+		if (button == Qt::LeftButton)
 		{
 			m_rotating = false;
 		}
-		else if (event->button() == Qt::RightButton)
+		else if (button == Qt::RightButton)
 		{
 			m_translating = false;
 		}
 	}
 }
 
-void Camera::handleMouseMove(QMouseEvent* event)
+void Camera::handleMouseMove(QPoint globalPos)
 {
 	m_gMouseCoordLast = m_gMouseCoord;
-	m_gMouseCoord = event->globalPos();
+	m_gMouseCoord = globalPos;
 
 	QPoint mouseMove = m_gMouseCoord - m_gMouseCoordLast;
 	if (conf.cam.type == FirstPerson)
@@ -311,11 +278,11 @@ void Camera::handleMouseMove(QMouseEvent* event)
 	}
 }
 
-void Camera::handleKeyPress(QKeyEvent* event)
+void Camera::handleKeyPress(Qt::Key key)
 {
 	if (conf.cam.type == FirstPerson)
 	{
-		switch (event->key())
+		switch (key)
 		{
 		case(Qt::Key_W) :
 			m_fpi.moveForward = true;
@@ -343,11 +310,11 @@ void Camera::handleKeyPress(QKeyEvent* event)
 	}
 }
 
-void Camera::handleKeyRelease(QKeyEvent* event)
+void Camera::handleKeyRelease(Qt::Key key)
 {
 	if (conf.cam.type == FirstPerson)
 	{
-		switch (event->key())
+		switch (key)
 		{
 		case(Qt::Key_W) :
 			m_fpi.moveForward = false;
@@ -375,15 +342,15 @@ void Camera::handleKeyRelease(QKeyEvent* event)
 	}
 }
 
-void Camera::handleWheel(QWheelEvent* event)
+void Camera::handleWheel(QPoint angleDelta)
 {
 	if (conf.cam.type == ModelView)
 	{
-		// angleDelta returns amount of vertical scrolling in 8th of degrees
-		// ---> degrees = angleDelta().ry() / 8
+		// angleDelta is amount of vertical scrolling in 8th of degrees
+		// ---> degrees = angleDelta.ry() / 8
 		// It is negative if wheel was scrolled towards the user
 		// One wheel tick usually is 15 degrees -> angleDelta() returns 120 for one tick
-		m_mvi.zoom -= event->angleDelta().ry() / 120.0f * conf.cam.mv.zoomSpeed * m_mvi.zoom; // Amount off zoom change is dependent on current zoom/distance to the model
+		m_mvi.zoom -= angleDelta.ry() / 120.0f * conf.cam.mv.zoomSpeed * m_mvi.zoom; // Amount off zoom change is dependent on current zoom/distance to the model
 
 		m_mvi.zoom = std::max(0.01f, m_mvi.zoom); // cap minimal zoom, so we always can change zoom with the mouse wheel
 

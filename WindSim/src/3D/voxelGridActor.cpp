@@ -41,3 +41,8 @@ void VoxelGridActor::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
 {
 	m_grid.resize(resolution, voxelSize);
 }
+
+void VoxelGridActor::voxelize()
+{
+	m_grid.setVoxelize(true);
+}

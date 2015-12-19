@@ -19,8 +19,6 @@ class Actor;
 class MarkerActor;
 class ObjectManager;
 class Camera;
-class QKeyEvent;
-class QMouseEvent;
 
 struct ID3D11Device;
 
@@ -31,9 +29,9 @@ public:
 
 	void initDX11(ID3D11Device* device);
 
-	void handleKeyPress(QKeyEvent* event, QPoint currentMousePos = QPoint(-1, -1)); // Change states
-	void handleMousePress(QMouseEvent* event); // Abort(right)/Finish(left)/Nothing(middelbutton)
-	void handleMouseMove(QMouseEvent* event); // Modify selected actors; calculate transformation from current and old cursor position dependent on current view matrix
+	void handleKeyPress(Qt::Key key, QPoint currentMousePos = QPoint(-1, -1)); // Change states
+	void handleMousePress(Qt::MouseButton button); // Abort(right)/Finish(left)/Nothing(middelbutton)
+	void handleMouseMove(QPoint localPos, Qt::KeyboardModifiers modifiers); // Modify selected actors; calculate transformation from current and old cursor position dependent on current view matrix
 
 	std::vector<QJsonObject> getTransformation(); // Return transformed data, reset machine
 	void reset() { m_state = State::Start; m_oldActors.clear(); m_transformation.clear(); }; // change to start (reset machine)

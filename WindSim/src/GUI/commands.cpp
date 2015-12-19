@@ -85,8 +85,6 @@ void ModifyObjectCmd::redo()
 	// This will emit itemChanged once per setData call
 	if(m_mod.testFlag(Name))
 		m_item->setData(m_newData["name"].toString(), Qt::DisplayRole);
-	if(m_mod.testFlag(Visibility))
-		m_item->setEnabled(m_newData["disabled"].toInt() == Qt::Unchecked);
 
 	m_item->setData(m_newData);
 }
@@ -96,8 +94,6 @@ void ModifyObjectCmd::undo()
 	// This will emit itemChanged once per setData call
 	if (m_mod.testFlag(Name))
 		m_item->setData(m_oldData["name"].toString(), Qt::DisplayRole);
-	if (m_mod.testFlag(Visibility))
-		m_item->setEnabled(m_oldData["disabled"].toInt() == Qt::Unchecked);
 
 	m_item->setData(m_oldData);
 }
@@ -116,8 +112,8 @@ bool ModifyObjectCmd::mergeWith(const QUndoCommand* cmd)
 	if (m.testFlag(Position)) m_newData["Position"] = json["Position"].toObject();
 	if (m.testFlag(Scaling)) m_newData["Scaling"] = json["Scaling"].toObject();
 	if (m.testFlag(Rotation)) m_newData["Rotation"] = json["Rotation"].toObject();
-	if (m.testFlag(Visibility)) m_newData["Visibility"] = json["Visibility"].toInt();
-	if (m.testFlag(Shading)) m_newData["Visibility"] = json["Visibility"].toString();
+	if (m.testFlag(Visibility)) m_newData["disabled"] = json["disabled"].toInt();
+	if (m.testFlag(Shading)) m_newData["Shading"] = json["Visibility"].toString();
 	if (m.testFlag(Name)) m_newData["name"] = json["name"].toString();
 	if (m.testFlag(Color)) m_newData["Color"] = json["Color"].toObject();
 	if (m.testFlag(Resolution)) m_newData["resolution"] = json["resolution"].toObject();

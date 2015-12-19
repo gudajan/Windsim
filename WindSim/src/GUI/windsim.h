@@ -52,6 +52,8 @@ private slots:
 
 	void applySettings(); // Settings Dialog connects to this
 
+	void onUpdateFPS(int fps);
+
 signals:
 	void settingsChanged();
 	void selectionChanged(std::unordered_set<int> ids); // Propagate changes from the GUI to the 3D View

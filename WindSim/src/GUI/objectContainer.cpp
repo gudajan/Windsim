@@ -267,7 +267,6 @@ bool ObjectContainer::add(ObjectType type, QJsonObject& data)
 	if (!verifyData(data)) return false;
 
 	ObjectItem* item = new ObjectItem(data["name"].toString());
-	item->setEnabled(data["disabled"].toInt() == Qt::Unchecked); // Indicate if object is currently enabled/rendered
 	item->setData(data);
 	m_model.appendRow(item);
 	return true;
@@ -300,7 +299,6 @@ bool ObjectContainer::modify(QJsonObject& data)
 		return false;
 	}
 	item->setData(data["name"].toString(), Qt::DisplayRole); // Modify name in gui
-	item->setEnabled(data["disabled"].toInt() == Qt::Unchecked); // Indicate if object is currently enabled/rendered
 	item->setData(data); // Modify object data ( UserRole + 1)
 
 	return true;

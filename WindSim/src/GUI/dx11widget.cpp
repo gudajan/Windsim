@@ -10,7 +10,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	m_renderer(nullptr)
 {
 	// Create DirectX Renderer on our widget
-	m_renderer= new DX11Renderer(winId(), width(), height(), this);
+	m_renderer= new DX11Renderer(winId(), width(), height(), nullptr);
 
 	if (!m_renderer->init())
 		throw std::runtime_error("Failed to initialize renderer!");
@@ -30,7 +30,11 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	connect(this, &DX11Widget::mouseRelease, m_renderer, &DX11Renderer::onMouseRelease);
 	connect(this, &DX11Widget::keyPress, m_renderer, &DX11Renderer::onKeyPress);
 	connect(this, &DX11Widget::keyRelease, m_renderer, &DX11Renderer::onKeyRelease);
+	connect(this, &DX11Widget::wheelUse, m_renderer, &DX11Renderer::onWheelUse);
+	connect(this, &DX11Widget::mouseEnter, m_renderer, &DX11Renderer::onMouseEnter);
+	connect(this, &DX11Widget::mouseLeave, m_renderer, &DX11Renderer::onMouseLeave);
 	connect(this, &DX11Widget::reloadShadersTriggered, m_renderer, &DX11Renderer::reloadShaders);
+	connect(this, &DX11Widget::reloadIniTriggered, m_renderer, &DX11Renderer::reloadIni);
 
 	// Arbitrary Events Renerer -> Widget
 	connect(m_renderer, &DX11Renderer::logit, this, &DX11Widget::logit);
@@ -44,6 +48,9 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	setMouseTracking(true);
 
 	m_renderThread.start();
+
+
+	OutputDebugStringA(("MAIN THREAD: " + std::to_string(reinterpret_cast<int>(thread()->currentThreadId())) + "\n").c_str());
 }
 
 DX11Widget::~DX11Widget()
@@ -65,7 +72,7 @@ void DX11Widget::cleanUp()
 // Trigger update of current settings
 void DX11Widget::applySettings()
 {
-	m_renderer->getCamera()->computeViewMatrix(); // Settings may have changed
+	emit reloadIniTriggered();
 }
 
 void DX11Widget::logit(const QString& str)
@@ -87,50 +94,51 @@ void DX11Widget::resizeEvent(QResizeEvent* event)
 
 void DX11Widget::keyPressEvent(QKeyEvent * event)
 {
-	emit keyPress(event);
+	emit keyPress(event->key());
 
 	return QWidget::keyPressEvent(event);
 }
 
 void DX11Widget::keyReleaseEvent(QKeyEvent * event)
 {
-	emit keyRelease(event);
+	emit keyRelease(event->key());
 
 	return QWidget::keyReleaseEvent(event);
 }
 
 void DX11Widget::mouseMoveEvent(QMouseEvent * event)
 {
-	emit mouseMove(event);
+
+	emit mouseMove(event->pos(), event->globalPos(), event->modifiers());
 	return QWidget::mouseMoveEvent(event);
 }
 
 void DX11Widget::mousePressEvent(QMouseEvent * event)
 {
-	emit mousePress(event);
+	emit mousePress(event->globalPos(), event->button(), event->modifiers());
 	return QWidget::mousePressEvent(event);
 }
 
 void DX11Widget::mouseReleaseEvent(QMouseEvent * event)
 {
-	emit mouseRelease(event);
+	emit mouseRelease(event->globalPos(), event->button(), event->modifiers());
 	return QWidget::mouseReleaseEvent(event);
 }
 
 void DX11Widget::wheelEvent(QWheelEvent * event)
 {
-	m_renderer->getCamera()->handleControlEvent(event);
+	emit wheelUse(event->angleDelta());
 	return QWidget::wheelEvent(event);
 }
 
 void DX11Widget::enterEvent(QEvent* event)
 {
-	m_renderer->mouseEnter();
+	emit mouseEnter();
 	return QWidget::enterEvent(event);
 }
 
 void DX11Widget::leaveEvent(QEvent* event)
 {
-	m_renderer->mouseLeave();
+	emit mouseLeave();
 	return QWidget::enterEvent(event);
 }

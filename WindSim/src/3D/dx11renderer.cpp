@@ -10,16 +10,16 @@
 #include <cassert>
 #include <sstream>
 
-#include <DirectXMath.h>
+// DirectX
 #include <DirectXColors.h>
+#include <d3d11.h>
+#include <d3dx11effect.h>
 
 #include <QCoreApplication>
 #include <QDir>
-#include <QCursor>
-#include <QMouseEvent>
+#include <QThread>
 
 using namespace DirectX;
-
 
 DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	: QObject(parent),
@@ -39,11 +39,13 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_state(State::Default),
 	m_elapsedTimer(),
 	m_renderTimer(this),
+	m_voxelizationTimer(this),
 	m_camera(width, height),
 	m_manager(),
 	m_transformer(&m_manager, &m_camera)
 {
 	connect(&m_renderTimer, &QTimer::timeout, this, &DX11Renderer::frame);
+	connect(&m_voxelizationTimer, &QTimer::timeout, this, &DX11Renderer::issueVoxelization);
 }
 
 DX11Renderer::~DX11Renderer()
@@ -137,15 +139,23 @@ bool DX11Renderer::init()
 
 void DX11Renderer::frame()
 {
-	double elapsedTime = m_elapsedTimer.restart() * 0.001;
+	double elapsedTime = m_elapsedTimer.restart() * 0.001; // Milliseconds to seconds
 	update(elapsedTime);
 	render(elapsedTime);
+	emit updateFPS(static_cast<int>(1.0 / elapsedTime)); // Show fps in statusBar
+}
+
+void DX11Renderer::issueVoxelization()
+{
+	m_manager.voxelizeNextFrame();
 }
 
 void DX11Renderer::execute()
 {
+	OutputDebugStringA(("WORKER THREAD: " + std::to_string(reinterpret_cast<int>(thread()->currentThreadId())) + "\n").c_str());
 	m_elapsedTimer.start();
 	m_renderTimer.start(1000.0f / 120.0f); // Rendering happens with 120 FPS at max
+	m_voxelizationTimer.start(1000.0f / 40.0f); // Voxelization happens 40 times per second at maximum
 }
 
 void DX11Renderer::stop()
@@ -218,39 +228,43 @@ void DX11Renderer::onResize(int width, int height)
 
 }
 
-void DX11Renderer::onMouseMove(QMouseEvent* event)
+void DX11Renderer::onMouseMove(QPoint localPos, QPoint globalPos, int modifiers)
 {
-	m_localCursorPos = event->pos();
+	m_localCursorPos = localPos;
+	Qt::KeyboardModifiers m = Qt::KeyboardModifiers(modifiers);
 
 	switch (m_state)
 	{
 	case(State::Default) :
 		break;
 	case(State::CameraMove):
-		m_camera.handleControlEvent(event);
+		m_camera.handleMouseMove(globalPos);
 		break;
 	case(State::Modifying) :
-		m_transformer.handleMouseMove(event);
+		m_transformer.handleMouseMove(localPos, m);
 		break;
 	}
 
 }
 
-void DX11Renderer::onMousePress(QMouseEvent* event)
+void DX11Renderer::onMousePress(QPoint globalPos, int button, int modifiers)
 {
+	Qt::MouseButton b = Qt::MouseButton(button);
+	Qt::KeyboardModifiers m = Qt::KeyboardModifiers(modifiers);
+
 	switch (m_state)
 	{
 	case(State::Default):
-		m_camera.handleControlEvent(event);
+		m_camera.handleMousePress(globalPos, b, m);
 		if (m_camera.isMoving())
 			m_state = State::CameraMove; // Default -> CameraMove;
 		break;
 	case(State::CameraMove) :
-		m_camera.handleControlEvent(event);
+		m_camera.handleMousePress(globalPos, b, m);
 		break;
 	case(State::Modifying) :
 		// (righclick -> abort, leftclick -> ok -> create modify cmd
-		m_transformer.handleMousePress(event);
+		m_transformer.handleMousePress(b);
 		if (!m_transformer.isModifying())
 		{
 			m_state = State::Default; // Modifying -> Default;
@@ -261,18 +275,20 @@ void DX11Renderer::onMousePress(QMouseEvent* event)
 		break;
 	}
 
-	if (event->button() == Qt::LeftButton)
+	if (button == Qt::LeftButton)
 		m_pressedId = m_manager.getHoveredId();
 }
 
-void DX11Renderer::onMouseRelease(QMouseEvent* event)
+void DX11Renderer::onMouseRelease(QPoint globalPos, int button, int modifiers)
 {
+	Qt::MouseButton b = Qt::MouseButton(button);
+	Qt::KeyboardModifiers m = Qt::KeyboardModifiers(modifiers);
 	switch (m_state)
 	{
 	case(State::Default) :
 		break;
 	case(State::CameraMove) :
-		m_camera.handleControlEvent(event);
+		m_camera.handleMouseRelease(globalPos, b);
 		if (!m_camera.isMoving())
 		{
 			m_state = State::Default; // CameraMove -> Default
@@ -287,12 +303,12 @@ void DX11Renderer::onMouseRelease(QMouseEvent* event)
 	// to select an object -> The camera must have been moving during mouse press and release
 	if (m_pressedId == m_manager.getHoveredId()) // Hovered id did not change since mouse press -> change selection
 	{
-		if (event->button() == Qt::LeftButton)
+		if (b == Qt::LeftButton)
 		{
 			bool changed = false;
-			if (event->modifiers() == Qt::NoModifier)
+			if (m == Qt::NoModifier)
 				changed = m_manager.updateSelection(Selection::Replace);
-			else if (event->modifiers() == Qt::ControlModifier)
+			else if (m == Qt::ControlModifier)
 				changed = m_manager.updateSelection(Selection::Switch);
 
 			if (changed)
@@ -301,27 +317,29 @@ void DX11Renderer::onMouseRelease(QMouseEvent* event)
 	}
 }
 
-void DX11Renderer::onKeyPress(QKeyEvent* event)
+void DX11Renderer::onKeyPress(int key)
 {
+	Qt::Key k = Qt::Key(key);
+
 	switch (m_state)
 	{
 	case(State::Default) :
-		m_camera.handleControlEvent(event);
+		m_camera.handleKeyPress(k);
 		if (m_camera.isMoving())
 		{
 			m_state = State::CameraMove; // Default -> CameraMove
 			break;
 		}
 
-		m_transformer.handleKeyPress(event, m_localCursorPos);
+		m_transformer.handleKeyPress(k, m_localCursorPos);
 		if (m_transformer.isModifying())
 			m_state = State::Modifying; // Default -> Modifying
 		break;
 	case(State::CameraMove) :
-		m_camera.handleControlEvent(event);
+		m_camera.handleKeyPress(k);
 		break;
 	case(State::Modifying) :
-		m_transformer.handleKeyPress(event, m_localCursorPos);
+		m_transformer.handleKeyPress(k, m_localCursorPos);
 		if (!m_transformer.isModifying())
 		{
 			m_state = State::Default; // Modifying -> Default;
@@ -333,14 +351,16 @@ void DX11Renderer::onKeyPress(QKeyEvent* event)
 	}
 }
 
-void DX11Renderer::onKeyRelease(QKeyEvent* event)
+void DX11Renderer::onKeyRelease(int key)
 {
+	Qt::Key k = Qt::Key(key);
+
 	switch (m_state)
 	{
 	case(State::Default) :
 		break;
 	case(State::CameraMove) :
-		m_camera.handleControlEvent(event);
+		m_camera.handleKeyRelease(k);
 		if (!m_camera.isMoving())
 			m_state = State::Default; // CameraMove -> Default
 		break;
@@ -349,6 +369,11 @@ void DX11Renderer::onKeyRelease(QKeyEvent* event)
 	}
 }
 
+void DX11Renderer::onWheelUse(QPoint angleDelta)
+{
+	if (m_state != State::Modifying)
+		m_camera.handleWheel(angleDelta);
+}
 void DX11Renderer::onAddObject(const QJsonObject& data)
 {
 	m_manager.add(m_device, data);
@@ -393,6 +418,11 @@ bool DX11Renderer::reloadShaders()
 		return false;
 
 	return true;
+}
+
+void DX11Renderer::reloadIni()
+{
+	m_camera.computeViewMatrix(); // Depends on camera type
 }
 
 bool DX11Renderer::createShaders()
@@ -445,7 +475,7 @@ void DX11Renderer::destroy()
 	VoxelGrid::releaseShader();
 
 	// Release all objects
-	m_manager.release();
+	m_manager.release(true);
 
 	if (m_device)
 	{

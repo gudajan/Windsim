@@ -64,6 +64,7 @@ WindSim::WindSim(QWidget *parent)
 	connect(this, &WindSim::selectionChanged, ui.dx11Viewer->getRenderer(), &DX11Renderer::onSelectionChanged);
 	// 3D Renderer to WindSim
 	connect(ui.dx11Viewer->getRenderer(), &DX11Renderer::selectionChanged, this, &WindSim::on3DSelectionChanged);
+	connect(ui.dx11Viewer->getRenderer(), &DX11Renderer::updateFPS, this, &WindSim::onUpdateFPS);
 
 	reloadIni();
 
@@ -360,6 +361,12 @@ void WindSim::applySettings()
 {
 	ui.dx11Viewer->applySettings();
 }
+
+void WindSim::onUpdateFPS(int fps)
+{
+	ui.dx11Viewer->setStatusTip("FPS: " + QString::number(fps));
+}
+
 
 void WindSim::reloadIni()
 {

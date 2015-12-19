@@ -3,15 +3,7 @@
 
 #include <DirectXMath.h>
 
-//#include <QMouseEvent>
-//#include <QKeyEvent>
-//#include <QWheelEvent>
 #include <QPoint>
-
-class QMouseEvent;
-class QKeyEvent;
-class QWheelEvent;
-class QEvent;
 
 class Camera
 {
@@ -31,7 +23,6 @@ public:
 
 	QPoint worldToWindow(DirectX::XMFLOAT4 v);
 
-	bool handleControlEvent(QEvent* event);
 	void update(double elapsedTime);
 
 	void setProjectionParams(const float fov, const uint32_t width, const uint32_t height, const float nearZ, const float farZ);
@@ -42,14 +33,14 @@ public:
 	void setNearZ(const float nearZ) { m_nearZ = nearZ; computeProjectionMatrix(); };
 	void setFarZ(const float farZ) { m_farZ = farZ; computeProjectionMatrix(); };
 
-private:
-	void handleMousePress(QMouseEvent* event);
-	void handleMouseRelease(QMouseEvent* event);
-	void handleMouseMove(QMouseEvent* event);
-	void handleKeyPress(QKeyEvent* event);
-	void handleKeyRelease(QKeyEvent* event);
-	void handleWheel(QWheelEvent* event);
+	void handleMousePress(QPoint globalPos, Qt::MouseButton button, Qt::KeyboardModifiers modifiers);
+	void handleMouseRelease(QPoint globalPos, Qt::MouseButton button);
+	void handleMouseMove(QPoint globalPos);
+	void handleKeyPress(Qt::Key key);
+	void handleKeyRelease(Qt::Key key);
+	void handleWheel(QPoint angleDelta);
 
+private:
 	void computeProjectionMatrix();
 
 	QPointF windowToScreen(QPoint p);

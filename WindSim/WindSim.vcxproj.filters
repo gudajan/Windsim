@@ -321,6 +321,9 @@
     <ClInclude Include="GeneratedFiles\ui_voxelGridProperties.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\metaTypes.h">
+      <Filter>util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\3D\shaders\axes.fx">

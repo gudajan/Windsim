@@ -46,12 +46,17 @@ protected:
 signals:
 	void stopRendering();
 	void resize(int width, int height);
-	void mouseMove(QMouseEvent* event);
-	void mousePress(QMouseEvent* event);
-	void mouseRelease(QMouseEvent* event);
-	void keyPress(QKeyEvent* event);
-	void keyRelease(QKeyEvent* event);
+	void mouseMove(QPoint localPos, QPoint globalPos, int modifiers);
+	void mousePress(QPoint globalPos, int button, int modifiers);
+	void mouseRelease(QPoint globalPos, int button, int modifiers);
+	void keyPress(int key);
+	void keyRelease(int key);
+	void wheelUse(QPoint angleDelta);
+	void mouseEnter();
+	void mouseLeave();
+
 	void reloadShadersTriggered();
+	void reloadIniTriggered();
 
 private:
 	QThread m_renderThread;

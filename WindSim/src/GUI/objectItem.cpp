@@ -3,6 +3,8 @@
 
 #include <QJsonObject>
 #include <QUndoStack>
+#include <QApplication>
+#include <QPalette>
 
 extern QUndoStack g_undoStack;
 
@@ -29,4 +31,16 @@ void ObjectItem::setData(const QVariant& value, int role)
 	}
 	// Set other data as usual
 	return QStandardItem::setData(value, role);
+}
+
+QVariant ObjectItem::data(int role) const
+{
+	if (role == Qt::ForegroundRole)
+	{
+		if (QStandardItem::data().toJsonObject()["disabled"].toInt() != Qt::Unchecked)
+		{
+			return QVariant(QApplication::palette().color(QPalette::Disabled, QPalette::Foreground));
+		}
+	}
+	return QStandardItem::data(role);
 }

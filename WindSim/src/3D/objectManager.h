@@ -32,13 +32,13 @@ public:
 	// Render ALL objects at their current transformation
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	// Release the DirectX objects of ALL objects
-	void release();
+	void release(bool withAccessories);
+	void voxelizeNextFrame(); // Issue a voxelization for all voxelgrids in the next frame
 
 	void updateCursor(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, bool containsCursor); // Update id of hovered object
 	bool updateSelection(Selection op);
 	void setHovered();
 	void setSelected(); // Set currently hovered object to selected if its a mesh; returns if selection changed
-
 
 	int getHoveredId() const { return m_hoveredId; };
 	const std::unordered_set<int>& getSelection(){ return m_selectedIds; };

@@ -41,12 +41,23 @@ struct PSVoxelIn
 // =============================================================================
 // FUNCTIONS
 // =============================================================================
-bool getValue(in float3 posVS, out uint voxel)
+
+bool gridIndex(in float3 pos, out int3 index)
 {
-	int3 index = uint3(floor(posVS));
+	index = int3(floor(pos));
 	if (any(index < int3(0, 0, 0)) || any(index > int3(g_vResolution))) // Index out of bounds
 		return false;
+	return true;
+}
 
+bool getValue(in float3 posVS, out uint voxel)
+{
+	int3 index;
+	if (!gridIndex(posVS, index))
+	{
+		voxel = 0;
+		return false;
+	}
 	voxel = g_srvGrid[index];
 	return true;
 }
@@ -64,8 +75,10 @@ PSGridBoxIn vsGridBox(VSGridIn vsIn)
 PSVoxelIn vsVoxelize(VSMeshIn vsIn)
 {
 	PSVoxelIn vsOut;
-	vsOut.voxelPos = mul(float4(vsIn.pos, 1.0f), g_mObjWorld * g_mVoxelWorldInv).xyz; // Transform from mesh object space -> grid object space -> grid voxel space
-	vsOut.pos = mul(float4(vsOut.voxelPos, 1.0f), g_mVoxelProj);
+	vsOut.voxelPos = mul(mul(float4(vsIn.pos, 1.0f), g_mObjWorld), g_mVoxelWorldInv).xyz; // Transform from mesh object space -> World Space -> grid object space -> grid voxel space
+	vsOut.pos = mul(mul(mul(float4(vsIn.pos, 1.0f), g_mObjWorld), g_mVoxelWorldInv), g_mVoxelProj);
+	//vsOut.pos = mul(float4(vsIn.pos, 1.0f), g_mWorldViewProj);
+	//vsOut.pos = mul(float4(vsIn.pos, 1.0f), mul(g_mVoxelWorldInv, g_mVoxelProj));
 	return vsOut;
 }
 
@@ -85,9 +98,13 @@ float4 psGridBox(PSGridBoxIn psIn) : SV_Target
 	return float4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
+//float4 psVoxelize(PSVoxelIn psIn) : SV_Target
 void psVoxelize(PSVoxelIn psIn)
 {
-	InterlockedXor(g_uavGrid[uint3(psIn.voxelPos)], 1); // Write 1 to voxel, which is set
+	int3 index;
+	if (gridIndex(psIn.voxelPos, index))
+		g_uavGrid[index] = 1; // Write 1 to voxel, which is set
+	//return float4(abs(psIn.voxelPos / g_vResolution), 1.0f);
 }
 
 // Ray casting into voxel grid -> render first voxel
@@ -95,8 +112,11 @@ void psVoxelize(PSVoxelIn psIn)
 float4 psVolume(PSVoxelIn psIn) : SV_Target
 {
 	float3 rayDir = normalize(psIn.voxelPos - g_vCamPosVS.xyz);
-	float stepSize = 0.5; // In Voxel space, all sides of a voxel are of length 1
+	float stepSize = 0.1; // In Voxel space, all sides of a voxel are of length 1
 	float3 currentPos = psIn.voxelPos; // Start raycasting at the incoming fragment, which corresponds to the border of the voxel grid
+	int3 index;
+	if (!gridIndex(currentPos + stepSize * rayDir, index)) // If camera is located inside the grid: start ray casting from camera position instead of the fragment
+		currentPos = g_vCamPosVS.xyz;
 	bool stepping = true;
 	while (stepping)
 	{
@@ -142,9 +162,9 @@ technique11 Voxel
 	}
 	pass RenderVoxel
 	{
-		SetVertexShader(CompileShader(vs_5_0, vsGridBox()));
+		SetVertexShader(CompileShader(vs_5_0, vsVolume()));
 		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0, psGridBox()));
+		SetPixelShader(CompileShader(ps_5_0, psVolume()));
 		SetRasterizerState(CullNone);
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);

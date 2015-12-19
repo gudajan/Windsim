@@ -37,6 +37,7 @@ public:
 	DirectX::XMFLOAT3 getVoxelSize() const { return m_voxelSize; };
 
 	bool resize(DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize);
+	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
 
 private:
 	void createGridData(); // Create cube for line rendering
@@ -70,6 +71,9 @@ private:
 	DirectX::XMFLOAT3 m_voxelSize; // Size of one voxel in object space of the grid
 	bool m_resize; // Indicates if voxelgrid has to be resized, because resolution or voxelSize changed
 	uint32_t m_cubeIndices;
+
+	bool m_voxelize;
+	int m_counter;
 
 	std::vector<unsigned char> m_grid;
 	ID3D11Texture3D* m_gridTextureGPU; // Texture in GPU memory, filled in pixel shader

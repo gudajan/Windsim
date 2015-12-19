@@ -3,6 +3,7 @@
 
 #include "objectItem.h"
 #include "common.h"
+#include "metaTypes.h"
 #include "commands.h"
 #include "..\3D\dx11renderer.h"
 

@@ -112,7 +112,7 @@ void ObjectManager::remove(int id)
 
 void ObjectManager::removeAll()
 {
-	release();
+	release(false);
 	m_objects.clear();
 	m_actors.clear();
 }
@@ -193,7 +193,7 @@ void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, c
 	}
 }
 
-void ObjectManager::release()
+void ObjectManager::release(bool withAccessories)
 {
 	for (const auto& object : m_objects)
 	{
@@ -207,9 +207,22 @@ void ObjectManager::release()
 		}
 	}
 
-	for (const auto& object : m_accessoryObjects)
+	if (withAccessories)
 	{
-		object.second->release();
+		for (const auto& object : m_accessoryObjects)
+		{
+			object.second->release();
+		}
+	}
+}
+
+
+void ObjectManager::voxelizeNextFrame()
+{
+	for (const auto& act : m_actors)
+	{
+		if (act.second->getType() == ObjectType::VoxelGrid)
+			std::dynamic_pointer_cast<VoxelGridActor>(act.second)->voxelize();
 	}
 }
 

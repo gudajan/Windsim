@@ -389,6 +389,7 @@
     <ClInclude Include="src\3D\objLoader.h" />
     <ClInclude Include="src\util\libini.hpp" />
     <ClInclude Include="src\GUI\project.h" />
+    <ClInclude Include="src\util\metaTypes.h" />
     <ClInclude Include="src\util\settings.h" />
     <CustomBuild Include="src\GUI\settingsDialog.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

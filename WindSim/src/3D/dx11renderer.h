@@ -2,6 +2,7 @@
 #define DX11_RENDERER_H
 
 #include "common.h"
+#include "metaTypes.h"
 #include "camera.h"
 #include "objectManager.h"
 #include "transformMachine.h"
@@ -13,14 +14,18 @@
 #include <QTimer>
 #include <QJsonObject>
 
-// DirectX
-#include <d3d11.h>
-#include <d3dx11effect.h>
-
 namespace State
 {
 	enum RendererState { CameraMove, Modifying, Default };
 }
+
+struct ID3D11Devicee;
+struct ID3D11DeviceContext;
+struct IDXGISwapChain;
+struct ID3D11Texture2D;
+struct ID3D11RenderTargetView;
+struct ID3D11DepthStencilView;
+struct ID3D11RasterizerState;
 
 class DX11Renderer : public QObject
 {
@@ -35,12 +40,11 @@ public:
 
 	int getWidth(){ return m_width; };
 	int getHeight(){ return m_height; };
-	void mouseEnter() { m_containsCursor = true; };
-	void mouseLeave() { m_containsCursor = false; };
 	Camera* getCamera() { return &m_camera; };
 
 public slots:
 	void frame(); // Compute one Frame
+	void issueVoxelization();
 
 	// Start/Stop rendering
 	void execute(); // Enter Render loop
@@ -48,11 +52,14 @@ public slots:
 
 	// Arbitrary Events
 	void onResize(int width, int height); // Resize viewport
-	void onMouseMove(QMouseEvent* event);
-	void onMousePress(QMouseEvent* event);
-	void onMouseRelease(QMouseEvent* event);
-	void onKeyPress(QKeyEvent* event);
-	void onKeyRelease(QKeyEvent* event);
+	void onMouseMove(QPoint localPos, QPoint globalPos, int modifiers);
+	void onMousePress(QPoint globalPos, int button, int modifiers);
+	void onMouseRelease(QPoint globalPos, int button, int modifiers);
+	void onKeyPress(int key);
+	void onKeyRelease(int key);
+	void onWheelUse(QPoint angleDelta);
+	void onMouseEnter() { m_containsCursor = true; };
+	void onMouseLeave() { m_containsCursor = false; };
 
 
 	void onAddObject(const QJsonObject& data);
@@ -61,9 +68,11 @@ public slots:
 	void onRemoveAll();
 	void onSelectionChanged(std::unordered_set<int> ids);
 	bool reloadShaders(); // Recompile and load all shaders
+	void reloadIni(); // Update everything, which depends on ini-values
 
 signals:
 	void logit(const QString& str);
+	void updateFPS(int fps);
 	void selectionChanged(std::unordered_set<int> ids);
 	void modify(std::vector<QJsonObject> data);
 
@@ -97,6 +106,7 @@ private:
 
 	QElapsedTimer m_elapsedTimer;
 	QTimer m_renderTimer;
+	QTimer m_voxelizationTimer;
 
 	Camera m_camera;
 	ObjectManager m_manager;
