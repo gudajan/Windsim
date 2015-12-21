@@ -48,13 +48,16 @@ private:
 	struct ShaderVariables
 	{
 		ShaderVariables();
-		ID3DX11EffectMatrixVariable* worldViewProj; // Normal world view projection of voxelgrid /camera for rendering the box itself
-		ID3DX11EffectMatrixVariable* objWorld; // World of meshes, which are voxelized
-		ID3DX11EffectMatrixVariable* voxelWorldInv; // Inverse world of voxel grid
-		ID3DX11EffectMatrixVariable* voxelProj; // orhtogonal Projection
-		ID3DX11EffectVectorVariable* camPosVS; // camera position in voxel space
+		ID3DX11EffectMatrixVariable* worldViewProj; // Object space -> world space -> Camera/View space -> projection space
+		ID3DX11EffectMatrixVariable* objToWorld; // Mesh object space -> world space
+		ID3DX11EffectMatrixVariable* gridToVoxel; // Grid Object Space -> Voxel Space (use position as 3D index into voxel grid texture)
+		ID3DX11EffectMatrixVariable* worldToVoxel; // Combined matrix: world space -> grid object space -> voxel space
+		ID3DX11EffectMatrixVariable* voxelProj; // Projection matrix for voxelization (orthogonal, aligned with the voxelgrid)
+		ID3DX11EffectMatrixVariable* voxelWorldViewProj; // Voxel space -> grid object space -> world space -> camera/view space -> projection space
 
+		ID3DX11EffectVectorVariable* camPosVS;
 		ID3DX11EffectVectorVariable* resolution;
+		ID3DX11EffectVectorVariable* voxelSize;
 		ID3DX11EffectUnorderedAccessViewVariable* gridUAV;
 		ID3DX11EffectShaderResourceVariable* gridSRV;
 

@@ -161,6 +161,7 @@ void DX11Renderer::execute()
 void DX11Renderer::stop()
 {
 	m_renderTimer.stop();
+	m_voxelizationTimer.stop();
 	destroy();
 }
 

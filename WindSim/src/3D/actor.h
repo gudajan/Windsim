@@ -32,6 +32,7 @@ public:
 	virtual const DirectX::XMFLOAT3& getPos() const;
 	virtual const DirectX::XMFLOAT4& getRot() const;
 	virtual const DirectX::XMFLOAT3& getScale() const;
+	virtual const bool getRender() const { return m_render; };
 	virtual DirectX::XMFLOAT4X4 getWorld() const;
 	ObjectType getType() const { return m_type; };
 	int getId() const { return m_id; };

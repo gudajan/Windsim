@@ -49,11 +49,16 @@ HRESULT VoxelGrid::createShaderFromFile(const std::wstring& shaderPath, ID3D11De
 	}
 
 	s_shaderVariables.worldViewProj = s_effect->GetVariableByName("g_mWorldViewProj")->AsMatrix();
-	s_shaderVariables.objWorld = s_effect->GetVariableByName("g_mObjWorld")->AsMatrix();
-	s_shaderVariables.voxelWorldInv = s_effect->GetVariableByName("g_mVoxelWorldInv")->AsMatrix();
+	s_shaderVariables.objToWorld = s_effect->GetVariableByName("g_mObjToWorld")->AsMatrix();
+	s_shaderVariables.gridToVoxel = s_effect->GetVariableByName("g_mGridToVoxel")->AsMatrix();
+	s_shaderVariables.worldToVoxel = s_effect->GetVariableByName("g_mWorldToVoxel")->AsMatrix();
 	s_shaderVariables.voxelProj = s_effect->GetVariableByName("g_mVoxelProj")->AsMatrix();
+	s_shaderVariables.voxelWorldViewProj = s_effect->GetVariableByName("g_mVoxelWorldViewProj")->AsMatrix();
+
 	s_shaderVariables.camPosVS = s_effect->GetVariableByName("g_vCamPosVS")->AsVector();
 	s_shaderVariables.resolution = s_effect->GetVariableByName("g_vResolution")->AsVector();
+	s_shaderVariables.voxelSize = s_effect->GetVariableByName("g_vVoxelSize")->AsVector();
+
 	s_shaderVariables.gridUAV = s_effect->GetVariableByName("g_uavGrid")->AsUnorderedAccessView();
 	s_shaderVariables.gridSRV = s_effect->GetVariableByName("g_srvGrid")->AsShaderResource();
 
@@ -307,11 +312,14 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	s_shaderVariables.gridUAV->SetUnorderedAccessView(m_gridUAV);
 
 	// Set viewport, so projection plane resolution matches grid resolution
+	// -> The generated fragments have the same size as the voxel sizes
+	// If we increase the resolution, the voxelization is gets more conservative (more (barely) touched voxels are set) as more rays are casted per voxel row
+	float factor = 1.0f;
 	D3D11_VIEWPORT vp;
 	vp.TopLeftX = 0.0f;
 	vp.TopLeftY = 0.0f;
-	vp.Width = static_cast<float>(m_resolution.x);
-	vp.Height = static_cast<float>(m_resolution.y);
+	vp.Width = static_cast<float>(m_resolution.x * factor);
+	vp.Height = static_cast<float>(m_resolution.y * factor);
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 	context->RSSetViewports(1, &vp);
@@ -319,15 +327,17 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	// Passed projection and view transformations of current camera are ignored
 	// Transform mesh into "Voxel Space" (coordinates should be in range [0, resolution] so we can use floor(position) in pixel shader for accessing the grid)
 	// World to Grid Object Space:
-	XMMATRIX worldToGridSpace = XMMatrixInverse(nullptr, XMLoadFloat4x4(&world));
+	XMMATRIX worldToGrid = XMMatrixInverse(nullptr, XMLoadFloat4x4(&world));
 	// Grid Object Space to Voxel Space
 	XMMATRIX gridToVoxel = XMMatrixScalingFromVector(XMVectorReciprocal(XMLoadFloat3(&m_voxelSize))); // Scale with 1 / voxelSize so position is index into grid
 
 	// Create orthogonal projection aligned with voxel grid looking along z-axis
 	XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0, m_resolution.x, 0, m_resolution.y, 0, m_resolution.z);
 
-	s_shaderVariables.voxelWorldInv->SetMatrix(reinterpret_cast<float*>((worldToGridSpace * gridToVoxel).r));
+	s_shaderVariables.worldToVoxel->SetMatrix(reinterpret_cast<float*>((worldToGrid * gridToVoxel).r));
 	s_shaderVariables.voxelProj->SetMatrix(reinterpret_cast<float*>(proj.r));
+	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
+	s_shaderVariables.voxelSize->SetFloatVector(reinterpret_cast<float*>(&m_voxelSize));
 
 	const unsigned int strides[] = { sizeof(float) * 6 }; // 3 floats postion, 3 floats normal
 	const unsigned int offsets[] = { 0 };
@@ -339,7 +349,8 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	for (const auto& act : m_manager->getActors())
 	{
-		if (act.second->getType() == ObjectType::Mesh)
+		// Only meshes and enabled objects are voxelized
+		if (act.second->getType() == ObjectType::Mesh /* && act.second->getRender() */)
 		{
 			std::shared_ptr<MeshActor> ma = std::dynamic_pointer_cast<MeshActor>(act.second);
 
@@ -349,7 +360,7 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 			// Mesh Object Space -> World Space:
 			XMMATRIX objToWorld = XMLoadFloat4x4(&ma->getWorld());
-			s_shaderVariables.objWorld->SetMatrix(reinterpret_cast<float*>(objToWorld.r));
+			s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(objToWorld.r));
 
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
 
@@ -358,7 +369,6 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 			context->IASetVertexBuffers(0, 1, &vb, strides, offsets);
 			context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
 			context->DrawIndexed(ma->getMesh().getNumIndices(), 0, 0);
-
 
 			// Copy texture from GPU memory to system memory where it is accessable by the cpu
 			context->CopyResource(m_gridTextureStaging, m_gridTextureGPU);
@@ -382,11 +392,20 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 {
 	XMMATRIX w = XMLoadFloat4x4(&world);
 	XMMATRIX v = XMLoadFloat4x4(&view);
-	XMMATRIX worldViewProj = w * v * XMLoadFloat4x4(&projection);
-	XMMATRIX gridToVoxel = XMMatrixScalingFromVector(XMVectorReciprocal(XMLoadFloat3(&m_voxelSize)));
-
+	XMMATRIX p = XMLoadFloat4x4(&projection);
+	XMMATRIX worldViewProj = w * v * p;
 	s_shaderVariables.worldViewProj->SetMatrix(reinterpret_cast<float*>((worldViewProj).r));
-	s_shaderVariables.voxelWorldInv->SetMatrix(reinterpret_cast<float*>((gridToVoxel).r));
+
+	XMMATRIX gridToVoxel = XMMatrixScalingFromVector(XMVectorReciprocal(XMLoadFloat3(&m_voxelSize)));
+	s_shaderVariables.gridToVoxel->SetMatrix(reinterpret_cast<float*>((gridToVoxel).r));
+
+	XMMATRIX voxelToGrid = XMMatrixScalingFromVector(XMLoadFloat3(&m_voxelSize));
+	XMMATRIX voxelWorldViewProj = voxelToGrid * w * v * p;
+	s_shaderVariables.voxelWorldViewProj->SetMatrix(reinterpret_cast<float*>(voxelWorldViewProj.r));
+
+	s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(voxelToGrid.r));
+
+	int res[] = { m_resolution.x, m_resolution.y, m_resolution.z };
 	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
 
 	//Calculate camera position in Voxel Space (Texture space of grid texture -> [0, resolution])
@@ -416,9 +435,11 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 
 VoxelGrid::ShaderVariables::ShaderVariables()
 	: worldViewProj(nullptr),
-	objWorld(nullptr),
-	voxelWorldInv(nullptr),
+	objToWorld(nullptr),
+	gridToVoxel(nullptr),
+	worldToVoxel(nullptr),
 	voxelProj(nullptr),
+	voxelWorldViewProj(nullptr),
 	camPosVS(nullptr),
 	resolution(nullptr),
 	gridUAV(nullptr),
