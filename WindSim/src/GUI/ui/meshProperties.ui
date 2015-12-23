@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>382</width>
-    <height>379</height>
+    <height>402</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -72,6 +72,16 @@
        </widget>
       </item>
      </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="cbVoxelize">
+     <property name="text">
+      <string>Voxelize</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item>
@@ -438,12 +448,6 @@
           </widget>
          </item>
         </layout>
-        <zorder>ay</zorder>
-        <zorder>az</zorder>
-        <zorder>ax</zorder>
-        <zorder>azRot</zorder>
-        <zorder>ayRot</zorder>
-        <zorder>axRot</zorder>
         <zorder>azRot</zorder>
         <zorder>ay</zorder>
         <zorder>az</zorder>

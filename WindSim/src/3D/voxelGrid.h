@@ -38,6 +38,7 @@ public:
 
 	bool resize(DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize);
 	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
+	void setRenderVoxel(bool renderVoxel) { m_renderVoxel = renderVoxel; };
 
 private:
 	void createGridData(); // Create cube for line rendering
@@ -60,6 +61,9 @@ private:
 		ID3DX11EffectVectorVariable* voxelSize;
 		ID3DX11EffectUnorderedAccessViewVariable* gridUAV;
 		ID3DX11EffectShaderResourceVariable* gridSRV;
+		ID3DX11EffectUnorderedAccessViewVariable* gridAllUAV;
+		ID3DX11EffectShaderResourceVariable* gridAllSRV;
+
 
 	};
 
@@ -77,12 +81,16 @@ private:
 
 	bool m_voxelize;
 	int m_counter;
+	bool m_renderVoxel;
 
 	std::vector<unsigned char> m_grid;
 	ID3D11Texture3D* m_gridTextureGPU; // Texture in GPU memory, filled in pixel shader
-	ID3D11Texture3D* m_gridTextureStaging; // Texture in system memory: The data of gpu texture is copyied here and than may be accessed by the cpu
+	ID3D11Texture3D* m_gridAllTextureGPU; // Texture, containing the voxelizations of all meshes
+	ID3D11Texture3D* m_gridAllTextureStaging; // Texture in system memory: The data of gpu texture is copyied here and than may be accessed by the cpu
 	ID3D11UnorderedAccessView* m_gridUAV; // UAV for filling the voxel grid
-	ID3D11ShaderResourceView* m_gridSRV; // SRV for volume rendering
+	ID3D11ShaderResourceView* m_gridSRV; // SRV for one voxelization, used in compute shader
+	ID3D11UnorderedAccessView* m_gridAllUAV; // UAV for all Voxelizations
+	ID3D11ShaderResourceView* m_gridAllSRV; // SRV for volume rendering
 
 
 };

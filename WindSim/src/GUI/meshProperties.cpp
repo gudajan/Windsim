@@ -17,6 +17,9 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	// Disabled
 	connect(ui.cbDisabled, SIGNAL(stateChanged(int)), this, SLOT(disabledChanged(int)));
 
+	// Voxelize
+	connect(ui.cbVoxelize, SIGNAL(stateChanged(int)), this, SLOT(voxelizeChanged(int)));
+
 	// Position
 	connect(ui.xP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
 	connect(ui.yP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
@@ -52,6 +55,10 @@ void MeshProperties::setup(QObject* obj)
 
 void MeshProperties::updateProperties(const QJsonObject& properties)
 {
+	ObjectType type = stringToObjectType(properties["type"].toString().toStdString());
+	if (type != ObjectType::Mesh)
+		return;
+
 	// We just update the dialog with the changes, made outside of it. So we do not want to create any signals because of these changes
 	// Doing so, would create annother invalid modify command
 	blockSignals();
@@ -62,6 +69,7 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 
 		// Visibility
 		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
+		ui.cbVoxelize->setChecked(properties["voxelize"].toInt() == Qt::Checked);
 
 		// Position
 		const QJsonObject& pos = properties.find("Position")->toObject();
@@ -113,6 +121,12 @@ void MeshProperties::nameChanged(const QString& text)
 void MeshProperties::disabledChanged(int state)
 {
 	m_properties["disabled"] = state;
+	emit propertiesChanged(m_properties, Visibility);
+}
+
+void MeshProperties::voxelizeChanged(int state)
+{
+	m_properties["voxelize"] = state;
 	emit propertiesChanged(m_properties, Visibility);
 }
 
@@ -193,6 +207,7 @@ void MeshProperties::blockSignals()
 
 	// Visibility
 	ui.cbDisabled->blockSignals(true);
+	ui.cbVoxelize->blockSignals(true);
 
 	// Position
 	ui.xP->blockSignals(true);
@@ -221,6 +236,7 @@ void MeshProperties::enableSignals()
 
 	// Visibility
 	ui.cbDisabled->blockSignals(false);
+	ui.cbVoxelize->blockSignals(false);
 
 	// Position
 	ui.xP->blockSignals(false);

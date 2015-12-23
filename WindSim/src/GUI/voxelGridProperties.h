@@ -21,6 +21,7 @@ public:
 private slots:
 	void nameChanged(const QString & text);
 	void disabledChanged(int state);
+	void showVoxelChanged(int state);
 	void positionChanged();
 	void resolutionChanged();
 	void voxelSizeChanged();

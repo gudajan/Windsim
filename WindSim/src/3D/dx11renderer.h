@@ -103,6 +103,7 @@ private:
 	QPoint m_localCursorPos;
 	int m_pressedId; // Id of the object, which was hovered during last mouse press
 	State::RendererState m_state;
+	int m_currentFPS;
 
 	QElapsedTimer m_elapsedTimer;
 	QTimer m_renderTimer;

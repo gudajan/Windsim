@@ -12,6 +12,7 @@ MeshActor::MeshActor(Mesh3D& mesh, int id)
 	m_boundingBox(),
 	m_flatShading(true),
 	m_color(PackedVector::XMCOLOR(conf.mesh.dc.r / 255.0f, conf.mesh.dc.g / 255.0f, conf.mesh.dc.b / 255.0f, 1.0f)), // XMCOLOR constructor multiplies by 255.0f and packs color into one uint32_t
+	m_voxelize(true),
 	m_hovered(false),
 	m_selected(false)
 {

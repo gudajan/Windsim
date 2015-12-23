@@ -46,3 +46,8 @@ void VoxelGridActor::voxelize()
 {
 	m_grid.setVoxelize(true);
 }
+
+void VoxelGridActor::setRenderVoxel(bool renderVoxel)
+{
+	m_grid.setRenderVoxel(renderVoxel);
+}

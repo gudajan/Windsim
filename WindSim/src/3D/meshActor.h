@@ -29,6 +29,9 @@ public:
 
 	Mesh3D& getMesh() { return m_mesh; };
 
+	bool getVoxelize() const { return m_voxelize; };
+	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
+
 private:
 	Marker m_marker;
 	Mesh3D& m_mesh;
@@ -37,6 +40,7 @@ private:
 
 	bool m_flatShading;
 	DirectX::PackedVector::XMCOLOR m_color;
+	bool m_voxelize;
 
 	bool m_hovered; // The mouse is hovering above the mesh
 	bool m_selected; // The mesh is the currently selected object

@@ -37,6 +37,7 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_localCursorPos(),
 	m_pressedId(0),
 	m_state(State::Default),
+	m_currentFPS(0),
 	m_elapsedTimer(),
 	m_renderTimer(this),
 	m_voxelizationTimer(this),
@@ -142,7 +143,11 @@ void DX11Renderer::frame()
 	double elapsedTime = m_elapsedTimer.restart() * 0.001; // Milliseconds to seconds
 	update(elapsedTime);
 	render(elapsedTime);
-	emit updateFPS(static_cast<int>(1.0 / elapsedTime)); // Show fps in statusBar
+
+	float smoothing = 0.05f; // the amount of influence of the measured fps to the current fps
+	int measured = static_cast<int>(1.0 / elapsedTime);
+	m_currentFPS = measured * smoothing + m_currentFPS * (1.0f - smoothing);
+	emit updateFPS(m_currentFPS); // Show fps in statusBar
 }
 
 void DX11Renderer::issueVoxelization()

@@ -131,7 +131,9 @@ void ObjectManager::modify(const QJsonObject& data)
 	}
 
 	// Modify general data
-	it->second->setRender(data["disabled"].toInt() == Qt::Unchecked);
+	bool render = data["disabled"].toInt() == Qt::Unchecked;
+	bool oldRender = it->second->getRender();
+	it->second->setRender(render);
 
 	// Modify object specific data
 	if (type == ObjectType::Mesh)
@@ -162,6 +164,15 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->computeWorld();
 		act->setFlatShading(flatShading);
 		act->setColor(col);
+		act->setVoxelize(data["voxelize"].toInt() == Qt::Checked);
+
+
+		if (render != oldRender && !render)
+		{
+			m_selectedIds.erase(act->getId());
+			act->setSelected(false);
+		}
+
 	}
 	else if (type == ObjectType::VoxelGrid)
 	{
@@ -174,10 +185,12 @@ void ObjectManager::modify(const QJsonObject& data)
 		QJsonObject jVs = data["voxelSize"].toObject();
 		XMFLOAT3 vs(jVs["x"].toDouble(), jVs["y"].toDouble(), jVs["z"].toDouble());
 
+
 		std::shared_ptr<VoxelGridActor> act = std::dynamic_pointer_cast<VoxelGridActor>(it->second);
 		act->setPos(pos);
 		act->computeWorld();
 		act->resize(res, vs);
+		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
 	}
 }
 
@@ -255,7 +268,10 @@ bool ObjectManager::updateSelection(Selection op)
 		{
 			m_selectedIds.clear();
 		}
-		return ids != m_selectedIds;
+		bool changed = ids != m_selectedIds;
+		if (changed)
+			setSelected();
+		return changed;
 	}
 	return false;
 }
@@ -293,8 +309,8 @@ int ObjectManager::computeIntersection(const DirectX::XMFLOAT3& origin, const Di
 	// Search for intersection, closes to the camera
 	for (auto& act : m_actors)
 	{
-		// Only meshes are searched for intersections
-		if (act.second->getType() == ObjectType::Mesh)
+		// Only enabled meshes are searched for intersections
+		if (act.second->getType() == ObjectType::Mesh && act.second->getRender())
 		{
 			float dist = std::numeric_limits<float>::infinity();
 			if (std::dynamic_pointer_cast<MeshActor>(act.second)->intersect(origin, direction, dist)) // If intersected -> maybe hovered
@@ -336,7 +352,8 @@ const void ObjectManager::setSelection(const std::unordered_set<int>& selection)
 	// Check which ids belong to meshes and add them if so
 	for (int id : selection)
 	{
-		if (m_actors.find(id)->second->getType() == ObjectType::Mesh)
+		std::shared_ptr<Actor> a = m_actors.find(id)->second;
+		if (a->getType() == ObjectType::Mesh && a->getRender())
 			m_selectedIds.insert(id);
 	}
 }

@@ -14,6 +14,9 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	// Disabled
 	connect(ui.cbDisabled, SIGNAL(stateChanged(int)), this, SLOT(disabledChanged(int)));
 
+	// Show voxel
+	connect(ui.cbShowVoxel, SIGNAL(stateChanged(int)), this, SLOT(showVoxelChanged(int)));
+
 	// Position
 	connect(ui.xP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
 	connect(ui.yP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
@@ -43,6 +46,10 @@ void VoxelGridProperties::setup(QObject* obj)
 
 void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 {
+	ObjectType type = stringToObjectType(properties["type"].toString().toStdString());
+	if (type != ObjectType::VoxelGrid)
+		return;
+
 	// We just update the dialog with the changes, made outside of it. So we do not want to create any signals because of these changes
 	// Doing so, would create annother invalid modify command
 	blockSignals();
@@ -53,6 +60,7 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 
 		// Visibility
 		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
+		ui.cbShowVoxel->setChecked(properties["renderVoxel"].toInt() == Qt::Checked);
 
 		// Position
 		const QJsonObject& pos = properties.find("Position")->toObject();
@@ -86,6 +94,12 @@ void VoxelGridProperties::nameChanged(const QString& text)
 void VoxelGridProperties::disabledChanged(int state)
 {
 	m_properties["disabled"] = state;
+	emit propertiesChanged(m_properties, Visibility);
+}
+
+void VoxelGridProperties::showVoxelChanged(int state)
+{
+	m_properties["renderVoxel"] = state;
 	emit propertiesChanged(m_properties, Visibility);
 }
 
@@ -140,6 +154,7 @@ void VoxelGridProperties::blockSignals()
 
 	// Visibility
 	ui.cbDisabled->blockSignals(true);
+	ui.cbShowVoxel->blockSignals(true);
 
 	// Position
 	ui.xP->blockSignals(true);
@@ -163,6 +178,7 @@ void VoxelGridProperties::enableSignals()
 
 	// Visibility
 	ui.cbDisabled->blockSignals(false);
+	ui.cbShowVoxel->blockSignals(false);
 
 	// Position
 	ui.xP->blockSignals(false);

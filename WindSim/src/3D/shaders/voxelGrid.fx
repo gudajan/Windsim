@@ -1,7 +1,11 @@
 #include "common.fx"
 
-RWTexture3D<uint> g_uavGrid;
-Texture3D<uint> g_srvGrid;
+// Read-Write and Read texture for the grid, containing a single mesh voxelization
+RWTexture3D<uint> g_gridUAV;
+Texture3D<uint> g_gridSRV;
+// Read-Write and Read texture for the grid, containing all combined voxelizations
+RWTexture3D<uint> g_gridAllUAV;
+Texture3D<uint> g_gridAllSRV;
 
 cbuffer cb
 {
@@ -52,24 +56,20 @@ struct PSOut
 // FUNCTIONS
 // =============================================================================
 
-bool gridIndex(in float3 pos, out int3 index)
+bool inGrid(in float3 pos)
 {
 	if (any(pos < float3(0.0f, 0.0f, 0.0f)) || any(pos > float3(g_vResolution))) // Index out of bounds
 		return false;
-	index = int3(pos);
 	return true;
 }
 
-bool getValue(in float3 posVS, out uint voxel)
+uint getValue(in float3 posVS, out bool posInGrid)
 {
-	int3 index;
-	if (!gridIndex(posVS, index))
-	{
-		voxel = 0;
-		return false;
-	}
-	voxel = g_srvGrid[index];
-	return true;
+	posInGrid = inGrid(posVS);
+	if (!posInGrid)
+		return 0;
+
+	return g_gridAllSRV[uint3(posVS)];
 }
 
 bool intersectBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 boxMax, out float t0, out float t1)
@@ -86,6 +86,19 @@ bool intersectBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 b
 	return t0 <= t1;
 }
 
+// =============================================================================
+// COMPUTE SHADER
+// =============================================================================
+
+// 8 * 8 * 16 = 1024
+// z dimension is the biggest because the grid should resemble a windtunnel
+[numthreads(8, 8, 16)]
+void csCombine(uint3 threadID : SV_DispatchThreadID)
+{
+	if (!inGrid(float3(threadID)))
+		return;
+	g_gridAllUAV[threadID] |= g_gridSRV[threadID]; // Or with new value
+}
 
 // =============================================================================
 // VERTEX SHADER
@@ -132,16 +145,16 @@ float4 psGridBox(PSGridBoxIn psIn) : SV_Target
 //float4 psVoxelize(PSVoxelIn psIn) : SV_Target
 void psVoxelize(PSVoxelIn psIn)
 {
-	int3 index;
+	uint3 index = uint3(psIn.voxelPos);
 	int zRun = g_vResolution.z;
 	if (psIn.voxelPos.z < 0)
 		zRun = 0;
-	if (gridIndex(psIn.voxelPos, index))
+	if (inGrid(psIn.voxelPos))
 		zRun = index.z;
 
 	for (int z = 0; z < zRun; ++z)
 	{
-		InterlockedXor(g_uavGrid[uint3(index.xy, z)], 1);
+		InterlockedXor(g_gridUAV[uint3(index.xy, z)], 1);
 	}
 
 	//return float4(abs(psIn.voxelPos / g_vResolution), 1.0f);
@@ -151,26 +164,36 @@ void psVoxelize(PSVoxelIn psIn)
 PSOut psVolume(PSVoxelIn psIn)
 {
 	PSOut psOut = (PSOut)0;
-	psOut.Depth = 0.0f;
+	psOut.Depth = 1.0f;
 
 	float3 rayDir = normalize(psIn.voxelPos - g_vCamPosVS.xyz);
-	float stepSize = 0.01; // In Voxel space, all sides of a voxel are of length 1
+	float stepSize = 0.1; // In Voxel space, all sides of a voxel are of length 1
 	float3 currentPos = psIn.voxelPos; // Start raycasting at the incoming fragment, which corresponds to the border of the voxel grid
-	int3 index;
-	if (!gridIndex(currentPos + rayDir, index)) // If fragment is backface: start ray casting from view plane position instead of the fragment
-		currentPos = g_vCamPosVS.xyz + rayDir; // We would need the intersection of the view plane and the ray, casted from the camera; just fake it by using the RayDir
-	bool stepping = true;
-	while (stepping)
+	// If point on viewplane is inside the grid -> start casting from there
+	// We would need the intersection of the view plane and the ray, casted from the camera; just fake it by using the RayDir
+	if (inGrid(g_vCamPosVS.xyz + rayDir))
+		currentPos = g_vCamPosVS.xyz + rayDir;
+	bool voxelFound = false;
+	bool discarded = false;
+	int counter = 0;
+	uint voxel = 0;
+
+	int maxSteps = ceil(length(g_vResolution) / stepSize);
+
+	while (counter < maxSteps)
 	{
-		uint voxel = 0;
-		stepping = getValue(currentPos, voxel);
-		if (!stepping)
+		counter++;
+
+		bool posInGrid = false;
+		voxel = getValue(currentPos, posInGrid);
+		if (!posInGrid)
 		{
-			discard;
+			discarded = true;
+			break;
 		}
 		if (voxel > 0) // Found a voxel
 		{
-			stepping = false;
+			voxelFound = true;
 			break;
 		}
 		currentPos += rayDir * stepSize; // Step about one voxel
@@ -178,15 +201,25 @@ PSOut psVolume(PSVoxelIn psIn)
 
 	// TODO: calculate normal and perform lighting
 
-	// Calculate output
-	float tmin = 0;
-	float tmax = 0;
-	if (intersectBox(g_vCamPosVS.xyz, rayDir, floor(currentPos), ceil(currentPos), tmin, tmax)) // Get intersection point of voxel and ray
+	// discard statement outside of while loop to avoid compiler problems
+	if (discarded)
 	{
-		float4 pos = mul(float4(g_vCamPosVS.xyz + tmin * rayDir, 1.0f), g_mVoxelWorldViewProj).xyzw;
-		psOut.Depth = pos.z / pos.w;
-		psOut.col = float4(0.7, 0.2, 0.2, 1.0f);
+		discard;
 	}
+
+	if (voxelFound)
+	{
+		// Calculate output
+		float tmin = 0;
+		float tmax = 0;
+		if (intersectBox(g_vCamPosVS.xyz, rayDir, floor(currentPos), ceil(currentPos), tmin, tmax)) // Get intersection point of voxel and ray
+		{
+			float4 pos = mul(float4(g_vCamPosVS.xyz + tmin * rayDir, 1.0f), g_mVoxelWorldViewProj);
+			psOut.Depth = pos.z / pos.w;
+			psOut.col = float4(0.7, 0.2, 0.2, 1.0f);
+		}
+	}
+
 	return psOut;
 }
 
@@ -219,5 +252,9 @@ technique11 Voxel
 		SetRasterizerState(CullNone);
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+	pass Combine
+	{
+		SetComputeShader(CompileShader(cs_5_0, csCombine()));
 	}
 }

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>382</width>
-    <height>246</height>
+    <height>269</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -72,6 +72,16 @@
        </widget>
       </item>
      </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="cbShowVoxel">
+     <property name="text">
+      <string>Show Voxel</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item>

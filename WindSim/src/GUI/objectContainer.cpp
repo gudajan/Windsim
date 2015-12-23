@@ -232,6 +232,8 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["Shading"] = "Flat";
 		if (!object.contains("Color"))
 			object["Color"] = QJsonObject{ { "r", conf.mesh.dc.r }, { "g", conf.mesh.dc.g }, { "b", conf.mesh.dc.b } };
+		if (!object.contains("voxelize"))
+			object["voxelize"] = Qt::Checked;
 	}
 	if (type == ObjectType::VoxelGrid)
 	{
@@ -254,6 +256,8 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["Scaling"] = QJsonObject{ { "x", 1.0 }, { "y", 1.0 }, { "z", 1.0 } };
 		if (!object.contains("Rotation"))
 			object["Rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
+		if (!object.contains("renderVoxel"))
+			object["renderVoxel"] = Qt::Checked;
 	}
 
 	return true;

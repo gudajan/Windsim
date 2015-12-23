@@ -18,11 +18,15 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_cubeIndices(0),
 	m_voxelize(true),
 	m_counter(0),
+	m_renderVoxel(true),
 	m_grid(),
 	m_gridTextureGPU(nullptr),
-	m_gridTextureStaging(nullptr),
+	m_gridAllTextureGPU(nullptr),
+	m_gridAllTextureStaging(nullptr),
 	m_gridUAV(nullptr),
-	m_gridSRV(nullptr)
+	m_gridSRV(nullptr),
+	m_gridAllUAV(nullptr),
+	m_gridAllSRV(nullptr)
 {
 	createGridData();
 }
@@ -59,8 +63,10 @@ HRESULT VoxelGrid::createShaderFromFile(const std::wstring& shaderPath, ID3D11De
 	s_shaderVariables.resolution = s_effect->GetVariableByName("g_vResolution")->AsVector();
 	s_shaderVariables.voxelSize = s_effect->GetVariableByName("g_vVoxelSize")->AsVector();
 
-	s_shaderVariables.gridUAV = s_effect->GetVariableByName("g_uavGrid")->AsUnorderedAccessView();
-	s_shaderVariables.gridSRV = s_effect->GetVariableByName("g_srvGrid")->AsShaderResource();
+	s_shaderVariables.gridUAV = s_effect->GetVariableByName("g_gridUAV")->AsUnorderedAccessView();
+	s_shaderVariables.gridSRV = s_effect->GetVariableByName("g_gridSRV")->AsShaderResource();
+	s_shaderVariables.gridAllUAV = s_effect->GetVariableByName("g_gridAllUAV")->AsUnorderedAccessView();
+	s_shaderVariables.gridAllSRV = s_effect->GetVariableByName("g_gridAllSRV")->AsShaderResource();
 
 	// The same layout as meshes, as only they are voxelized
 	D3D11_INPUT_ELEMENT_DESC meshLayout[] =
@@ -105,7 +111,7 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	m_grid.resize(m_resolution.x * m_resolution.y * m_resolution.z);
 	std::fill(m_grid.begin(), m_grid.end(), 0);
 
-	// Create Texture3D for grid, filled in the pixel shader
+	// Create Texture3D for a grid, containing voxelization of one mesh, filled in the pixel shader
 	D3D11_TEXTURE3D_DESC td = {};
 	td.Width = m_resolution.x;
 	td.Height = m_resolution.y;
@@ -140,17 +146,26 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 
 	V_RETURN(device->CreateTexture3D(&td, nullptr , &m_gridTextureGPU));
 
-	// Create Unordered Access View for grid
+	// Create Unordered Access View for this grid
 	V_RETURN(device->CreateUnorderedAccessView(m_gridTextureGPU, nullptr, &m_gridUAV));
 
-	// Create Shader Resource View for grid
+	// Create Shader Resource View for the single mesh voxelization grid
 	V_RETURN(device->CreateShaderResourceView(m_gridTextureGPU, nullptr, &m_gridSRV));
+
+	// Create the same texture again for containing all voxelizations
+	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_gridAllTextureGPU));
+
+	// Create another UAV for the new texture
+	V_RETURN(device->CreateUnorderedAccessView(m_gridAllTextureGPU, nullptr, &m_gridAllUAV));
+
+	// Create Shader Resource View for combined grid
+	V_RETURN(device->CreateShaderResourceView(m_gridAllTextureGPU, nullptr, &m_gridAllSRV));
 
 	// Now create a texture in system memory, which is used by the GPU to copy the texture from the GPU memory to system memory
 	td.Usage = D3D11_USAGE_STAGING; // GPU Read/Write and GPU to CPU copiing -> texture in system memory
 	td.BindFlags = 0; // No binding to graphics pipeline allowed (and not needed)
 	td.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_gridTextureStaging));
+	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_gridAllTextureStaging));
 
 	return S_OK;
 }
@@ -159,9 +174,12 @@ void VoxelGrid::release()
 {
 	Object3D::release();
 	SAFE_RELEASE(m_gridTextureGPU);
-	SAFE_RELEASE(m_gridTextureStaging);
+	SAFE_RELEASE(m_gridAllTextureGPU);
+	SAFE_RELEASE(m_gridAllTextureStaging);
 	SAFE_RELEASE(m_gridUAV);
 	SAFE_RELEASE(m_gridSRV);
+	SAFE_RELEASE(m_gridAllUAV);
+	SAFE_RELEASE(m_gridAllSRV);
 }
 
 void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
@@ -190,20 +208,21 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	{
 		// Get CPU Access
 		D3D11_MAPPED_SUBRESOURCE msr;
-		context->Map(m_gridTextureStaging, 0, D3D11_MAP_READ, 0, &msr); // data contains pointer to texture data
+		context->Map(m_gridAllTextureStaging, 0, D3D11_MAP_READ, 0, &msr); // data contains pointer to texture data
 
 		if (msr.pData)
 		{
-			// OR data with voxel grid
-			std::transform(m_grid.begin(), m_grid.end(), reinterpret_cast<uint32_t*>(msr.pData), m_grid.begin(), [](const unsigned char& v1, const uint32_t& v2) { return v1 | static_cast<unsigned char>(v2); });
+			uint32_t* start = reinterpret_cast<uint32_t*>(msr.pData);
+			std::transform(start, start + std::distance(m_grid.begin(), m_grid.end()), m_grid.begin(), [](const uint32_t& val) {return static_cast<unsigned char>(val); });
 		}
 
 		// Remove CPU Access
-		context->Unmap(m_gridTextureStaging, 0);
+		context->Unmap(m_gridAllTextureStaging, 0);
 		m_counter = -1;
 	}
 
-	renderVoxel(device, context, world, view, projection);
+	if (m_renderVoxel)
+		renderVoxel(device, context, world, view, projection);
 }
 
 bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
@@ -307,10 +326,6 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	UINT vpCount = 1;
 	context->RSGetViewports(&vpCount, tempVP);
 
-	// Remove Render Target and set Unordered Access View
-	//context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, 1, &m_gridUAV, nullptr); // Last argument ignored
-	s_shaderVariables.gridUAV->SetUnorderedAccessView(m_gridUAV);
-
 	// Set viewport, so projection plane resolution matches grid resolution
 	// -> The generated fragments have the same size as the voxel sizes
 	// If we increase the resolution, the voxelization is gets more conservative (more (barely) touched voxels are set) as more rays are casted per voxel row
@@ -323,6 +338,13 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 	context->RSSetViewports(1, &vp);
+
+	// Clear combined grid UAV once each frame
+	const UINT iniVals[] = { 0, 0, 0, 0 };
+	context->ClearUnorderedAccessViewUint(m_gridAllUAV, iniVals);
+
+	// Reset voxel grid
+	std::fill(m_grid.begin(), m_grid.end(), 0);
 
 	// Passed projection and view transformations of current camera are ignored
 	// Transform mesh into "Voxel Space" (coordinates should be in range [0, resolution] so we can use floor(position) in pixel shader for accessing the grid)
@@ -339,28 +361,33 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
 	s_shaderVariables.voxelSize->SetFloatVector(reinterpret_cast<float*>(&m_voxelSize));
 
-	const unsigned int strides[] = { sizeof(float) * 6 }; // 3 floats postion, 3 floats normal
+	const unsigned int strides[] = { sizeof(float) * 6 }; // 3 floats postion, 3 floats normal for mesh layout
 	const unsigned int offsets[] = { 0 };
 	context->IASetInputLayout(s_meshInputLayout);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	// Reset voxel grid
-	std::fill(m_grid.begin(), m_grid.end(), 0);
-
 	for (const auto& act : m_manager->getActors())
 	{
 		// Only meshes and enabled objects are voxelized
-		if (act.second->getType() == ObjectType::Mesh /* && act.second->getRender() */)
+		if (act.second->getType() == ObjectType::Mesh)
 		{
 			std::shared_ptr<MeshActor> ma = std::dynamic_pointer_cast<MeshActor>(act.second);
 
+			if (!ma->getVoxelize())
+				continue;
+
+			// ###################################
+			// VOXELIZATION
+			// ###################################
+
 			// Clear UAV for each mesh
-			const UINT iniVals[] = { 0, 0, 0, 0 };
 			context->ClearUnorderedAccessViewUint(m_gridUAV, iniVals);
 
 			// Mesh Object Space -> World Space:
 			XMMATRIX objToWorld = XMLoadFloat4x4(&ma->getWorld());
 			s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(objToWorld.r));
+			// Set Unordered Access View
+			s_shaderVariables.gridUAV->SetUnorderedAccessView(m_gridUAV);
 
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
 
@@ -370,14 +397,35 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 			context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
 			context->DrawIndexed(ma->getMesh().getNumIndices(), 0, 0);
 
-			// Copy texture from GPU memory to system memory where it is accessable by the cpu
-			context->CopyResource(m_gridTextureStaging, m_gridTextureGPU);
+			// Remove Unordered Access View
+			s_shaderVariables.gridUAV->SetUnorderedAccessView(nullptr);
+
+			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
+
+			// ###################################
+			// COMBINE
+			// ###################################
+			// Use compute shader to combine this meshes voxelization with the former ones:
+			// Set shader resources
+			s_shaderVariables.gridSRV->SetResource(m_gridSRV);
+			s_shaderVariables.gridAllUAV->SetUnorderedAccessView(m_gridAllUAV);
+
+			s_effect->GetTechniqueByIndex(0)->GetPassByName("Combine")->Apply(0, context);
+
+			XMUINT3 dispatch( std::ceil(m_resolution.x / 8), std::ceil(m_resolution.y / 8), std::ceil(m_resolution.z / 16) );
+
+			context->Dispatch(dispatch.x, dispatch.y, dispatch.z);
+
+			// Remove shader resources
+			s_shaderVariables.gridSRV->SetResource(nullptr);
+			s_shaderVariables.gridAllUAV->SetUnorderedAccessView(nullptr);
+
+			s_effect->GetTechniqueByIndex(0)->GetPassByName("Combine")->Apply(0, context);
 		}
 	}
 
-	// Remove Unordered Access View
-	s_shaderVariables.gridUAV->SetUnorderedAccessView(nullptr);
-	s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
+	// Copy texture from GPU memory to system memory where it is accessable by the cpu
+	context->CopyResource(m_gridAllTextureStaging, m_gridAllTextureGPU);
 
 	// Restore old render targets and viewport
 	context->OMSetRenderTargets(1, &tempRTV, tempDSV);
@@ -405,7 +453,6 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 
 	s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(voxelToGrid.r));
 
-	int res[] = { m_resolution.x, m_resolution.y, m_resolution.z };
 	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
 
 	//Calculate camera position in Voxel Space (Texture space of grid texture -> [0, resolution])
@@ -415,7 +462,7 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 	camPos = XMVector3Transform(camPos, gridToVoxel); // Voxel Space
 	s_shaderVariables.camPosVS->SetFloatVector(camPos.m128_f32);
 
-	s_shaderVariables.gridSRV->SetResource(m_gridSRV);
+	s_shaderVariables.gridAllSRV->SetResource(m_gridAllSRV);
 
 	s_effect->GetTechniqueByIndex(0)->GetPassByName("RenderVoxel")->Apply(0, context);
 
@@ -427,7 +474,7 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	context->DrawIndexed(m_cubeIndices, m_numIndices, 0);
 
-	s_shaderVariables.gridSRV->SetResource(nullptr);
+	s_shaderVariables.gridAllSRV->SetResource(nullptr);
 
 	s_effect->GetTechniqueByIndex(0)->GetPassByName("RenderVoxel")->Apply(0, context);
 
@@ -443,7 +490,8 @@ VoxelGrid::ShaderVariables::ShaderVariables()
 	camPosVS(nullptr),
 	resolution(nullptr),
 	gridUAV(nullptr),
-	gridSRV(nullptr)
+	gridAllUAV(nullptr),
+	gridAllSRV(nullptr)
 {
 }
 

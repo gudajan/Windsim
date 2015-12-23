@@ -16,6 +16,7 @@ public:
 	void reCenter(); // Recalculate position so the grid center is at the origin
 	void resize(DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize);
 	void voxelize();
+	void setRenderVoxel(bool renderVoxel);
 
 private:
 	VoxelGrid& m_grid;

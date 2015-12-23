@@ -22,6 +22,7 @@ public slots:
 private slots:
 	void nameChanged(const QString & text);
 	void disabledChanged(int state);
+	void voxelizeChanged(int state);
 	void positionChanged();
 	void scalingChanged();
 	void rotationChanged();

@@ -112,7 +112,15 @@ bool ModifyObjectCmd::mergeWith(const QUndoCommand* cmd)
 	if (m.testFlag(Position)) m_newData["Position"] = json["Position"].toObject();
 	if (m.testFlag(Scaling)) m_newData["Scaling"] = json["Scaling"].toObject();
 	if (m.testFlag(Rotation)) m_newData["Rotation"] = json["Rotation"].toObject();
-	if (m.testFlag(Visibility)) m_newData["disabled"] = json["disabled"].toInt();
+	if (m.testFlag(Visibility))
+	{
+		m_newData["disabled"] = json["disabled"].toInt();
+		ObjectType type = stringToObjectType(m_newData["type"].toString().toStdString());
+		if (type == ObjectType::VoxelGrid)
+			m_newData["renderVoxel"] = json["renderVoxel"].toInt();
+		if (type == ObjectType::Mesh)
+			m_newData["voxelize"] = json["voxelize"].toInt();
+	}
 	if (m.testFlag(Shading)) m_newData["Shading"] = json["Visibility"].toString();
 	if (m.testFlag(Name)) m_newData["name"] = json["name"].toString();
 	if (m.testFlag(Color)) m_newData["Color"] = json["Color"].toObject();

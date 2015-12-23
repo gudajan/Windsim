@@ -364,7 +364,10 @@ void WindSim::applySettings()
 
 void WindSim::onUpdateFPS(int fps)
 {
-	ui.dx11Viewer->setStatusTip("FPS: " + QString::number(fps));
+	QString current = ui.statusBar->currentMessage();
+	// Remove FPS
+	current.remove(QRegularExpression("\\sFPS: \\d+"));
+	ui.statusBar->showMessage(current + "\tFPS: " + QString::number(fps));
 }
 
 
