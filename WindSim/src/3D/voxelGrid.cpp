@@ -7,6 +7,8 @@
 #include <d3dcompiler.h>
 #include "d3dx11effect.h"
 
+#include <QElapsedTimer>
+
 using namespace DirectX;
 
 VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelSize)
@@ -115,7 +117,7 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	D3D11_TEXTURE3D_DESC td = {};
 	td.Width = m_resolution.x;
 	td.Height = m_resolution.y;
-	td.Depth = m_resolution.z;
+	td.Depth = m_resolution.z / 32; // As we have to use 32 bit unsigned integer, simply encode 32 bool values/voxel in one grid cell
 	td.MipLevels = 1;
 	td.Format = DXGI_FORMAT_R32_UINT; // Atomic bitwise operations in shader (InterlockedXor) on UAVs are only supported for R32_SINT and R32_UINT
 	td.Usage = D3D11_USAGE_DEFAULT;
@@ -212,8 +214,43 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 
 		if (msr.pData)
 		{
-			uint32_t* start = reinterpret_cast<uint32_t*>(msr.pData);
-			std::transform(start, start + std::distance(m_grid.begin(), m_grid.end()), m_grid.begin(), [](const uint32_t& val) {return static_cast<unsigned char>(val); });
+			QElapsedTimer timer;
+			timer.start();
+			uint32_t* cells = reinterpret_cast<uint32_t*>(msr.pData);
+			uint32_t zRes = m_resolution.z / 32;
+			uint32_t slice = m_resolution.x * m_resolution.y;
+			//std::vector<uint32_t> tempGrid(m_resolution.x * m_resolution.y * zRes);
+			//std::copy(cells, cells + std::distance(tempGrid.begin(), tempGrid.end()), tempGrid.begin());
+			//for (int i = 0; i < m_resolution.x * m_resolution.y * zRes; ++i)
+			//{
+			//	uint32_t cell = cells[i];
+			//	for (int j = 0; j < 32; ++j)
+			//	{
+			//		m_grid[i * 32 + j] = static_cast<unsigned char>(cell & (1 << j) > 0); // voxel indicates if i-th bit is set
+			//	}
+			//}
+
+			// We have to realign the values, as 32 values are encoded in one cell along z axis, but the alignment in the grid should be x -> y -> z
+			uint yI, zI = 0;
+			for (int z = 0; z < zRes; ++z)
+			{
+				for (int y = 0; y < m_resolution.y; ++y)
+				{
+					for (int x = 0; x < m_resolution.x; ++x)
+					{
+
+						yI = y * m_resolution.x;
+						zI = z * 32;
+						uint32_t cell = cells[x + y * zRes + z * slice];
+						for (int i = 0; i < 32; ++i)
+						{
+							m_grid[x + yI + (zI + i) * slice] = static_cast<unsigned char>(cell & (1 << i) > 0); // voxel indicates if i-th bit is set
+						}
+					}
+				}
+			}
+			long long msec = timer.elapsed();
+			OutputDebugStringA(("COPYTIME: " + std::to_string(msec) + "msec\n").c_str());
 		}
 
 		// Remove CPU Access
@@ -343,9 +380,6 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	const UINT iniVals[] = { 0, 0, 0, 0 };
 	context->ClearUnorderedAccessViewUint(m_gridAllUAV, iniVals);
 
-	// Reset voxel grid
-	std::fill(m_grid.begin(), m_grid.end(), 0);
-
 	// Passed projection and view transformations of current camera are ignored
 	// Transform mesh into "Voxel Space" (coordinates should be in range [0, resolution] so we can use floor(position) in pixel shader for accessing the grid)
 	// World to Grid Object Space:
@@ -412,7 +446,8 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Combine")->Apply(0, context);
 
-			XMUINT3 dispatch( std::ceil(m_resolution.x / 8), std::ceil(m_resolution.y / 8), std::ceil(m_resolution.z / 16) );
+			// xy values are devided by 32 because of the numthreads attribute in the compute shader, z value is devided because 32 voxels are encoded in one cell
+			XMUINT3 dispatch( std::ceil(m_resolution.x / 32), std::ceil(m_resolution.y / 32), std::ceil((m_resolution.z / 32)) );
 
 			context->Dispatch(dispatch.x, dispatch.y, dispatch.z);
 

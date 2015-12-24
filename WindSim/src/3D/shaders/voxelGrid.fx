@@ -17,7 +17,7 @@ cbuffer cb
 	float4x4 g_mVoxelWorldViewProj; // Voxel space -> grid object space -> world space -> camera/view space -> projection space
 
 	float4 g_vCamPosVS; // Camera position in Voxel space
-	int3 g_vResolution; // Resolution of voxel grid
+	uint3 g_vResolution; // Resolution of voxel grid
 	float3 g_vVoxelSize; // VoxelSize in grid object space
 }
 
@@ -63,13 +63,18 @@ bool inGrid(in float3 pos)
 	return true;
 }
 
-uint getValue(in float3 posVS, out bool posInGrid)
+bool getValue(in float3 posVS, out bool posInGrid)
 {
 	posInGrid = inGrid(posVS);
 	if (!posInGrid)
-		return 0;
+		return false;
 
-	return g_gridAllSRV[uint3(posVS)];
+	uint z = posVS.z / 32;
+	uint n = posVS.z - z * 32;
+	uint val = g_gridAllSRV[uint3(posVS.xy, z)];
+	// check if nth bit is set
+	val &= (1 << n);
+	return val > 0;
 }
 
 bool intersectBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 boxMax, out float t0, out float t1)
@@ -92,11 +97,13 @@ bool intersectBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 b
 
 // 8 * 8 * 16 = 1024
 // z dimension is the biggest because the grid should resemble a windtunnel
-[numthreads(8, 8, 16)]
+// As one cell contains 32 voxel in z direction
+[numthreads(32, 32, 1)]
 void csCombine(uint3 threadID : SV_DispatchThreadID)
 {
-	if (!inGrid(float3(threadID)))
+	if (any(threadID < uint3(0, 0, 0)) || any(threadID > uint3(g_vResolution.xy, g_vResolution.z / 32))) // Index out of bounds
 		return;
+
 	g_gridAllUAV[threadID] |= g_gridSRV[threadID]; // Or with new value
 }
 
@@ -146,16 +153,27 @@ float4 psGridBox(PSGridBoxIn psIn) : SV_Target
 void psVoxelize(PSVoxelIn psIn)
 {
 	uint3 index = uint3(psIn.voxelPos);
-	int zRun = g_vResolution.z;
+	uint zRun = g_vResolution.z;
 	if (psIn.voxelPos.z < 0)
 		zRun = 0;
 	if (inGrid(psIn.voxelPos))
 		zRun = index.z;
 
-	for (int z = 0; z < zRun; ++z)
+	// Calculate real index of current cell, which voxel index of current fragment falls into (one cell is 1 * 1 * 32 as one int contains 32 bit/bools -> one cell contains 32 voxel in z direction)
+	uint currentCell = zRun / 32; // Integer division without rest
+	uint n = zRun - currentCell * 32; // = zRun % 32 Voxel index within the current cell
+
+	// Completely xor the cells in front of the fragment
+	for (uint z = 0; z < currentCell; ++z)
 	{
-		InterlockedXor(g_gridUAV[uint3(index.xy, z)], 1);
+		InterlockedXor(g_gridUAV[uint3(index.xy, z)], 0xFFFFFFFF); // Use UINT_MAX
 	}
+
+	// Xor all bits in current cell up to index of current fragment
+	// For this, set all necessary bits in a temp value to 1 and xor the whole cell with it once
+	uint xorVal = 1 << n; // nth bit is set
+	xorVal -= 1; // all bits 0..n-1 are set as desired
+	InterlockedXor(g_gridUAV[uint3(index.xy, currentCell)], xorVal);
 
 	//return float4(abs(psIn.voxelPos / g_vResolution), 1.0f);
 }
@@ -164,19 +182,19 @@ void psVoxelize(PSVoxelIn psIn)
 PSOut psVolume(PSVoxelIn psIn)
 {
 	PSOut psOut = (PSOut)0;
-	psOut.Depth = 1.0f;
+	psOut.col = float4(0.0f, 1.0f, 0.0f, 1.0f);
+	psOut.Depth = 0.0f;
 
 	float3 rayDir = normalize(psIn.voxelPos - g_vCamPosVS.xyz);
-	float stepSize = 0.1; // In Voxel space, all sides of a voxel are of length 1
+	float stepSize = 0.2; // In Voxel space, all sides of a voxel are of length 1
 	float3 currentPos = psIn.voxelPos; // Start raycasting at the incoming fragment, which corresponds to the border of the voxel grid
 	// If point on viewplane is inside the grid -> start casting from there
 	// We would need the intersection of the view plane and the ray, casted from the camera; just fake it by using the RayDir
 	if (inGrid(g_vCamPosVS.xyz + rayDir))
 		currentPos = g_vCamPosVS.xyz + rayDir;
-	bool voxelFound = false;
 	bool discarded = false;
 	int counter = 0;
-	uint voxel = 0;
+	bool voxel = false;
 
 	int maxSteps = ceil(length(g_vResolution) / stepSize);
 
@@ -191,9 +209,8 @@ PSOut psVolume(PSVoxelIn psIn)
 			discarded = true;
 			break;
 		}
-		if (voxel > 0) // Found a voxel
+		if (voxel) // Found a voxel
 		{
-			voxelFound = true;
 			break;
 		}
 		currentPos += rayDir * stepSize; // Step about one voxel
@@ -207,7 +224,7 @@ PSOut psVolume(PSVoxelIn psIn)
 		discard;
 	}
 
-	if (voxelFound)
+	if (voxel)
 	{
 		// Calculate output
 		float tmin = 0;
