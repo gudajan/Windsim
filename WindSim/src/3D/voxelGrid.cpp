@@ -7,7 +7,7 @@
 #include <d3dcompiler.h>
 #include "d3dx11effect.h"
 
-#include <QElapsedTimer>
+#include <qelapsedtimer.h>
 
 using namespace DirectX;
 
@@ -115,36 +115,15 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 
 	// Create Texture3D for a grid, containing voxelization of one mesh, filled in the pixel shader
 	D3D11_TEXTURE3D_DESC td = {};
-	td.Width = m_resolution.x;
+	td.Width = m_resolution.x / 32;  // As we have to use 32 bit unsigned integer, simply encode 32 bool values/voxel in one grid cell
 	td.Height = m_resolution.y;
-	td.Depth = m_resolution.z / 32; // As we have to use 32 bit unsigned integer, simply encode 32 bool values/voxel in one grid cell
+	td.Depth = m_resolution.z;
 	td.MipLevels = 1;
 	td.Format = DXGI_FORMAT_R32_UINT; // Atomic bitwise operations in shader (InterlockedXor) on UAVs are only supported for R32_SINT and R32_UINT
 	td.Usage = D3D11_USAGE_DEFAULT;
 	td.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	td.CPUAccessFlags = 0; // No CPU Access for this texture
 	td.MiscFlags = 0;
-
-	//// DEBUG
-	//std::vector<unsigned char> initData(m_resolution.x * m_resolution.y * m_resolution.z, 0);
-	//for (int z = 0; z < m_resolution.z; ++z)
-	//{
-	//	for (int y = 0; y < m_resolution.y; ++y)
-	//	{
-	//		for (int x = 0; x < m_resolution.x; ++x)
-	//		{
-	//			if (x == 5 && y % 2 == 0 && z % 2 == 1)
-	//			{
-	//				initData[x + y*m_resolution.x + z * m_resolution.x * m_resolution.y] = 1;
-	//			}
-	//		}
-	//	}
-	//}
-	//D3D11_SUBRESOURCE_DATA srd = {};
-	//srd.pSysMem = initData.data();
-	//srd.SysMemPitch = m_resolution.x;
-	//srd.SysMemSlicePitch = m_resolution.x * m_resolution.y;
-
 
 	V_RETURN(device->CreateTexture3D(&td, nullptr , &m_gridTextureGPU));
 
@@ -208,53 +187,42 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	// Make sure, the cpu only accesses the voxel grid if the GPU copiing is done, to avoid pipeline stalling
 	if (m_counter > 2)
 	{
+		uint32_t xRes = m_resolution.x / 32;
+		std::vector<uint32_t> tempCells;
+
 		// Get CPU Access
 		D3D11_MAPPED_SUBRESOURCE msr;
 		context->Map(m_gridAllTextureStaging, 0, D3D11_MAP_READ, 0, &msr); // data contains pointer to texture data
-
 		if (msr.pData)
 		{
-			QElapsedTimer timer;
-			timer.start();
 			uint32_t* cells = reinterpret_cast<uint32_t*>(msr.pData);
-			uint32_t zRes = m_resolution.z / 32;
-			uint32_t slice = m_resolution.x * m_resolution.y;
-			//std::vector<uint32_t> tempGrid(m_resolution.x * m_resolution.y * zRes);
-			//std::copy(cells, cells + std::distance(tempGrid.begin(), tempGrid.end()), tempGrid.begin());
-			//for (int i = 0; i < m_resolution.x * m_resolution.y * zRes; ++i)
-			//{
-			//	uint32_t cell = cells[i];
-			//	for (int j = 0; j < 32; ++j)
-			//	{
-			//		m_grid[i * 32 + j] = static_cast<unsigned char>(cell & (1 << j) > 0); // voxel indicates if i-th bit is set
-			//	}
-			//}
-
-			// We have to realign the values, as 32 values are encoded in one cell along z axis, but the alignment in the grid should be x -> y -> z
-			uint yI, zI = 0;
-			for (int z = 0; z < zRes; ++z)
-			{
-				for (int y = 0; y < m_resolution.y; ++y)
-				{
-					for (int x = 0; x < m_resolution.x; ++x)
-					{
-
-						yI = y * m_resolution.x;
-						zI = z * 32;
-						uint32_t cell = cells[x + y * zRes + z * slice];
-						for (int i = 0; i < 32; ++i)
-						{
-							m_grid[x + yI + (zI + i) * slice] = static_cast<unsigned char>(cell & (1 << i) > 0); // voxel indicates if i-th bit is set
-						}
-					}
-				}
-			}
-			long long msec = timer.elapsed();
-			OutputDebugStringA(("COPYTIME: " + std::to_string(msec) + "msec\n").c_str());
+			tempCells.resize(xRes * m_resolution.y * m_resolution.z);
+			std::copy(cells, cells + std::distance(tempCells.begin(), tempCells.end()), tempCells.begin());
 		}
-
 		// Remove CPU Access
 		context->Unmap(m_gridAllTextureStaging, 0);
+
+		// Copy data into own grid and decode 32 bit cells into voxels
+		// THIS IS REALLY SLOW: TODO: perform in concurrent thread/process, where it is used
+		QElapsedTimer timer;
+		timer.start();
+		if (!tempCells.empty())
+		{
+			uint32_t slice = xRes * m_resolution.y;
+			uint32_t cell = 0;
+			uint32_t index = 0;
+			for (int i = 0; i < xRes * m_resolution.y * m_resolution.z; ++i)
+			{
+				cell = tempCells[i];
+				index = i * 32;
+				for (int j = index; j < index + 32; ++j)
+				{
+					m_grid[j] = static_cast<unsigned char>(cell & (1 << j) > 0); // indicates if j-th bit of i-th cell is set
+				}
+			}
+		}
+		long long msec = timer.elapsed();
+		OutputDebugStringA(("COPYTIME: " + std::to_string(msec) + "msec\n").c_str());
 		m_counter = -1;
 	}
 
@@ -352,6 +320,13 @@ void VoxelGrid::renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context
 
 void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world)
 {
+	// The voxelization is performed along the x-axis, so the 32 bit cells are properly aligned
+	// -> The viewport is aligned with the yz side of the voxel grid
+	// -> The orthogonal projection is aligned along the x-axis (e.g. x-Resolution corresponds to zFar)
+	// -> As the voxelization in shader is always performed along the z-axis, rotate the voxelized objects about 90 degrees
+	//    Additionally, the grid has to be mirrored at the xy-plane (because for the grid access index, x and z values are switched;
+	//    a 90 deg rotation in 2D is x1 = -x2, x2 = x1; so one of the axises has to be mirrored)
+	// -> On accessing the grid in the pixel shader (voxelGrid.fx -> psVoxelize()), the x and z values a switched (rotation and mirroring)
 
 	// Save old renderTarget
 	ID3D11RenderTargetView* tempRTV = nullptr;
@@ -370,7 +345,7 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	D3D11_VIEWPORT vp;
 	vp.TopLeftX = 0.0f;
 	vp.TopLeftY = 0.0f;
-	vp.Width = static_cast<float>(m_resolution.x * factor);
+	vp.Width = static_cast<float>(m_resolution.z * factor);
 	vp.Height = static_cast<float>(m_resolution.y * factor);
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
@@ -386,11 +361,13 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	XMMATRIX worldToGrid = XMMatrixInverse(nullptr, XMLoadFloat4x4(&world));
 	// Grid Object Space to Voxel Space
 	XMMATRIX gridToVoxel = XMMatrixScalingFromVector(XMVectorReciprocal(XMLoadFloat3(&m_voxelSize))); // Scale with 1 / voxelSize so position is index into grid
+	// Perform rotation and mirroring to enforce voxelization along x-instead of z-axis
+	XMMATRIX voxelizeX = XMMatrixRotationNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), degToRad(90)) * XMMatrixScaling(1.0f, 1.0f, -1.0f);;
 
-	// Create orthogonal projection aligned with voxel grid looking along z-axis
-	XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0, m_resolution.x, 0, m_resolution.y, 0, m_resolution.z);
+	// Create orthogonal projection aligned with voxel grid looking along x-axis
+	XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0, m_resolution.z, 0, m_resolution.y, 0, m_resolution.x);
 
-	s_shaderVariables.worldToVoxel->SetMatrix(reinterpret_cast<float*>((worldToGrid * gridToVoxel).r));
+	s_shaderVariables.worldToVoxel->SetMatrix(reinterpret_cast<float*>((worldToGrid * gridToVoxel * voxelizeX).r));
 	s_shaderVariables.voxelProj->SetMatrix(reinterpret_cast<float*>(proj.r));
 	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
 	s_shaderVariables.voxelSize->SetFloatVector(reinterpret_cast<float*>(&m_voxelSize));
@@ -446,8 +423,8 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Combine")->Apply(0, context);
 
-			// xy values are devided by 32 because of the numthreads attribute in the compute shader, z value is devided because 32 voxels are encoded in one cell
-			XMUINT3 dispatch( std::ceil(m_resolution.x / 32), std::ceil(m_resolution.y / 32), std::ceil((m_resolution.z / 32)) );
+			// yz values are devided by 32 because of the numthreads attribute in the compute shader, x value is devided because 32 voxels are encoded in one cell
+			XMUINT3 dispatch( std::ceil(m_resolution.x / 32.0f), std::ceil(m_resolution.y / 32.0f), std::ceil((m_resolution.z / 32.0f)) );
 
 			context->Dispatch(dispatch.x, dispatch.y, dispatch.z);
 

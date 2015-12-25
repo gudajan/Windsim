@@ -140,12 +140,13 @@ bool DX11Renderer::init()
 
 void DX11Renderer::frame()
 {
-	double elapsedTime = m_elapsedTimer.restart() * 0.001; // Milliseconds to seconds
-	update(elapsedTime);
-	render(elapsedTime);
+	long long elapsedTime = m_elapsedTimer.restart(); // Milliseconds
+	double t = static_cast<double>(elapsedTime)* 0.001;
+	update(t);
+	render(t);
 
-	float smoothing = 0.05f; // the amount of influence of the measured fps to the current fps
-	int measured = static_cast<int>(1.0 / elapsedTime);
+	float smoothing = 0.1f; // the amount of influence of the measured fps to the current fps
+	int measured = static_cast<int>(1000.0 / elapsedTime); // 1000 msec / elapsed msec = fps
 	m_currentFPS = measured * smoothing + m_currentFPS * (1.0f - smoothing);
 	emit updateFPS(m_currentFPS); // Show fps in statusBar
 }
@@ -159,8 +160,8 @@ void DX11Renderer::execute()
 {
 	OutputDebugStringA(("WORKER THREAD: " + std::to_string(reinterpret_cast<int>(thread()->currentThreadId())) + "\n").c_str());
 	m_elapsedTimer.start();
-	m_renderTimer.start(1000.0f / 120.0f); // Rendering happens with 120 FPS at max
-	m_voxelizationTimer.start(1000.0f / 40.0f); // Voxelization happens 40 times per second at maximum
+	m_renderTimer.start(8); // Rendering happens with 125 FPS at max
+	m_voxelizationTimer.start(25); // Voxelization happens 40 times per second at maximum
 }
 
 void DX11Renderer::stop()

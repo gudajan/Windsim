@@ -364,6 +364,9 @@ void WindSim::applySettings()
 
 void WindSim::onUpdateFPS(int fps)
 {
+	if (fps <= 0)
+		return;
+
 	QString current = ui.statusBar->currentMessage();
 	// Remove FPS
 	current.remove(QRegularExpression("\\sFPS: \\d+"));

@@ -69,9 +69,9 @@ bool getValue(in float3 posVS, out bool posInGrid)
 	if (!posInGrid)
 		return false;
 
-	uint z = posVS.z / 32;
-	uint n = posVS.z - z * 32;
-	uint val = g_gridAllSRV[uint3(posVS.xy, z)];
+	uint x = posVS.x / 32;
+	uint n = posVS.x - x * 32;
+	uint val = g_gridAllSRV[uint3(x, posVS.yz)];
 	// check if nth bit is set
 	val &= (1 << n);
 	return val > 0;
@@ -95,13 +95,12 @@ bool intersectBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 b
 // COMPUTE SHADER
 // =============================================================================
 
-// 8 * 8 * 16 = 1024
-// z dimension is the biggest because the grid should resemble a windtunnel
-// As one cell contains 32 voxel in z direction
-[numthreads(32, 32, 1)]
+// 1*32*32 = 1024
+// As one cell contains 32 voxel in x direction
+[numthreads(1, 32, 32)]
 void csCombine(uint3 threadID : SV_DispatchThreadID)
 {
-	if (any(threadID < uint3(0, 0, 0)) || any(threadID > uint3(g_vResolution.xy, g_vResolution.z / 32))) // Index out of bounds
+	if (any(threadID < uint3(0, 0, 0)) || any(threadID > uint3(g_vResolution.x / 32, g_vResolution.yz))) // Index out of bounds
 		return;
 
 	g_gridAllUAV[threadID] |= g_gridSRV[threadID]; // Or with new value
@@ -124,8 +123,8 @@ PSVoxelIn vsVoxelize(VSMeshIn vsIn)
 	vsOut.pos = mul(mul(mul(float4(vsIn.pos, 1.0f), g_mObjToWorld), g_mWorldToVoxel), g_mVoxelProj);
 
 	// Shift z coordinate about half a voxel so the voxel position appears to be in its center instead of the lower, left, front corner
-	vsOut.pos.z += 2.0f / g_vVoxelSize.z; // size of voxel in projection space
 	vsOut.voxelPos.z += 0.5;
+
 	// Clamp z coordinate to grid
 	// This way, a fragment is generated although it lies outside the grid
 	// As the voxelization algorithm depends on the odd number of fragments (entering and leaving the object) it is important to also generate the leaving fragment if it lies outside the grid
@@ -149,14 +148,16 @@ float4 psGridBox(PSGridBoxIn psIn) : SV_Target
 	return float4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
-//float4 psVoxelize(PSVoxelIn psIn) : SV_Target
 void psVoxelize(PSVoxelIn psIn)
 {
+	// Voxelization performed along x-axis
+	// -> Switch x and z on grid access
+
 	uint3 index = uint3(psIn.voxelPos);
-	uint zRun = g_vResolution.z;
+	uint zRun = g_vResolution.x;
 	if (psIn.voxelPos.z < 0)
 		zRun = 0;
-	if (inGrid(psIn.voxelPos))
+	if (inGrid(float3(psIn.voxelPos.zyx)))
 		zRun = index.z;
 
 	// Calculate real index of current cell, which voxel index of current fragment falls into (one cell is 1 * 1 * 32 as one int contains 32 bit/bools -> one cell contains 32 voxel in z direction)
@@ -166,16 +167,14 @@ void psVoxelize(PSVoxelIn psIn)
 	// Completely xor the cells in front of the fragment
 	for (uint z = 0; z < currentCell; ++z)
 	{
-		InterlockedXor(g_gridUAV[uint3(index.xy, z)], 0xFFFFFFFF); // Use UINT_MAX
+		InterlockedXor(g_gridUAV[uint3(z, index.yx)], 0xFFFFFFFF); // Use UINT_MAX
 	}
 
 	// Xor all bits in current cell up to index of current fragment
 	// For this, set all necessary bits in a temp value to 1 and xor the whole cell with it once
 	uint xorVal = 1 << n; // nth bit is set
 	xorVal -= 1; // all bits 0..n-1 are set as desired
-	InterlockedXor(g_gridUAV[uint3(index.xy, currentCell)], xorVal);
-
-	//return float4(abs(psIn.voxelPos / g_vResolution), 1.0f);
+	InterlockedXor(g_gridUAV[uint3(currentCell, index.yx)], xorVal);
 }
 
 // Ray casting into voxel grid -> render first voxel
