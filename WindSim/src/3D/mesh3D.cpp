@@ -8,8 +8,8 @@
 
 using namespace DirectX;
 
-Mesh3D::Mesh3D(const std::string& path)
-	: Object3D()
+Mesh3D::Mesh3D(const std::string& path, Logger* logger)
+	: Object3D(logger)
 {
 	if (!readObj(path))
 	{
@@ -19,6 +19,7 @@ Mesh3D::Mesh3D(const std::string& path)
 }
 
 Mesh3D::Mesh3D(Mesh3D&& other)
+	: Object3D(std::move(other))
 {
 }
 

@@ -6,6 +6,7 @@
 struct ID3DX11EffectMatrixVariable;
 struct ID3DX11Effect;
 struct ID3D11InputLayout;
+class Logger;
 
 // A class for rendering the 3 coordinate axes as lines into the 3D view
 class Axes : public Object3D
@@ -14,7 +15,7 @@ public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
 
-	Axes();
+	Axes(Logger* logger);
 	Axes(Axes&& other);
 	~Axes();
 

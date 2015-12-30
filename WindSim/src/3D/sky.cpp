@@ -7,14 +7,15 @@
 
 using namespace DirectX;
 
-Sky::Sky()
-	: Object3D()
+Sky::Sky(Logger* logger)
+	: Object3D(logger)
 {
 	createCubeData();
 	m_numIndices = m_indexData.size();
 }
 
 Sky::Sky(Sky&& other)
+	: Object3D(std::move(other))
 {
 }
 

@@ -19,13 +19,14 @@ class Actor;
 class MarkerActor;
 class ObjectManager;
 class Camera;
+class Logger;
 
 struct ID3D11Device;
 
 class TransformMachine
 {
 public:
-	TransformMachine(ObjectManager* manager, Camera* camera);
+	TransformMachine(ObjectManager* manager, Camera* camera, Logger* logger = nullptr);
 
 	void initDX11(ID3D11Device* device);
 
@@ -38,6 +39,8 @@ public:
 
 	bool isModifying() const { return m_state != State::Start && m_state != State::Aborted && m_state != State::Finished; };
 	bool isAborted() const { return m_state == State::Aborted; };
+
+	void setLogger(Logger* logger) { m_logger = logger; };
 
 private:
 	void start(QPoint currentMousePos); // save selected actors calculate all values, which have to be computed only once (cursorPos, averaged object position ...)
@@ -70,6 +73,7 @@ private:
 
 	ObjectManager* m_manager;
 	Camera* m_camera;
+	Logger* m_logger;
 };
 
 #endif

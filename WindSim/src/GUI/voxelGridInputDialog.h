@@ -13,6 +13,10 @@ public:
 
 	std::vector<int> getGridResolution();
 	std::vector<double> getVoxelSize();
+	QString getSimulator();
+
+private slots:
+	void chooseSimulator();
 
 private:
 	Ui::gridInput ui;

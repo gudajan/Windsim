@@ -137,9 +137,6 @@
     <ClCompile Include="src\GUI\dx11widget.cpp">
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
-    <ClCompile Include="src\GUI\logger.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
     <ClCompile Include="src\GUI\meshProperties.cpp">
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
@@ -188,6 +185,21 @@
     <ClCompile Include="src\GUI\voxelGridProperties.cpp">
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="src\GUI\staticLogger.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\logger.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_logger.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_logger.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\simulator.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\ui\windsim.ui">
@@ -228,6 +240,9 @@
     </CustomBuild>
     <CustomBuild Include="src\GUI\voxelGridProperties.h">
       <Filter>Header Files\GUI</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\util\logger.h">
+      <Filter>util</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -279,9 +294,6 @@
     <ClInclude Include="src\GUI\commands.h">
       <Filter>Header Files\GUI</Filter>
     </ClInclude>
-    <ClInclude Include="src\GUI\logger.h">
-      <Filter>Header Files\GUI</Filter>
-    </ClInclude>
     <ClInclude Include="src\GUI\objectItem.h">
       <Filter>Header Files\GUI</Filter>
     </ClInclude>
@@ -323,6 +335,12 @@
     </ClInclude>
     <ClInclude Include="src\util\metaTypes.h">
       <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\staticLogger.h">
+      <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\simulator.h">
+      <Filter>Header Files\3D</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

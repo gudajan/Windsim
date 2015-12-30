@@ -121,6 +121,7 @@ bool ModifyObjectCmd::mergeWith(const QUndoCommand* cmd)
 		if (type == ObjectType::Mesh)
 			m_newData["voxelize"] = json["voxelize"].toInt();
 	}
+	if (m.testFlag(SimulatorExe)) m_newData["simulator"] = json["simulator"].toString();
 	if (m.testFlag(Shading)) m_newData["Shading"] = json["Visibility"].toString();
 	if (m.testFlag(Name)) m_newData["name"] = json["name"].toString();
 	if (m.testFlag(Color)) m_newData["Color"] = json["Color"].toObject();

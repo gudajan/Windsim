@@ -1,10 +1,10 @@
-#include "logger.h"
+#include "staticLogger.h"
 
 #include <QLayout>
 
-QPointer<QPlainTextEdit> Logger::m_log = nullptr;
+QPointer<QPlainTextEdit> StaticLogger::m_log = nullptr;
 
-void Logger::Setup(QWidget* parent, QLayout* layout)
+void StaticLogger::Setup(QWidget* parent, QLayout* layout)
 {
 	if (!m_log)
 	{
@@ -17,12 +17,16 @@ void Logger::Setup(QWidget* parent, QLayout* layout)
 		m_log->setSizePolicy(sp);
 
 		m_log->setReadOnly(true);
+		QFont monospace("monospace");
+		monospace.setStyleHint(QFont::StyleHint::Monospace);
+		monospace.setWeight(QFont::Light);
+		m_log->setFont(monospace);
 
 		layout->addWidget(m_log);
 	}
 }
 
-void Logger::logging(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+void StaticLogger::logging(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
 	if (m_log)
 	{
@@ -59,7 +63,7 @@ void Logger::logging(QtMsgType type, const QMessageLogContext &context, const QS
 	}
 }
 
-void Logger::logit(const QString& msg)
+void StaticLogger::logit(const QString& msg)
 {
 	m_log->appendPlainText(msg);
 	m_log->repaint();

@@ -16,10 +16,12 @@
 // Clear: Clear selection
 enum class Selection {Replace, Switch, Clear};
 
+class Logger;
+
 class ObjectManager
 {
 public:
-	ObjectManager();
+	ObjectManager(Logger* logger = nullptr);
 
 	// Add one object, which is rendered
 	void add(ID3D11Device* device, const QJsonObject& data);
@@ -45,6 +47,7 @@ public:
 	const void setSelection(const std::unordered_set<int>& selection);
 	std::shared_ptr<Actor> getActor(int id) { return m_actors[id]; }
 	std::unordered_map<int, std::shared_ptr<Actor>>& getActors() { return m_actors; };
+	void setLogger(Logger* logger) { m_logger = logger; };
 
 	void addAccessoryObject(const std::string& name, std::shared_ptr<Object3D> obj, std::shared_ptr<Actor> act);
 	std::shared_ptr<Actor> getAccessory(const std::string& name) { return m_accessoryActors[name]; };
@@ -52,6 +55,8 @@ public:
 private:
 	// Get ID of object with intersection
 	int computeIntersection(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float& distance) const;
+
+	void log(const std::string& msg);
 
 	int m_hoveredId; // ID of object which is currently hovered by the mouse
 	std::unordered_set<int> m_selectedIds; // Contains all ids of objects, that are currently selected
@@ -63,6 +68,8 @@ private:
 	// Additionally needed objects (e.g. Transform marker, Text displays etc)
 	std::unordered_map<std::string, std::shared_ptr<Object3D>> m_accessoryObjects;
 	std::unordered_map<std::string, std::shared_ptr<Actor>> m_accessoryActors;
+
+	Logger* m_logger;
 };
 
 #endif

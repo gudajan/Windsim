@@ -10,6 +10,7 @@ struct ID3DX11EffectScalarVariable;
 struct ID3DX11EffectVectorVariable;
 struct ID3DX11Effect;
 struct ID3D11InputLayout;
+class Logger;
 
 class Mesh3D : public Object3D
 {
@@ -17,7 +18,7 @@ public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
 
-	Mesh3D(const std::string& path);
+	Mesh3D(const std::string& path, Logger* logger);
 	Mesh3D(Mesh3D&& other);
 	~Mesh3D();
 

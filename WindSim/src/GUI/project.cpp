@@ -1,5 +1,5 @@
 #include "project.h"
-#include "logger.h"
+#include "staticLogger.h"
 
 #include <QJsonObject>
 #include <QJsonArray>
@@ -39,13 +39,13 @@ bool Project::open(ObjectContainer& container, const QString& path)
 	auto it = json.find("objects");
 	if (it == json.end())
 	{
-		Logger::logit("ERROR: No objects present within the project file '" + path + "'!");
+		StaticLogger::logit("ERROR: No objects present within the project file '" + path + "'!");
 		return false;
 	}
 
 	if (!it->isArray())
 	{
-		Logger::logit("ERROR: Objects not saved as Json-Array within the project file '" + path + "'!");
+		StaticLogger::logit("ERROR: Objects not saved as Json-Array within the project file '" + path + "'!");
 		return false;
 	}
 

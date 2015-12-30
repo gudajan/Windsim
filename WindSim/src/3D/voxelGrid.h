@@ -2,6 +2,7 @@
 #define VOXEL_GRID_H
 
 #include "object3D.h"
+#include "simulator.h"
 
 #include <DirectXMath.h>
 
@@ -17,7 +18,16 @@ struct ID3DX11EffectUnorderedAccessViewVariable;
 struct ID3DX11EffectShaderResourceVariable;
 struct ID3DX11Effect;
 struct ID3D11InputLayout;
+class Logger;
 
+enum VoxelType : char
+{
+	CELL_TYPE_FLUID = 0,
+	CELL_TYPE_INFLOW, // 1
+	CELL_TYPE_OUTFLOW, // 2
+	CELL_TYPE_SOLID_SLIP, // 3
+	CELL_TYPE_SOLID_NO_SLIP, // 4
+};
 
 class VoxelGrid : public Object3D
 {
@@ -25,7 +35,8 @@ public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
 
-	VoxelGrid(ObjectManager* manager, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize);
+	VoxelGrid(ObjectManager* manager, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize, const std::string& simulator, Logger* logger);
+	VoxelGrid(VoxelGrid&& other);
 
 	HRESULT create(ID3D11Device* device, bool clearClientBuffers = false) override; // Create custom viewport, renderTargets, UAV etc
 	void release() override;
@@ -39,12 +50,14 @@ public:
 	bool resize(DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize);
 	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
 	void setRenderVoxel(bool renderVoxel) { m_renderVoxel = renderVoxel; };
+	void setSimulator(const std::string& exe);
 
 private:
 	void createGridData(); // Create cube for line rendering
 	void renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world);
 	void renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
+	HRESULT startSimulator();
 
 	struct ShaderVariables
 	{
@@ -76,14 +89,16 @@ private:
 
 	DirectX::XMUINT3 m_resolution; // Resolution of the grid
 	DirectX::XMFLOAT3 m_voxelSize; // Size of one voxel in object space of the grid
-	bool m_resize; // Indicates if voxelgrid has to be resized, because resolution or voxelSize changed
+
+	bool m_reinit; // Indicates if voxelgrid has to be reinitialized, because resolution, voxelSize or simulator changed
 	uint32_t m_cubeIndices;
 
 	bool m_voxelize;
 	int m_counter;
 	bool m_renderVoxel;
 
-	std::vector<unsigned char> m_grid;
+	std::vector<char> m_grid; // Same type as for simulation
+	std::vector<uint32_t> m_tempCells;
 	ID3D11Texture3D* m_gridTextureGPU; // Texture in GPU memory, filled in pixel shader
 	ID3D11Texture3D* m_gridAllTextureGPU; // Texture, containing the voxelizations of all meshes
 	ID3D11Texture3D* m_gridAllTextureStaging; // Texture in system memory: The data of gpu texture is copyied here and than may be accessed by the cpu
@@ -92,6 +107,7 @@ private:
 	ID3D11UnorderedAccessView* m_gridAllUAV; // UAV for all Voxelizations
 	ID3D11ShaderResourceView* m_gridAllSRV; // SRV for volume rendering
 
+	Simulator m_simulator;
 
 };
 #endif

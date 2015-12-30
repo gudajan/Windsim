@@ -7,6 +7,7 @@
 #include "axesActor.h"
 #include "voxelGrid.h"
 #include "voxelGridActor.h"
+#include "logger.h"
 
 #include <d3d11.h>
 #include <DirectXMath.h>
@@ -15,13 +16,14 @@
 
 using namespace DirectX;
 
-ObjectManager::ObjectManager()
+ObjectManager::ObjectManager(Logger* logger)
 	: m_hoveredId(0),
 	m_selectedIds(),
 	m_objects(),
 	m_actors(),
 	m_accessoryObjects(),
-	m_accessoryActors()
+	m_accessoryActors(),
+	m_logger(logger)
 {
 }
 
@@ -40,7 +42,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			{
 				throw std::invalid_argument("Failed to create Mesh object '" + name + "' because no OBJ-Path was given in 'data' variable!");
 			}
-			Mesh3D* obj = new Mesh3D(objIt->toString().toStdString());
+			Mesh3D* obj = new Mesh3D(objIt->toString().toStdString(), m_logger);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
 			MeshActor* act = new MeshActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
@@ -50,7 +52,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 		}
 		else if (type == ObjectType::Sky)
 		{
-			Sky* obj = new Sky();
+			Sky* obj = new Sky(m_logger);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
 			SkyActor* act = new SkyActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
@@ -59,7 +61,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 		}
 		else if (type == ObjectType::Axes)
 		{
-			Axes* obj = new Axes();
+			Axes* obj = new Axes(m_logger);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
 			AxesActor* act = new AxesActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
@@ -76,7 +78,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			QJsonObject voxelSize = data["voxelSize"].toObject();
 			XMFLOAT3 vs(voxelSize["x"].toDouble(), voxelSize["y"].toDouble(), voxelSize["z"].toDouble());
 
-			VoxelGrid* obj = new VoxelGrid(this, res, vs);
+			VoxelGrid* obj = new VoxelGrid(this, res, vs, data["simulator"].toString().toStdString(), m_logger);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
 			VoxelGridActor* act = new VoxelGridActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
@@ -166,7 +168,6 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setColor(col);
 		act->setVoxelize(data["voxelize"].toInt() == Qt::Checked);
 
-
 		if (render != oldRender && !render)
 		{
 			m_selectedIds.erase(act->getId());
@@ -191,6 +192,7 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->computeWorld();
 		act->resize(res, vs);
 		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
+		act->setSimulator(data["simulator"].toString().toStdString());
 	}
 }
 
@@ -356,4 +358,10 @@ const void ObjectManager::setSelection(const std::unordered_set<int>& selection)
 		if (a->getType() == ObjectType::Mesh && a->getRender())
 			m_selectedIds.insert(id);
 	}
+}
+
+void ObjectManager::log(const std::string& msg)
+{
+	if (m_logger)
+		m_logger->logit(QString::fromStdString(msg));
 }

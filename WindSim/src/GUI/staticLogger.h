@@ -1,5 +1,5 @@
-#ifndef LOGGER_H
-#define LOGGER_H
+#ifndef STATIC_LOGGER_H
+#define STATIC_LOGGER_H
 
 #include <QWidget>
 #include <QPlainTextEdit>
@@ -7,7 +7,7 @@
 
 class QLayout;
 
-class Logger
+class StaticLogger
 {
 public:
 	static void Setup(QWidget* parent, QLayout* layout);

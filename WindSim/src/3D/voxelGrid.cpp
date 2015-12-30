@@ -11,27 +11,52 @@
 
 using namespace DirectX;
 
-VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelSize)
-	: Object3D(),
+VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelSize, const std::string& simulator, Logger* logger)
+	: Object3D(logger),
 	m_manager(manager),
 	m_resolution(resolution),
 	m_voxelSize(voxelSize),
-	m_resize(false),
+	m_reinit(false),
 	m_cubeIndices(0),
 	m_voxelize(true),
 	m_counter(0),
 	m_renderVoxel(true),
 	m_grid(),
+	m_tempCells(),
 	m_gridTextureGPU(nullptr),
 	m_gridAllTextureGPU(nullptr),
 	m_gridAllTextureStaging(nullptr),
 	m_gridUAV(nullptr),
 	m_gridSRV(nullptr),
 	m_gridAllUAV(nullptr),
-	m_gridAllSRV(nullptr)
+	m_gridAllSRV(nullptr),
+	m_simulator(simulator, logger)
 {
 	createGridData();
 }
+
+VoxelGrid::VoxelGrid(VoxelGrid&& other)
+	: Object3D(std::move(other)),
+	m_manager(other.m_manager),
+	m_resolution(std::move(other.m_resolution)),
+	m_voxelSize(std::move(other.m_voxelSize)),
+	m_reinit(other.m_reinit),
+	m_cubeIndices(other.m_cubeIndices),
+	m_voxelize(other.m_voxelize),
+	m_counter(other.m_counter),
+	m_renderVoxel(other.m_renderVoxel),
+	m_grid(std::move(other.m_grid)),
+	m_gridTextureGPU(other.m_gridTextureGPU),
+	m_gridAllTextureGPU(other.m_gridAllTextureGPU),
+	m_gridAllTextureStaging(other.m_gridAllTextureStaging),
+	m_gridUAV(other.m_gridUAV),
+	m_gridSRV(other.m_gridSRV),
+	m_gridAllUAV(other.m_gridAllUAV),
+	m_gridAllSRV(other.m_gridAllSRV),
+	m_simulator(std::move(other.m_simulator))
+{
+}
+
 
 HRESULT VoxelGrid::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device* device, const bool reload)
 {
@@ -112,6 +137,8 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	// Resize the grid
 	m_grid.resize(m_resolution.x * m_resolution.y * m_resolution.z);
 	std::fill(m_grid.begin(), m_grid.end(), 0);
+	m_tempCells.resize(m_resolution.x / 32 * m_resolution.y * m_resolution.z);
+	std::fill(m_tempCells.begin(), m_tempCells.end(), 0);
 
 	// Create Texture3D for a grid, containing voxelization of one mesh, filled in the pixel shader
 	D3D11_TEXTURE3D_DESC td = {};
@@ -148,6 +175,9 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	td.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_gridAllTextureStaging));
 
+	// Start simulator process
+	m_simulator.start();
+
 	return S_OK;
 }
 
@@ -161,34 +191,40 @@ void VoxelGrid::release()
 	SAFE_RELEASE(m_gridSRV);
 	SAFE_RELEASE(m_gridAllUAV);
 	SAFE_RELEASE(m_gridAllSRV);
+
+	// Stop simulator process
+	m_simulator.stop();
 }
 
 void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
 {
-	if (m_resize)
+	const static int counterStart = 0;
+	const static int counterCopyCPUParts = 4;
+	const static int counterCopyCPUEnd = counterStart + counterCopyCPUParts;
+	const static int counterVoxelize = counterCopyCPUEnd - 1; // Voxelization performed during last copy frame, wait frame for setting boundary cells
+	const static int counterCopyGPU = counterVoxelize + 2;
+	if (m_reinit)
 	{
 		createGridData();
 		create(device, false);
-		m_resize = false;
+		m_reinit = false;
 	}
 
 	renderGridBox(device, context, world, view, projection);
 
-	if (m_voxelize)
+	if (m_voxelize) // Restart voxelization cycle
 	{
-		voxelize(device, context, world);
-		m_counter = 0; // Start counting
+		m_counter = counterStart; // Start counting
 		m_voxelize = false;
 	}
 
-	if (m_counter >= 0)
-		m_counter++;
+	if (m_counter == counterVoxelize)
+		voxelize(device, context, world);
 
-	// Make sure, the cpu only accesses the voxel grid if the GPU copiing is done, to avoid pipeline stalling
-	if (m_counter > 2)
+	// Make sure, the cpu only accesses the voxel grid if the GPU copiing is done, to avoid pipeline stalling ( GPU copiing needs 1 frame)
+	if (m_counter == counterCopyGPU)
 	{
 		uint32_t xRes = m_resolution.x / 32;
-		std::vector<uint32_t> tempCells;
 
 		// Get CPU Access
 		D3D11_MAPPED_SUBRESOURCE msr;
@@ -196,38 +232,79 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		if (msr.pData)
 		{
 			uint32_t* cells = reinterpret_cast<uint32_t*>(msr.pData);
-			tempCells.resize(xRes * m_resolution.y * m_resolution.z);
-			std::copy(cells, cells + std::distance(tempCells.begin(), tempCells.end()), tempCells.begin());
+			std::copy(cells, cells + std::distance(m_tempCells.begin(), m_tempCells.end()), m_tempCells.begin());
 		}
 		// Remove CPU Access
 		context->Unmap(m_gridAllTextureStaging, 0);
+	}
+
+	// Copy the data into own grid for the next few frames
+	// As the next few frames until the next voxelization are not so busy,
+	// span this expensive operation over several frames to ensure a smoother frame rate instead of alternating fast and slow frames
+	// THIS IS REALLY SLOW: TODO: Maybe perform in concurrent thread/process
+	if (m_counter >= counterStart && m_counter < counterCopyCPUEnd)
+	{
+		int part = m_counter - counterStart; // Determine the part of the grid, which is copied this frame
+		uint32_t partZSize = m_resolution.z / counterCopyCPUParts; // Depth (z-value) of one part
+		uint32_t partZStart = partZSize * part; // Starting Depth of current part
 
 		// Copy data into own grid and decode 32 bit cells into voxels
-		// THIS IS REALLY SLOW: TODO: perform in concurrent thread/process, where it is used
 		QElapsedTimer timer;
 		timer.start();
-		if (!tempCells.empty())
+
+		uint32_t xRes = m_resolution.x / 32;
+		uint32_t slice = xRes * m_resolution.y;
+		uint32_t realSlice = m_resolution.x * m_resolution.y;
+		uint32_t cell = 0;
+		uint32_t index = 0;
+		char val = CELL_TYPE_FLUID;
+		for (int z = partZStart; z < partZStart + partZSize; ++z)
 		{
-			uint32_t slice = xRes * m_resolution.y;
-			uint32_t cell = 0;
-			uint32_t index = 0;
-			for (int i = 0; i < xRes * m_resolution.y * m_resolution.z; ++i)
+			for (int y = 0; y < m_resolution.y; ++y)
 			{
-				cell = tempCells[i];
-				index = i * 32;
-				for (int j = index; j < index + 32; ++j)
+				for (int x = 0; x < xRes; ++x)
 				{
-					m_grid[j] = static_cast<unsigned char>(cell & (1 << j) > 0); // indicates if j-th bit of i-th cell is set
+					cell = m_tempCells[x + y * xRes + z * slice]; // Index in encoded grid
+					index = x * 32 + y * m_resolution.x + z * realSlice; // Index in decoded grid
+					for (int j = index; j < index + 32; ++j)
+					{
+						if (static_cast<int>(cell & (1 << j) > 0)) val = CELL_TYPE_SOLID_NO_SLIP;
+						else val = CELL_TYPE_FLUID;
+						m_grid[j] = val; // indicates if j-th bit of i-th cell is set
+					}
 				}
 			}
 		}
-		long long msec = timer.elapsed();
-		OutputDebugStringA(("COPYTIME: " + std::to_string(msec) + "msec\n").c_str());
-		m_counter = -1;
+	}
+
+	// Set final types of boundary cells for the simulation
+	// performed within one frame
+	else if (m_counter == counterCopyCPUEnd)
+	{
+		uint32_t realSlice = m_resolution.x * m_resolution.y;
+		for (int y = 1; y < m_resolution.y - 1; y++)
+		{
+			for (int z = 1; z < m_resolution.z - 1; z++)
+			{
+				m_grid[0 + y * m_resolution.x + z * realSlice] = CELL_TYPE_INFLOW;
+				m_grid[m_resolution.x - 1 + y * m_resolution.x + z * realSlice] = CELL_TYPE_OUTFLOW;
+			}
+		}
+
+		for (int x = 0; x < m_resolution.x; x++)
+		{
+			for (int y = 0; y < m_resolution.y; y++)
+			{
+				m_grid[x + y * m_resolution.x + 0] = CELL_TYPE_SOLID_SLIP;
+				m_grid[x + y * m_resolution.x + (m_resolution.z - 1) * realSlice] = CELL_TYPE_SOLID_SLIP;
+			}
+		}
 	}
 
 	if (m_renderVoxel)
 		renderVoxel(device, context, world, view, projection);
+
+	m_counter++;
 }
 
 bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
@@ -245,8 +322,14 @@ bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
 
 	m_resolution = resolution;
 	m_voxelSize = voxelSize;
-	m_resize = true;
+	m_reinit = true; // Cannot resize here, because we have no dx11 device
 	return true;
+}
+
+void VoxelGrid::setSimulator(const std::string& exe)
+{
+	if(m_simulator.setExecutable(exe))
+		m_reinit = true;
 }
 
 void VoxelGrid::createGridData()

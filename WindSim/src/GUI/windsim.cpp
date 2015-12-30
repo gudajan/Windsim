@@ -1,5 +1,5 @@
 #include "windsim.h"
-#include "logger.h"
+#include "staticLogger.h"
 #include "settings.h"
 #include "settingsDialog.h"
 #include "voxelGridInputDialog.h"
@@ -35,7 +35,7 @@ WindSim::WindSim(QWidget *parent)
 	ui.menuEdit->insertAction(ui.menuCreate->menuAction(), ui.actionRedo);
 	ui.menuEdit->insertSeparator(ui.menuCreate->menuAction());
 
-	Logger::Setup(ui.gbLog, ui.verticalLayout_5);
+	StaticLogger::Setup(ui.gbLog, ui.verticalLayout_5);
 
 	ui.objectView->setModel(&m_container.getModel());
 	ui.objectView->setSelectionMode(QListView::ExtendedSelection); // Select multiple items (with shift and ctrl)
@@ -69,10 +69,10 @@ WindSim::WindSim(QWidget *parent)
 	reloadIni();
 
 	//DEBUG
-	undoView = std::shared_ptr<QUndoView>(new QUndoView(&g_undoStack));
-	undoView->setWindowTitle(tr("Command List"));
-	undoView->show();
-	undoView->setAttribute(Qt::WA_QuitOnClose, false);
+	//undoView = std::shared_ptr<QUndoView>(new QUndoView(&g_undoStack));
+	//undoView->setWindowTitle(tr("Command List"));
+	//undoView->show();
+	//undoView->setAttribute(Qt::WA_QuitOnClose, false);
 	//DEBUG
 }
 
@@ -124,7 +124,7 @@ bool WindSim::actionNewTriggered()
 	projectActionsEnable(false, false, true, true, true);
 	createActionEnable(true, true);
 
-	Logger::logit("INFO: Initialized new project.");
+	StaticLogger::logit("INFO: Initialized new project.");
 
 	// Create default sky object
 	actionCreateSkyTriggered("Sky");
@@ -149,7 +149,7 @@ bool WindSim::actionOpenTriggered()
 
 	if (!m_project.open(m_container, filename))
 	{
-		Logger::logit("ERROR: Failed to open the project file '" + filename + "'.");
+		StaticLogger::logit("ERROR: Failed to open the project file '" + filename + "'.");
 		return false;
 	}
 	// 3D objects are automatically created via signal/slot rowsInserted()/objectsInserted()
@@ -161,7 +161,7 @@ bool WindSim::actionOpenTriggered()
 	createActionEnable(true, true);
 
 	g_undoStack.clear();
-	Logger::logit("INFO: Opened project from '" + filename + "'.");
+	StaticLogger::logit("INFO: Opened project from '" + filename + "'.");
 
 	return true;
 }
@@ -179,7 +179,7 @@ void WindSim::actionCloseTriggered()
 	createActionEnable(false, false);
 
 	g_undoStack.clear();
-	Logger::logit("INFO: Closed project.");
+	StaticLogger::logit("INFO: Closed project.");
 }
 
 bool WindSim::actionSaveTriggered()
@@ -188,11 +188,11 @@ bool WindSim::actionSaveTriggered()
 	{
 		if (!m_project.save(m_container))
 		{
-			Logger::logit("ERROR: Failed to save project to '" + m_project.getFilename() +"'.");
+			StaticLogger::logit("ERROR: Failed to save project to '" + m_project.getFilename() +"'.");
 			return false;
 		}
 		g_undoStack.setClean();
-		Logger::logit("INFO: Saved project to '" + m_project.getFilename() + "'.");
+		StaticLogger::logit("INFO: Saved project to '" + m_project.getFilename() + "'.");
 		return true;
 	}
 	return actionSaveAsTriggered();
@@ -207,12 +207,12 @@ bool WindSim::actionSaveAsTriggered()
 
 	if (!m_project.saveAs(m_container, filename))
 	{
-		Logger::logit("ERROR: Failed to save project to '" + filename + "'.");
+		StaticLogger::logit("ERROR: Failed to save project to '" + filename + "'.");
 		return false;
 	}
 
 	g_undoStack.setClean();
-	Logger::logit("INFO: Saved project to '" + filename + "'.");
+	StaticLogger::logit("INFO: Saved project to '" + filename + "'.");
 	return true;
 }
 
@@ -234,7 +234,7 @@ bool WindSim::actionCreateMeshTriggered()
 	};
 	m_container.addCmd(json);
 
-	Logger::logit("INFO: Created new mesh '" + name + "' from OBJ-file '" + filename + "'.");
+	StaticLogger::logit("INFO: Created new mesh '" + name + "' from OBJ-file '" + filename + "'.");
 
 	return true;
 }
@@ -253,6 +253,7 @@ bool WindSim::actionCreateVoxelGridTriggered()
 
 	std::vector<int> res = dialog.getGridResolution();
 	std::vector<double> size = dialog.getVoxelSize();
+	QString exe = dialog.getSimulator();
 
 	QJsonObject resolution
 	{
@@ -271,12 +272,13 @@ bool WindSim::actionCreateVoxelGridTriggered()
 		{ "name", name },
 		{ "type", QString::fromStdString(objectTypeToString(ObjectType::VoxelGrid)) },
 		{ "resolution", resolution },
-		{ "voxelSize", voxelSize }
+		{ "voxelSize", voxelSize },
+		{ "simulator", exe }
 	};
 
 	m_container.addCmd(json);
 
-	Logger::logit("INFO: Created new voxel grid '" + name + "' with resolution (" + QString::number(res[0]) + ", " + QString::number(res[1]) + ", " + QString::number(res[2]) + ") and voxel size (" + QString::number(size[0]) + ", " + QString::number(size[1]) + ", " + QString::number(size[2]) + ").");
+	StaticLogger::logit("INFO: Created new voxel grid '" + name + "' with resolution (" + QString::number(res[0]) + ", " + QString::number(res[1]) + ", " + QString::number(res[2]) + ") and voxel size (" + QString::number(size[0]) + ", " + QString::number(size[1]) + ", " + QString::number(size[2]) + ").");
 
 	return true;
 }
@@ -297,7 +299,7 @@ bool WindSim::actionCreateSkyTriggered(QString name)
 	};
 	m_container.addCmd(json);
 
-	Logger::logit("INFO: Created new sky '" + name + "'.");
+	StaticLogger::logit("INFO: Created new sky '" + name + "'.");
 
 	return true;
 }
@@ -318,7 +320,7 @@ bool WindSim::actionCreateAxesTriggered(QString name)
 	};
 	m_container.addCmd(json);
 
-	Logger::logit("INFO: Created new axes '" + name + "'.");
+	StaticLogger::logit("INFO: Created new axes '" + name + "'.");
 
 	return true;
 }
@@ -380,12 +382,12 @@ void WindSim::reloadIni()
 	{
 		loadIni(m_iniFilePath.toStdString());
 		applySettings();
-		Logger::logit("INFO: Reloaded settings from ini-file '" + m_iniFilePath + "'.");
+		StaticLogger::logit("INFO: Reloaded settings from ini-file '" + m_iniFilePath + "'.");
 		emit settingsChanged();
 	}
 	catch (const std::runtime_error& re)
 	{
-		Logger::logit("INFO: Could not open ini-file '" + m_iniFilePath + "'. Settings not reloaded.");
+		StaticLogger::logit("INFO: Could not open ini-file '" + m_iniFilePath + "'. Settings not reloaded.");
 	}
 }
 

@@ -60,6 +60,7 @@ enum Modification
 	Color = 0x40,
 	Resolution = 0x80,
 	VoxelSize = 0x100,
+	SimulatorExe = 0x200,
 	All = UINT_MAX
 };
 

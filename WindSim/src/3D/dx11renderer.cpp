@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cassert>
 #include <sstream>
+#include <algorithm>
 
 // DirectX
 #include <DirectXColors.h>
@@ -20,6 +21,9 @@
 #include <QThread>
 
 using namespace DirectX;
+
+const int fpsFramesSaved = 20;
+const float fpsFramesWeight = 1.0 / fpsFramesSaved;
 
 DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	: QObject(parent),
@@ -37,16 +41,21 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_localCursorPos(),
 	m_pressedId(0),
 	m_state(State::Default),
+	m_elapsedTimes(fpsFramesSaved, 0),
 	m_currentFPS(0),
 	m_elapsedTimer(),
 	m_renderTimer(this),
 	m_voxelizationTimer(this),
 	m_camera(width, height),
 	m_manager(),
-	m_transformer(&m_manager, &m_camera)
+	m_transformer(&m_manager, &m_camera),
+	m_logger()
 {
 	connect(&m_renderTimer, &QTimer::timeout, this, &DX11Renderer::frame);
 	connect(&m_voxelizationTimer, &QTimer::timeout, this, &DX11Renderer::issueVoxelization);
+
+	m_manager.setLogger(&m_logger);
+	m_transformer.setLogger(&m_logger);
 }
 
 DX11Renderer::~DX11Renderer()
@@ -136,19 +145,20 @@ bool DX11Renderer::init()
 	return createShaders();
 }
 
-
-
 void DX11Renderer::frame()
 {
-	long long elapsedTime = m_elapsedTimer.restart(); // Milliseconds
-	double t = static_cast<double>(elapsedTime)* 0.001;
+	long long elapsedTime = m_elapsedTimer.nsecsElapsed(); // nanoseconds
+	OutputDebugStringA(("Current FPS: " + std::to_string(m_currentFPS) + "\n").c_str());
+	OutputDebugStringA(("Elapsed: " + std::to_string(elapsedTime * 0.000001) + "msec\n").c_str());
+	m_elapsedTimer.restart();
+	double t = static_cast<double>(elapsedTime)* 0.000000001; // to seconds
 	update(t);
 	render(t);
 
-	float smoothing = 0.1f; // the amount of influence of the measured fps to the current fps
-	int measured = static_cast<int>(1000.0 / elapsedTime); // 1000 msec / elapsed msec = fps
-	m_currentFPS = measured * smoothing + m_currentFPS * (1.0f - smoothing);
-	emit updateFPS(m_currentFPS); // Show fps in statusBar
+	m_elapsedTimes.pop_back();
+	m_elapsedTimes.push_front(1000000000.0 / elapsedTime); // 1 sec / elapsedTime nsec = fps
+	m_currentFPS = std::accumulate(m_elapsedTimes.begin(), m_elapsedTimes.end(), 0.0, [](float acc, const float& val) {return acc + fpsFramesWeight * val; });
+	emit updateFPS(static_cast<int>(m_currentFPS)); // Show fps in statusBar
 }
 
 void DX11Renderer::issueVoxelization()

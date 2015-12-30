@@ -1,5 +1,5 @@
 #include "objectContainer.h"
-#include "logger.h"
+#include "staticLogger.h"
 #include "meshProperties.h"
 #include "voxelGridProperties.h"
 #include "commands.h"
@@ -45,7 +45,7 @@ QJsonObject ObjectContainer::getData(int id)
 	ObjectItem* item = getItem(id);
 	if (!item)
 	{
-		Logger::logit("WARNING: Object not found! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
+		StaticLogger::logit("WARNING: Object not found! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
 		return QJsonObject();
 	}
 
@@ -188,7 +188,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 	auto nameIt = object.find("name");
 	if (nameIt == object.end())
 	{
-		Logger::logit("WARNING: Found no name for object in project file!");
+		StaticLogger::logit("WARNING: Found no name for object in project file!");
 		return false;
 	}
 	const QString& name = nameIt->toString();
@@ -197,7 +197,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 	auto typeIt = object.find("type");
 	if (typeIt == object.end())
 	{
-		Logger::logit("WARNING: Found no type for object '" + name + "' in project file!");
+		StaticLogger::logit("WARNING: Found no type for object '" + name + "' in project file!");
 		return false;
 	}
 
@@ -217,7 +217,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		// Verify mandatory keys for meshes
 		if (!object.contains("obj-file"))
 		{
-			Logger::logit("WARNING: Found no obj-file for Mesh '" + name + "' in project file!");
+			StaticLogger::logit("WARNING: Found no obj-file for Mesh '" + name + "' in project file!");
 			return false;
 		}
 
@@ -240,12 +240,12 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		// Verify mandatory keys for meshes
 		if (!object.contains("resolution"))
 		{
-			Logger::logit("WARNING: Found no resolution for Voxel Grid '" + name + "' in project file!");
+			StaticLogger::logit("WARNING: Found no resolution for Voxel Grid '" + name + "' in project file!");
 			return false;
 		}
 		if (!object.contains("voxelSize"))
 		{
-			Logger::logit("WARNING: Found no voxel size for Voxel Grid '" + name + "' in project file!");
+			StaticLogger::logit("WARNING: Found no voxel size for Voxel Grid '" + name + "' in project file!");
 			return false;
 		}
 
@@ -258,6 +258,8 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["Rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
 		if (!object.contains("renderVoxel"))
 			object["renderVoxel"] = Qt::Checked;
+		if (!object.contains("simulator"))
+			object["simulator"] = ""; // Empty simulator is ok, as simulation simply does not run in this case
 	}
 
 	return true;
@@ -281,7 +283,7 @@ bool ObjectContainer::remove(int id)
 	ObjectItem* item = getItem(id);
 	if (!item)
 	{
-		Logger::logit("WARNING: Object not removed! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
+		StaticLogger::logit("WARNING: Object not removed! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
 		return false;
 	}
 
@@ -299,7 +301,7 @@ bool ObjectContainer::modify(QJsonObject& data)
 	ObjectItem * item = getItem(data["id"].toInt());
 	if (!item)
 	{
-		Logger::logit("WARNING: Object not modified! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
+		StaticLogger::logit("WARNING: Object not modified! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
 		return false;
 	}
 	item->setData(data["name"].toString(), Qt::DisplayRole); // Modify name in gui

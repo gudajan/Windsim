@@ -21,10 +21,13 @@ public:
 private slots:
 	void nameChanged(const QString & text);
 	void disabledChanged(int state);
+	void simulatorChanged(const QString& text);
 	void showVoxelChanged(int state);
 	void positionChanged();
 	void resolutionChanged();
 	void voxelSizeChanged();
+
+	void chooseSimulator(); // Open Filedialog to choose executable
 
 	void buttonClicked(QAbstractButton* button);
 

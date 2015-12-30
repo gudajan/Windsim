@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "objectManager.h"
 #include "transformMachine.h"
+#include "logger.h"
 
 // Qt
 #include <QWidget> // for WId
@@ -13,6 +14,8 @@
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QJsonObject>
+
+#include <deque>
 
 namespace State
 {
@@ -41,6 +44,7 @@ public:
 	int getWidth(){ return m_width; };
 	int getHeight(){ return m_height; };
 	Camera* getCamera() { return &m_camera; };
+	Logger* getLogger() { return &m_logger; };
 
 public slots:
 	void frame(); // Compute one Frame
@@ -71,7 +75,6 @@ public slots:
 	void reloadIni(); // Update everything, which depends on ini-values
 
 signals:
-	void logit(const QString& str);
 	void updateFPS(int fps);
 	void selectionChanged(std::unordered_set<int> ids);
 	void modify(std::vector<QJsonObject> data);
@@ -103,7 +106,9 @@ private:
 	QPoint m_localCursorPos;
 	int m_pressedId; // Id of the object, which was hovered during last mouse press
 	State::RendererState m_state;
-	int m_currentFPS;
+
+	std::deque<float> m_elapsedTimes;
+	float m_currentFPS;
 
 	QElapsedTimer m_elapsedTimer;
 	QTimer m_renderTimer;
@@ -112,6 +117,7 @@ private:
 	Camera m_camera;
 	ObjectManager m_manager;
 	TransformMachine m_transformer;
+	Logger m_logger;
 
 };
 

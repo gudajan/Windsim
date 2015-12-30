@@ -2,6 +2,7 @@
 
 #include "objectManager.h"
 #include "camera.h"
+#include "logger.h"
 #include "settings.h"
 #include "actor.h"
 #include "marker.h"
@@ -18,7 +19,7 @@
 using namespace State;
 using namespace DirectX;
 
-TransformMachine::TransformMachine(ObjectManager* manager, Camera* camera)
+TransformMachine::TransformMachine(ObjectManager* manager, Camera* camera, Logger* logger)
 	: m_state(Start),
 	m_marker(nullptr),
 	m_oldActors(),
@@ -31,14 +32,15 @@ TransformMachine::TransformMachine(ObjectManager* manager, Camera* camera)
 	m_oldYZInt(0.0, 0.0, 0.0),
 	m_transformation(),
 	m_manager(manager),
-	m_camera(camera)
+	m_camera(camera),
+	m_logger(logger)
 {
 }
 
 void TransformMachine::initDX11(ID3D11Device* device)
 {
 	// Create transformation marker
-	Marker* m = new Marker();
+	Marker* m = new Marker(m_logger);
 	m_marker = std::shared_ptr<MarkerActor>(new MarkerActor(*m, 0)); // ID is not necessary
 
 	m_marker->setRender(false);
@@ -320,6 +322,7 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		// Refer to intersection point at start of the transformation
 		XMVECTOR camPos = XMLoadFloat3(&m_camera->getCamPos());
 		XMVECTOR cursorDir = XMLoadFloat3(&m_camera->getCursorDir(currentCursorPos));
+		XMVECTOR ocd = XMLoadFloat3(&m_oldCursorDir);
 		XMVECTOR axis;
 		XMVECTOR plane;
 		XMVECTOR oldInt;
@@ -335,7 +338,7 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 			axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 			// Choose plane dependent on the current angle of the camera to this plane
 			// If cosine of cursor ray to plane normal is bigger -> plane has a "better" angle to the camera
-			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(cursorDir, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(cursorDir, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
+			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
 			{
 				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)); // XY plane
 				oldInt = XMLoadFloat3(&m_oldXYInt);

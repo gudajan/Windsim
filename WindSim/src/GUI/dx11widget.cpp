@@ -1,5 +1,5 @@
 #include "dx11widget.h"
-#include "logger.h"
+#include "staticLogger.h"
 
 #include <QResizeEvent>
 #include <QApplication>
@@ -37,7 +37,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	connect(this, &DX11Widget::reloadIniTriggered, m_renderer, &DX11Renderer::reloadIni);
 
 	// Arbitrary Events Renerer -> Widget
-	connect(m_renderer, &DX11Renderer::logit, this, &DX11Widget::logit);
+	connect(m_renderer->getLogger(), &Logger::logit, this, &DX11Widget::logit);
 
 	setAttribute(Qt::WA_PaintOnScreen, true);
 	setAttribute(Qt::WA_NativeWindow, true);
@@ -77,7 +77,7 @@ void DX11Widget::applySettings()
 
 void DX11Widget::logit(const QString& str)
 {
-	Logger::logit(str);
+	StaticLogger::logit(str);
 }
 
 void DX11Widget::paintEvent(QPaintEvent* event)

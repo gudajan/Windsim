@@ -8,14 +8,15 @@
 
 using namespace DirectX;
 
-Axes::Axes()
-	: Object3D()
+Axes::Axes(Logger* logger)
+	: Object3D(logger)
 {
 	createAxesData();
 	m_numIndices = m_indexData.size();
 }
 
 Axes::Axes(Axes&& other)
+	: Object3D(std::move(other))
 {
 }
 

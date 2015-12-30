@@ -8,8 +8,8 @@
 
 using namespace DirectX;
 
-Marker::Marker()
-	: Object3D(),
+Marker::Marker(Logger* logger)
+	: Object3D(logger),
 	m_renderPosition(true)
 {
 	m_vertexData.insert(m_vertexData.end(), { 0.0f, 0.0f, 0.0f }); // Push pack origin position
@@ -18,6 +18,8 @@ Marker::Marker()
 }
 
 Marker::Marker(Marker&& other)
+	: Object3D(std::move(other)),
+	m_renderPosition(other.m_renderPosition)
 {
 }
 

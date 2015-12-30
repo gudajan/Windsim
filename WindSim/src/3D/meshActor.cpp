@@ -7,7 +7,7 @@ using namespace DirectX;
 
 MeshActor::MeshActor(Mesh3D& mesh, int id)
 	: Actor(ObjectType::Mesh, id),
-	m_marker(),
+	m_marker(mesh.getLogger()),
 	m_mesh(mesh),
 	m_boundingBox(),
 	m_flatShading(true),

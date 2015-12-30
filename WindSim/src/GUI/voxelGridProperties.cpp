@@ -1,5 +1,7 @@
 #include "voxelGridProperties.h"
 
+#include <QFileDialog>
+
 VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent)
 	: QDialog(parent),
 	m_properties(properties)
@@ -13,6 +15,10 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 
 	// Disabled
 	connect(ui.cbDisabled, SIGNAL(stateChanged(int)), this, SLOT(disabledChanged(int)));
+
+	// Simulator
+	connect(ui.leSim, SIGNAL(textChanged(const QString &)), this, SLOT(simulatorChanged(const QString &)));
+	connect(ui.pbSim, SIGNAL(clicked()), this, SLOT(chooseSimulator()));
 
 	// Show voxel
 	connect(ui.cbShowVoxel, SIGNAL(stateChanged(int)), this, SLOT(showVoxelChanged(int)));
@@ -62,6 +68,9 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
 		ui.cbShowVoxel->setChecked(properties["renderVoxel"].toInt() == Qt::Checked);
 
+		// Simulator
+		ui.leSim->setText(properties["simulator"].toString());
+
 		// Position
 		const QJsonObject& pos = properties.find("Position")->toObject();
 		ui.xP->setValue(pos.find("x")->toDouble()); // right: x in DX1
@@ -95,6 +104,25 @@ void VoxelGridProperties::disabledChanged(int state)
 {
 	m_properties["disabled"] = state;
 	emit propertiesChanged(m_properties, Visibility);
+}
+
+void VoxelGridProperties::simulatorChanged(const QString& text)
+{
+	m_properties["simulator"] = text;
+}
+
+void VoxelGridProperties::chooseSimulator()
+{
+	QString exe = QFileDialog::getOpenFileName(this, tr("Choose simulator executable"), QString(), tr("Executables (*.exe)"));
+
+	if (exe == ui.leSim->text())
+		return;
+	else if (exe.isEmpty())
+		return;
+
+	ui.leSim->setText(exe);
+
+	m_properties["simulator"] = exe;
 }
 
 void VoxelGridProperties::showVoxelChanged(int state)
@@ -144,7 +172,7 @@ void VoxelGridProperties::buttonClicked(QAbstractButton* button)
 	QDialogButtonBox::StandardButton sb = ui.buttonBox->standardButton(button);
 	if (sb == QDialogButtonBox::Apply || sb == QDialogButtonBox::Ok)
 	{
-		emit propertiesChanged(m_properties, Position | Name | Visibility | Resolution | VoxelSize );
+		emit propertiesChanged(m_properties, Position | Name | Visibility | Resolution | VoxelSize | SimulatorExe);
 	}
 }
 
@@ -155,6 +183,9 @@ void VoxelGridProperties::blockSignals()
 	// Visibility
 	ui.cbDisabled->blockSignals(true);
 	ui.cbShowVoxel->blockSignals(true);
+
+	// Simulator
+	ui.leSim->blockSignals(true);
 
 	// Position
 	ui.xP->blockSignals(true);
@@ -179,6 +210,9 @@ void VoxelGridProperties::enableSignals()
 	// Visibility
 	ui.cbDisabled->blockSignals(false);
 	ui.cbShowVoxel->blockSignals(false);
+
+	// Simulator
+	ui.leSim->blockSignals(false);
 
 	// Position
 	ui.xP->blockSignals(false);
