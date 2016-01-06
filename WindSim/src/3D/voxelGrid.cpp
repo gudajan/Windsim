@@ -212,7 +212,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 
 	renderGridBox(device, context, world, view, projection);
 
-	if (m_voxelize) // Restart voxelization cycle
+	if (m_voxelize && m_counter > counterCopyGPU) // Restart voxelization cycle if indicated by renderer AND if prior cycle was finished
 	{
 		m_counter = counterStart; // Start counting
 		m_voxelize = false;
@@ -231,8 +231,28 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		context->Map(m_gridAllTextureStaging, 0, D3D11_MAP_READ, 0, &msr); // data contains pointer to texture data
 		if (msr.pData)
 		{
+			// The mapped data may include padding in the memory, because of GPU optimizations
+			// This means a 10x10x10 texture may be mapped as a 16x16x16 block
+			// The real pitches from one row/depth slice to another are givem by the D3D11_MAPPED_SUBRESOURCE
+
 			uint32_t* cells = reinterpret_cast<uint32_t*>(msr.pData);
-			std::copy(cells, cells + std::distance(m_tempCells.begin(), m_tempCells.end()), m_tempCells.begin());
+
+			// Temps
+			int paddedRowPitch = msr.RowPitch / sizeof(uint32_t); // convert byte size to block resolution
+			int paddedDepthPitch = msr.DepthPitch / sizeof(uint32_t);
+			int rowPitch = xRes;
+			int depthPitch = xRes * m_resolution.y;
+			// Extract the voxel grid from the padded texture block
+			for (int z = 0; z < m_resolution.z; ++z)
+			{
+				for (int y = 0; y < m_resolution.y; ++y)
+				{
+					for (int x = 0; x < xRes; ++x)
+					{
+						m_tempCells[x + y * rowPitch + z * depthPitch] = cells[x + y * paddedRowPitch + z * paddedDepthPitch];
+					}
+				}
+			}
 		}
 		// Remove CPU Access
 		context->Unmap(m_gridAllTextureStaging, 0);
@@ -434,7 +454,7 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	vp.MaxDepth = 1.0f;
 	context->RSSetViewports(1, &vp);
 
-	// Clear combined grid UAV once each frame
+	// Clear combined grid UAV once each voxelization
 	const UINT iniVals[] = { 0, 0, 0, 0 };
 	context->ClearUnorderedAccessViewUint(m_gridAllUAV, iniVals);
 
