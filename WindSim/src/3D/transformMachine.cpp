@@ -330,8 +330,18 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		if (m_state == TranslateX)
 		{
 			axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-			plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // XZ plane
-			oldInt = XMLoadFloat3(&m_oldXZInt);
+			// Choose plane dependent on the current angle of the camera to this plane
+			// If cosine of cursor ray to plane normal is bigger -> plane has a "better" angle to the camera
+			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
+			{
+				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)); // XY plane
+				oldInt = XMLoadFloat3(&m_oldXYInt);
+			}
+			else
+			{
+				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // XZ plane
+				oldInt = XMLoadFloat3(&m_oldXZInt);
+			}
 		}
 		else if (m_state == TranslateY)
 		{
@@ -353,8 +363,18 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		else if (m_state == TranslateZ)
 		{
 			axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-			plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // XZ plane
-			oldInt = XMLoadFloat3(&m_oldXZInt);
+			// Choose plane dependent on the current angle of the camera to this plane
+			// If cosine of cursor ray to plane normal is bigger -> plane has a "better" angle to the camera
+			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
+			{
+				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // XZ plane
+				oldInt = XMLoadFloat3(&m_oldXZInt);
+			}
+			else
+			{
+				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)); // YZ plane
+				oldInt = XMLoadFloat3(&m_oldYZInt);
+			}
 		}
 		else
 			throw std::runtime_error("Invalid translation state!");
@@ -423,33 +443,53 @@ void TransformMachine::scale(QPoint currentMousePos, Qt::KeyboardModifiers mods)
 		//===========================================================
 		XMVECTOR pos = XMLoadFloat3(&act.second->getPos());
 		XMVECTOR scale = XMLoadFloat3(&act.second->getScale());
-		std::shared_ptr<Actor> a = m_manager->getActor(act.second->getId());
+		XMVECTOR rot = XMLoadFloat4(&act.second->getRot());
 
 		// If the scaling center is different to the origin of the object space
 		// -> The translation of the object changes too
-		// -> We have to decompose the transformation and have to apply its different parts in the correct order
-		XMVECTOR rot = XMLoadFloat4(&act.second->getRot());
 
-		// Build new world matrix
-		XMMATRIX newWorld = XMMatrixScalingFromVector(scale); // Local scaling (from oldWorld)
-		newWorld *= XMMatrixRotationQuaternion(rot); // Local rotation (from oldWorld)
-		newWorld *= XMMatrixTranslationFromVector((pos - objPos)); // Move transformation center to averaged object position (includes oldWorld translation)
-		// Perform scaling, dependent on mouse movement (scaling center is averaged object position (located at the origin))
+		// Compute new local scaling
 		if (m_state == Scale)
-			newWorld *= XMMatrixScaling(scaleFactor, scaleFactor, scaleFactor);
-		else if (m_state == ScaleX)
-			newWorld *= XMMatrixScaling(scaleFactor, 1.0f, 1.0f);
-		else if (m_state == ScaleY)
-			newWorld *= XMMatrixScaling(1.0f, scaleFactor, 1.0f);
-		else if (m_state == ScaleZ)
-			newWorld *= XMMatrixScaling(1.0f, 1.0f, scaleFactor);
+			scale *= XMVectorSet(scaleFactor, scaleFactor, scaleFactor, 1.0f);
 		else
-			throw std::runtime_error("Invalid scaling state!");
-		newWorld *= XMMatrixTranslationFromVector(objPos); // Move object to its final world position (as objPos is currently at origin -> move about objPos to get to world position)
+		{
+			// Avoid shearing by calculating the individual amount of scaling along local coordinate axes, dependent on the current rotation in world space
+			// Individual amount is given by cosine between global scaling axis and the respective local coordinate axis
+			XMVECTOR axis;
+			if (m_state == ScaleX)
+				axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+			else if (m_state == ScaleY)
+				axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			else if (m_state == ScaleZ)
+				axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+			else
+				throw std::runtime_error("Invalid scaling state!");
+			// Cosines (= dot-product) between global scaling axis and all local axes
+			float xAmount = XMVectorGetX(XMVectorAbs(XMVector3Dot(XMVector3Rotate(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), rot), axis)));
+			float yAmount = XMVectorGetX(XMVectorAbs(XMVector3Dot(XMVector3Rotate(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rot), axis)));
+			float zAmount = XMVectorGetX(XMVectorAbs(XMVector3Dot(XMVector3Rotate(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot), axis)));
+			// Perform linear mapping [0 - 1] -> [1 - scaleFactor]
+			scale *= XMVectorSet(scaleFactor * xAmount - xAmount + 1.0f, scaleFactor * yAmount - yAmount + 1.0f, scaleFactor * zAmount - zAmount + 1.0f, 1.0f);
+		}
 
-		XMFLOAT4X4 nw;
-		XMStoreFloat4x4(&nw, newWorld);
-		a->setWorld(nw);
+		// Translate object to its new world position away from (or to) the scaling center
+		if (m_state == Scale)
+			pos += (scaleFactor - 1.0f) * (pos - objPos);
+		else if (m_state == ScaleX)
+			pos += (scaleFactor - 1.0f) * XMVectorSet(XMVectorGetX(pos - objPos), 0.0f, 0.0f, 0.0f);
+		else if (m_state == ScaleY)
+			pos += (scaleFactor - 1.0f) * XMVectorSet(0.0f, XMVectorGetY(pos - objPos), 0.0f, 0.0f);
+		else if (m_state == ScaleZ)
+			pos += (scaleFactor - 1.0f) * XMVectorSet(0.0f, 0.0f, XMVectorGetZ(pos - objPos), 0.0f);
+
+		std::shared_ptr<Actor> a = m_manager->getActor(act.second->getId());
+		XMFLOAT3 newPos;
+		XMStoreFloat3(&newPos, pos);
+		XMFLOAT3 newScale;
+		XMStoreFloat3(&newScale, scale);
+		a->setPos(newPos);
+		a->setScale(newScale);
+		a->computeWorld();
 	}
 }
 

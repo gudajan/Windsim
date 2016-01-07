@@ -435,6 +435,9 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	ID3D11RenderTargetView* tempRTV = nullptr;
 	ID3D11DepthStencilView* tempDSV = nullptr;
 	context->OMGetRenderTargets(1, &tempRTV, &tempDSV);
+	// Disable old renderTarget to enable arbitrary viewport sizes (i.e. voxel grid sizes)
+	// Otherwise the viewport size is clamped to the resolution of the current render target
+	context->OMSetRenderTargets(0, nullptr, nullptr);
 
 	// Save old viewport
 	D3D11_VIEWPORT tempVP[1];
