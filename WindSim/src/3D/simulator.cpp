@@ -5,15 +5,19 @@
 #include <QFileInfo>
 #include <QDir>
 
+#include <DirectXMath.h>
+
+using namespace DirectX;
+
 Simulator::Simulator(const std::string& exe, Logger* logger)
 	: m_executable(exe),
-	m_valid(false),
+	m_running(false),
 	m_process(),
 	m_logger(logger)
 {
 }
 
-void Simulator::start()
+void Simulator::start(const XMUINT3& resolution, const XMFLOAT3& voxelSize)
 {
 	std::wstring exe(m_executable.begin(), m_executable.end());
 
@@ -24,12 +28,22 @@ void Simulator::start()
 	{
 		log("WARNING: No valid Simulator executable specified. Current value is '" + m_executable + "'!\n" \
 		  	"         Continuing without simulation.");
-		m_valid = false;
+		m_running = false;
 		return;
 	}
 
+	if (m_process.hProcess != NULL)
+	{
+		DWORD exitCode;
+		BOOL success = GetExitCodeProcess(m_process.hProcess, &exitCode);
+		if (exitCode == STILL_ACTIVE)
+		{
+			log("ERROR: Simulator already running! Omit starting new process.");
+			return;
+		}
+	}
+
 	log("INFO: Starting simulator '" + m_executable + "'...");
-	m_valid = true;
 
 	// Create windows child process
 	STARTUPINFO si;
@@ -38,35 +52,46 @@ void Simulator::start()
 
 	ZeroMemory(&m_process, sizeof(m_process));
 
-	/*if (!CreateProcess(exe.c_str(), NULL, NULL, NULL, FALSE, 0, NULL, QFileInfo(QString::fromStdWString(exe)).absoluteDir().absolutePath().toStdWString().c_str(), &si, &m_process))
+	if (!CreateProcess(exe.c_str(), NULL, NULL, NULL, FALSE, 0, NULL, QFileInfo(QString::fromStdWString(exe)).absoluteDir().absolutePath().toStdWString().c_str(), &si, &m_process))
 	{
 		log("WARNING: Starting of simulator in '" + m_executable + "' in child process failed!\n" \
 			"         Continuing without simulation.");
-		m_valid = false;
+		m_running = false;
 		return;
 	}
 
-	CloseHandle(m_process.hThread);*/
+	CloseHandle(m_process.hThread); // Thread handle not needed anymore
+	m_process.hThread = NULL;
 
-	m_valid = true;
+	m_running = true;
+
+}
+
+void Simulator::updateDimensions(const XMUINT3& resolution, const XMFLOAT3& voxelSize)
+{
 
 }
 
 void Simulator::stop()
 {
-	//DWORD exitCode;
-	//BOOL success = GetExitCodeProcess(m_process.hProcess, &exitCode);
-	//if (exitCode == STILL_ACTIVE)
-	//	// TODO: perhapse send signal to simulator, to give it a chance to exit itself (ExitProcess())
-	//	TerminateProcess(m_process.hProcess, 0);
+	// Execute only if process was created
+	if (m_process.hProcess != NULL)
+	{
+		DWORD exitCode;
+		BOOL success = GetExitCodeProcess(m_process.hProcess, &exitCode);
+		if (exitCode == STILL_ACTIVE)
+			// TODO: perhaps send signal to simulator, to give it a chance to exit itself (ExitProcess())
+			TerminateProcess(m_process.hProcess, 0);
 
-	//// Wait 10 seconds until child process exits.
-	//WaitForSingleObject(m_process.hProcess, INFINITE);
+		// Wait 10 seconds until child process exits.
+		WaitForSingleObject(m_process.hProcess, INFINITE);
 
-	////if (m_process.hThread != NULL) // Process was successfully created
-	////	CloseHandle(m_process.hThread);
-	//if (m_process.hProcess != NULL)
-	//	CloseHandle(m_process.hProcess);
+		CloseHandle(m_process.hProcess);
+
+		ZeroMemory(&m_process, sizeof(m_process)); // i.e. set process handle to NULL
+
+		m_running = false;
+	}
 }
 
 void Simulator::update(std::vector<char>& voxelGrid)

@@ -57,7 +57,6 @@ private:
 	void renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world);
 	void renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
-	HRESULT startSimulator();
 
 	struct ShaderVariables
 	{
@@ -68,6 +67,8 @@ private:
 		ID3DX11EffectMatrixVariable* worldToVoxel; // Combined matrix: world space -> grid object space -> voxel space
 		ID3DX11EffectMatrixVariable* voxelProj; // Projection matrix for voxelization (orthogonal, aligned with the voxelgrid)
 		ID3DX11EffectMatrixVariable* voxelWorldViewProj; // Voxel space -> grid object space -> world space -> camera/view space -> projection space
+		ID3DX11EffectMatrixVariable* voxelWorldViewProjInv;
+		ID3DX11EffectMatrixVariable* voxelWorldView; // Voxel space -> grid object space -> world space -> camera/view space -> projection space
 
 		ID3DX11EffectVectorVariable* camPosVS;
 		ID3DX11EffectVectorVariable* resolution;

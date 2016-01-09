@@ -8,6 +8,11 @@ RasterizerState CullBack
 	CullMode = Back;
 };
 
+RasterizerState CullFront
+{
+	CullMode = Front;
+};
+
 DepthStencilState DepthDefault
 {
 };
@@ -59,4 +64,9 @@ float4 BlinnPhongIllumination(in float3 n, in float3 v, in float3 col, in float 
 	color.a = 1.0f;
 
 	return color;
+}
+
+bool equal(float a, float b, float epsilon)
+{
+	return abs(a - b) <= epsilon;
 }

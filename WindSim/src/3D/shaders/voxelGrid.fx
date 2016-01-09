@@ -15,6 +15,8 @@ cbuffer cb
 	float4x4 g_mWorldToVoxel; // Combined matrix: world space -> grid object space -> voxel space
 	float4x4 g_mVoxelProj; // Projection matrix for voxelization (orthogonal, aligned with the voxelgrid)
 	float4x4 g_mVoxelWorldViewProj; // Voxel space -> grid object space -> world space -> camera/view space -> projection space
+	float4x4 g_mVoxelWorldViewProjInv; // Inverse of the above
+	float4x4 g_mVoxelWorldView; // Voxel space -> grid object space -> world space -> camera/view space
 
 	float4 g_vCamPosVS; // Camera position in Voxel space
 	uint3 g_vResolution; // Resolution of voxel grid
@@ -43,13 +45,14 @@ struct PSGridBoxIn
 struct PSVoxelIn
 {
 	float4 pos : SV_Position;
+	float4 projPos : POSITION;
 	float3 voxelPos : INDEX;
 };
 
 struct PSOut
 {
 	float4 col : SV_Target;
-	float Depth : SV_Depth;
+	float depth : SV_Depth;
 };
 
 // =============================================================================
@@ -79,16 +82,20 @@ bool getValue(in float3 posVS, out bool posInGrid)
 
 bool intersectBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 boxMax, out float t0, out float t1)
 {
-	float3 invR = 1.0 / dir;
-	float3 tbot = invR * (boxMin - origin);
-	float3 ttop = invR * (boxMax - origin);
-	float3 tmin = min(ttop, tbot);
-	float3 tmax = max(ttop, tbot);
-	float2 t = max(tmin.xx, tmin.yz);
-	t0 = max(t.x, t.y);
-	t = min(tmax.xx, tmax.yz);
-	t1 = min(t.x, t.y);
-	return t0 <= t1;
+	float3 invDir = 1.0f / dir;
+	float3 tbot = (boxMin - origin) * invDir;
+	float3 ttop = (boxMax - origin) * invDir;
+
+	t0 = (dir.x >= 0) ? tbot.x : ttop.x;
+	t1 = (dir.x >= 0) ? ttop.x : tbot.x;
+
+	t0 = max((dir.y >= 0) ? tbot.y : ttop.y, t0);
+	t1 = min((dir.y >= 0) ? ttop.y : tbot.y, t1);
+
+	t0 = max((dir.z >= 0) ? tbot.z : ttop.z, t0);
+	t1 = min((dir.z >= 0) ? ttop.z : tbot.z, t1);
+
+	return t0 <= t1; // this has numerical errors if t0 and t1 are almost equal
 }
 
 // =============================================================================
@@ -129,6 +136,7 @@ PSVoxelIn vsVoxelize(VSMeshIn vsIn)
 	// This way, a fragment is generated although it lies outside the grid
 	// As the voxelization algorithm depends on the odd number of fragments (entering and leaving the object) it is important to also generate the leaving fragment if it lies outside the grid
 	vsOut.pos.z = clamp(vsOut.pos.z, - 1.0f, 1.0f);
+	vsOut.projPos = vsOut.pos;
 	return vsOut;
 }
 
@@ -137,6 +145,7 @@ PSVoxelIn vsVolume(VSGridIn vsIn)
 	PSVoxelIn vsOut;
 	vsOut.voxelPos = mul(float4(vsIn.pos, 1.0f), g_mGridToVoxel).xyz; // Transfrom from grid object space -> grid voxel space (aka texture space)
 	vsOut.pos = mul(float4(vsIn.pos, 1.0f), g_mWorldViewProj);
+	vsOut.projPos = vsOut.pos;
 	return vsOut;
 }
 
@@ -181,16 +190,29 @@ void psVoxelize(PSVoxelIn psIn)
 PSOut psVolume(PSVoxelIn psIn)
 {
 	PSOut psOut = (PSOut)0;
-	psOut.col = float4(0.0f, 1.0f, 0.0f, 1.0f);
-	psOut.Depth = 0.0f;
+
+	// Default
+	float3 voxelColor = float3(0.7f, 0.2f, 0.2f);
+	psOut.col = float4(0.0, 0.0f, 0.0f, 1.0f);
+	psOut.depth = 0.0f;
 
 	float3 rayDir = normalize(psIn.voxelPos - g_vCamPosVS.xyz);
-	float stepSize = 0.2; // In Voxel space, all sides of a voxel are of length 1
-	float3 currentPos = psIn.voxelPos; // Start raycasting at the incoming fragment, which corresponds to the border of the voxel grid
-	// If point on viewplane is inside the grid -> start casting from there
-	// We would need the intersection of the view plane and the ray, casted from the camera; just fake it by using the RayDir
-	if (inGrid(g_vCamPosVS.xyz + rayDir))
-		currentPos = g_vCamPosVS.xyz + rayDir;
+
+	float tmin = 0.0;
+	float tmax = -1.0;
+	// Add/Subtract small value because of numerical inaccuracies, which would lead to discarded pixels later
+	// (i.e. the intersection position may lie just outside the grid and therefore the raycasting is immediately stopped)
+	if (!intersectBox(g_vCamPosVS.xyz, rayDir, float3(0.0001f, 0.0001f, 0.0001f), float3(g_vResolution - 0.0001), tmin, tmax))
+	{
+		discard;
+		return psOut;
+	}
+
+	float stepSize = 0.1; // In Voxel space, all sides of a voxel are of length 1
+	float3 rayInc = stepSize * rayDir;
+	float3 currentPos = g_vCamPosVS.xyz + tmin * rayDir; // Start raycasting at the incoming fragment, which corresponds to the border of the voxel grid
+	if (inGrid(g_vCamPosVS.xyz))
+		currentPos = g_vCamPosVS.xyz;
 	bool discarded = false;
 	int counter = 0;
 	bool voxel = false;
@@ -212,10 +234,8 @@ PSOut psVolume(PSVoxelIn psIn)
 		{
 			break;
 		}
-		currentPos += rayDir * stepSize; // Step about one voxel
+		currentPos += rayInc; // Next step
 	}
-
-	// TODO: calculate normal and perform lighting
 
 	// discard statement outside of while loop to avoid compiler problems
 	if (discarded)
@@ -226,14 +246,40 @@ PSOut psVolume(PSVoxelIn psIn)
 	if (voxel)
 	{
 		// Calculate output
-		float tmin = 0;
-		float tmax = 0;
-		if (intersectBox(g_vCamPosVS.xyz, rayDir, floor(currentPos), ceil(currentPos), tmin, tmax)) // Get intersection point of voxel and ray
-		{
-			float4 pos = mul(float4(g_vCamPosVS.xyz + tmin * rayDir, 1.0f), g_mVoxelWorldViewProj);
-			psOut.Depth = pos.z / pos.w;
-			psOut.col = float4(0.7, 0.2, 0.2, 1.0f);
-		}
+		tmin = 0.0f;
+		tmax = -1.0f;
+		float3 boxMin = floor(currentPos);
+		float3 boxMax = ceil(currentPos);
+		intersectBox(g_vCamPosVS.xyz, rayDir, boxMin, boxMax, tmin, tmax); // Get intersection point of voxel and ray
+
+		float3 voxelPos = g_vCamPosVS.xyz + tmin * rayDir;
+		float4 pos = mul(float4(voxelPos, 1.0f), g_mVoxelWorldViewProj);
+		psOut.depth = pos.z / pos.w;
+
+		// Calculate normal at intersection point
+		float3 nor = float3(0.0f, 0.0f, 0.0f);
+		float epsilon = 0.02f;
+
+		if (equal(voxelPos.x, boxMin.x, epsilon))
+			nor.x = -1.0f; // left
+		else if (equal(voxelPos.x, boxMax.x, epsilon))
+			nor.x = 1.0f; // right
+
+		if (equal(voxelPos.y, boxMin.y, epsilon))
+			nor.y = -1.0f; // bottom
+		else if (equal(voxelPos.y, boxMax.y, epsilon))
+			nor.y = 1.0f; // top
+
+		if (equal(voxelPos.z, boxMin.z, epsilon))
+			nor.z = -1.0f; // near
+		else if (equal(voxelPos.z, boxMax.z, epsilon))
+			nor.z = 1.0f; // far
+
+		// Transform into view space
+		nor = mul(float4(nor, 0.0f), g_mVoxelWorldView).xyz;
+		float3 viewDir = mul(float4(rayDir, 0.0f), g_mVoxelWorldView).xyz;
+
+		psOut.col = BlinnPhongIllumination(nor, -viewDir, voxelColor, 0.3f, 0.6f, 0.1f, 4);
 	}
 
 	return psOut;
@@ -265,7 +311,7 @@ technique11 Voxel
 		SetVertexShader(CompileShader(vs_5_0, vsVolume()));
 		SetGeometryShader(NULL);
 		SetPixelShader(CompileShader(ps_5_0, psVolume()));
-		SetRasterizerState(CullNone);
+		SetRasterizerState(CullFront);
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}

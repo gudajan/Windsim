@@ -6,6 +6,8 @@
 
 #include <Windows.h>
 
+#include <DirectXMath.h>
+
 class Logger;
 
 class Simulator
@@ -13,19 +15,20 @@ class Simulator
 public:
 	Simulator(const std::string& executable = "", Logger* logger = nullptr);
 
-	void start();
-	void stop();
+	void start(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Create Process
+	void updateDimensions(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Update VoxelGrid dimensions
+	void stop(); // Exit/Terminate Process
 
 	void update(std::vector<char>& voxelGrid); // Check signals from process (i.e. set ready if signal finished received), send voxelgrid, receive velocity grid
 
-	bool isValid() const { return m_valid; };
+	bool isRunning() const { return m_running; };
 	bool setExecutable(const std::string& executable); // Returns if a simulator restart is necessary
 
 private:
 	void log(const std::string& msg);
 
 	std::string m_executable;
-	bool m_valid;
+	bool m_running;
 	PROCESS_INFORMATION m_process;
 
 	Logger* m_logger;

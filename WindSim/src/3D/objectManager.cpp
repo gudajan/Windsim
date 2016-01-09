@@ -100,16 +100,13 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 void ObjectManager::remove(int id)
 {
 	const auto object = m_objects.find(id);
-	if (object != m_objects.end())
-	{
-		object->second->release();
-		m_objects.erase(id);
-	}
-	else
-	{
+	if (object == m_objects.end())
 		throw std::runtime_error("Failed to remove object with id '" + std::to_string(id) + "' as the id was not found!");
-	}
+
+	object->second->release();
+	m_objects.erase(id);
 	m_actors.erase(id);
+
 }
 
 void ObjectManager::removeAll()

@@ -85,6 +85,8 @@ HRESULT VoxelGrid::createShaderFromFile(const std::wstring& shaderPath, ID3D11De
 	s_shaderVariables.worldToVoxel = s_effect->GetVariableByName("g_mWorldToVoxel")->AsMatrix();
 	s_shaderVariables.voxelProj = s_effect->GetVariableByName("g_mVoxelProj")->AsMatrix();
 	s_shaderVariables.voxelWorldViewProj = s_effect->GetVariableByName("g_mVoxelWorldViewProj")->AsMatrix();
+	s_shaderVariables.voxelWorldViewProjInv = s_effect->GetVariableByName("g_mVoxelWorldViewProjInv")->AsMatrix();
+	s_shaderVariables.voxelWorldView = s_effect->GetVariableByName("g_mVoxelWorldView")->AsMatrix();
 
 	s_shaderVariables.camPosVS = s_effect->GetVariableByName("g_vCamPosVS")->AsVector();
 	s_shaderVariables.resolution = s_effect->GetVariableByName("g_vResolution")->AsVector();
@@ -130,9 +132,7 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 {
 	HRESULT hr;
 
-	release();
-
-	Object3D::create(device, false); // Create vertex and index buffer for grid rendering
+	Object3D::create(device, false); // Create vertex and index buffer for grid rendering and calls release
 
 	// Resize the grid
 	m_grid.resize(m_resolution.x * m_resolution.y * m_resolution.z);
@@ -175,8 +175,10 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	td.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_gridAllTextureStaging));
 
-	// Start simulator process
-	m_simulator.start();
+	if (!m_simulator.isRunning())
+		m_simulator.start(m_resolution, m_voxelSize);
+	else
+		m_simulator.updateDimensions(m_resolution, m_voxelSize);
 
 	return S_OK;
 }
@@ -192,8 +194,8 @@ void VoxelGrid::release()
 	SAFE_RELEASE(m_gridAllUAV);
 	SAFE_RELEASE(m_gridAllSRV);
 
-	// Stop simulator process
-	m_simulator.stop();
+	if (!m_reinit) // Final release, no reinitialization
+		m_simulator.stop();
 }
 
 void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
@@ -348,8 +350,11 @@ bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
 
 void VoxelGrid::setSimulator(const std::string& exe)
 {
-	if(m_simulator.setExecutable(exe))
-		m_reinit = true;
+	if (m_simulator.setExecutable(exe))
+	{
+		m_simulator.stop();
+		m_simulator.start(m_resolution, m_voxelSize);
+	}
 }
 
 void VoxelGrid::createGridData()
@@ -360,44 +365,44 @@ void VoxelGrid::createGridData()
 
 	m_vertexData =
 	{
-		0.0f, 0.0f, 0.0f, // left, lower, front
-		0.0f, 0.0f, z, // left, lower, back
-		0.0f, y, 0.0f, // left, upper, front
-		0.0f, y, z, // left, upper, back
-		x, 0.0f, 0.0f, // right, lower, front
-		x, 0.0f, z, // right, lower, back
-		x, y, 0.0f, // right, upper, front
-		x, y, z // right, upper, back
+		x, y, 0.0f,
+		x, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f,
+		0.0f, y, 0.0f,
+		x, y, z,
+		x, 0.0f, z,
+		0.0f, 0.0f, z,
+		0.0f, y, z
 	};
 
 	m_indexData =
 	{
 		// Box lines
 		0, 1,
-		0, 2,
+		0, 3,
 		0, 4,
-		1, 3,
+		1, 2,
 		1, 5,
 		2, 3,
 		2, 6,
 		3, 7,
 		4, 5,
-		4, 6,
-		5, 7,
+		4, 7,
+		5, 6,
 		6, 7,
 		// Box triangles
-		0, 1, 2,
-		0, 2, 4,
-		0, 5, 1,
+		0, 1, 3,
+		4, 7, 6,
 		0, 4, 5,
-		1, 3, 2,
-		1, 5, 3,
-		2, 6, 4,
-		2, 3, 6,
-		3, 7, 6,
-		3, 5, 7,
-		4, 6, 5,
-		5, 6 ,7
+		1, 5, 2,
+		2, 6, 3,
+		4, 0, 3,
+		1, 2, 3,
+		5, 4, 6,
+		1, 0, 5,
+		5, 6, 2,
+		6, 7, 3,
+		7, 4, 3
 	};
 	m_numIndices = 12 * 2; // 12 lines with 2 vertices
 	m_cubeIndices = 12 * 3; // 12 triangles with 3 vertices
@@ -566,8 +571,14 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 	s_shaderVariables.gridToVoxel->SetMatrix(reinterpret_cast<float*>((gridToVoxel).r));
 
 	XMMATRIX voxelToGrid = XMMatrixScalingFromVector(XMLoadFloat3(&m_voxelSize));
-	XMMATRIX voxelWorldViewProj = voxelToGrid * w * v * p;
+	XMMATRIX voxelWorldView = voxelToGrid * w * v;
+	XMMATRIX voxelWorldViewProj = voxelWorldView * p;
+	XMMATRIX viewInv = XMMatrixInverse(nullptr, v);
+	XMMATRIX worldInv = XMMatrixInverse(nullptr, w);
+	XMMATRIX projInv = XMMatrixInverse(nullptr, p);
 	s_shaderVariables.voxelWorldViewProj->SetMatrix(reinterpret_cast<float*>(voxelWorldViewProj.r));
+	s_shaderVariables.voxelWorldViewProjInv->SetMatrix(reinterpret_cast<float*>((projInv * viewInv * worldInv * gridToVoxel).r));
+	s_shaderVariables.voxelWorldView->SetMatrix(reinterpret_cast<float*>(voxelWorldView.r));
 
 	s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(voxelToGrid.r));
 
@@ -575,8 +586,8 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 
 	//Calculate camera position in Voxel Space (Texture space of grid texture -> [0, resolution])
 	XMVECTOR camPos = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f); // In camera space
-	camPos = XMVector3Transform(camPos, XMMatrixInverse(nullptr, v)); // World Space
-	camPos = XMVector3Transform(camPos, XMMatrixInverse(nullptr, w)); // Grid Object Space
+	camPos = XMVector3Transform(camPos, viewInv); // World Space
+	camPos = XMVector3Transform(camPos, worldInv); // Grid Object Space
 	camPos = XMVector3Transform(camPos, gridToVoxel); // Voxel Space
 	s_shaderVariables.camPosVS->SetFloatVector(camPos.m128_f32);
 
@@ -605,6 +616,8 @@ VoxelGrid::ShaderVariables::ShaderVariables()
 	worldToVoxel(nullptr),
 	voxelProj(nullptr),
 	voxelWorldViewProj(nullptr),
+	voxelWorldViewProjInv(nullptr),
+	voxelWorldView(nullptr),
 	camPosVS(nullptr),
 	resolution(nullptr),
 	gridUAV(nullptr),
