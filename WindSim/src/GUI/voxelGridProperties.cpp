@@ -145,13 +145,56 @@ void VoxelGridProperties::positionChanged()
 
 void VoxelGridProperties::resolutionChanged()
 {
+	// New resolutions
+	int nrx = ui.spResX->value();
+	int nry = ui.spResY->value();
+	int nrz = ui.spResZ->value();
+
+	// If linked to voxel size: recalculate it
+	if (ui.tbLink->isChecked())
+	{
+		// Old resolutions
+		QJsonObject or = m_properties["resolution"].toObject();
+		int orx = or["x"].toInt();
+		int ory = or["y"].toInt();
+		int orz = or["z"].toInt();
+
+		// Calculate new voxel sizes
+		double nvsx = ui.dspSizeX->value() * orx / nrx;
+		double nvsy = ui.dspSizeY->value() * ory / nry;
+		double nvsz = ui.dspSizeZ->value() * orz / nrz;
+
+		// Set new voxel size
+		ui.dspSizeX->blockSignals(true);
+		ui.dspSizeY->blockSignals(true);
+		ui.dspSizeZ->blockSignals(true);
+
+		ui.dspSizeX->setValue(nvsx);
+		ui.dspSizeY->setValue(nvsy);
+		ui.dspSizeZ->setValue(nvsz);
+
+		ui.dspSizeX->blockSignals(false);
+		ui.dspSizeY->blockSignals(false);
+		ui.dspSizeZ->blockSignals(false);
+
+		QJsonObject vs
+		{
+			{ "x", nvsx },
+			{ "y", nvsy },
+			{ "z", nvsz }
+		};
+		m_properties["voxelSize"] = vs;
+	}
+
 	QJsonObject res
 	{
-		{ "x", ui.spResX->value() },
-		{ "y", ui.spResY->value() },
-		{ "z", ui.spResZ->value() }
+		{ "x", nrx },
+		{ "y", nry },
+		{ "z", nrz }
 	};
 	m_properties["resolution"] = res;
+
+
 }
 
 void VoxelGridProperties::voxelSizeChanged()

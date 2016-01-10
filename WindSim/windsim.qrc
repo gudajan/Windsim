@@ -1,4 +1,5 @@
 <RCC>
-    <qresource prefix="WindSim">
-    </qresource>
+  <qresource prefix="WindSim">
+    <file>link.svg</file>
+  </qresource>
 </RCC>

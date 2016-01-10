@@ -194,7 +194,7 @@ void VoxelGrid::release()
 	SAFE_RELEASE(m_gridAllUAV);
 	SAFE_RELEASE(m_gridAllSRV);
 
-	if (!m_reinit) // Final release, no reinitialization
+	if (!m_reinit && m_simulator.isRunning()) // Final release, no reinitialization
 		m_simulator.stop();
 }
 

@@ -202,7 +202,7 @@ PSOut psVolume(PSVoxelIn psIn)
 	float tmax = -1.0;
 	// Add/Subtract small value because of numerical inaccuracies, which would lead to discarded pixels later
 	// (i.e. the intersection position may lie just outside the grid and therefore the raycasting is immediately stopped)
-	if (!intersectBox(g_vCamPosVS.xyz, rayDir, float3(0.0001f, 0.0001f, 0.0001f), float3(g_vResolution - 0.0001), tmin, tmax))
+	if (!intersectBox(g_vCamPosVS.xyz, rayDir, float3(0.001f, 0.001f, 0.001f), float3(g_vResolution - 0.001), tmin, tmax))
 	{
 		discard;
 		return psOut;
