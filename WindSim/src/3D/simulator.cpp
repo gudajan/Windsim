@@ -52,7 +52,7 @@ void Simulator::start(const XMUINT3& resolution, const XMFLOAT3& voxelSize)
 
 	ZeroMemory(&m_process, sizeof(m_process));
 
-	if (!CreateProcess(exe.c_str(), NULL, NULL, NULL, FALSE, 0, NULL, QFileInfo(QString::fromStdWString(exe)).absoluteDir().absolutePath().toStdWString().c_str(), &si, &m_process))
+	if (!CreateProcess(NULL, const_cast<LPWSTR>(exe.c_str()), NULL, NULL, FALSE, 0, NULL, QFileInfo(QString::fromStdWString(exe)).absoluteDir().absolutePath().toStdWString().c_str(), &si, &m_process))
 	{
 		log("WARNING: Starting of simulator in '" + m_executable + "' in child process failed!\n" \
 			"         Continuing without simulation.");
@@ -83,7 +83,7 @@ void Simulator::stop()
 			// TODO: perhaps send signal to simulator, to give it a chance to exit itself (ExitProcess())
 			TerminateProcess(m_process.hProcess, 0);
 
-		// Wait 10 seconds until child process exits.
+		// Wait until child process exits.
 		WaitForSingleObject(m_process.hProcess, INFINITE);
 
 		CloseHandle(m_process.hProcess);

@@ -55,7 +55,6 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 
 DX11Widget::~DX11Widget()
 {
-	m_renderThread.quit();
 	m_renderThread.wait();
 }
 

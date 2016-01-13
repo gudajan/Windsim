@@ -179,6 +179,7 @@ void DX11Renderer::stop()
 	m_renderTimer.stop();
 	m_voxelizationTimer.stop();
 	destroy();
+	thread()->quit(); // Quit the thread
 }
 
 void DX11Renderer::onResize(int width, int height)
