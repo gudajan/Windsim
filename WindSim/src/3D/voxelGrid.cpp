@@ -348,9 +348,9 @@ bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
 	return true;
 }
 
-void VoxelGrid::setSimulator(const std::string& exe)
+void VoxelGrid::setSimulator(const std::string& cmdline)
 {
-	if (m_simulator.setExecutable(exe))
+	if (m_simulator.setCommandLine(cmdline))
 	{
 		m_simulator.stop();
 		m_simulator.start(m_resolution, m_voxelSize);

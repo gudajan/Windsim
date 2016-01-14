@@ -13,7 +13,7 @@ class Logger;
 class Simulator
 {
 public:
-	Simulator(const std::string& executable = "", Logger* logger = nullptr);
+	Simulator(const std::string& cmdline = "", Logger* logger = nullptr);
 
 	void start(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Create Process
 	void updateDimensions(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Update VoxelGrid dimensions
@@ -22,12 +22,13 @@ public:
 	void update(std::vector<char>& voxelGrid); // Check signals from process (i.e. set ready if signal finished received), send voxelgrid, receive velocity grid
 
 	bool isRunning() const { return m_running; };
-	bool setExecutable(const std::string& executable); // Returns if a simulator restart is necessary
+	bool setCommandLine(const std::string& cmdline); // Returns if a simulator restart is necessary
 
 private:
 	void log(const std::string& msg);
 
 	std::string m_executable;
+	std::string m_cmdArguments;
 	bool m_running;
 	PROCESS_INFORMATION m_process;
 

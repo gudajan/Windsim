@@ -17,7 +17,7 @@ public:
 	void resize(DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize);
 	void voxelize();
 	void setRenderVoxel(bool renderVoxel);
-	void setSimulator(const std::string& exe);
+	void setSimulator(const std::string& cmdline);
 
 private:
 	VoxelGrid& m_grid;

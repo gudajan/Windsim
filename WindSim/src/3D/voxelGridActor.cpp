@@ -52,7 +52,7 @@ void VoxelGridActor::setRenderVoxel(bool renderVoxel)
 	m_grid.setRenderVoxel(renderVoxel);
 }
 
-void VoxelGridActor::setSimulator(const std::string& exe)
+void VoxelGridActor::setSimulator(const std::string& cmdline)
 {
-	m_grid.setSimulator(exe);
+	m_grid.setSimulator(cmdline);
 }

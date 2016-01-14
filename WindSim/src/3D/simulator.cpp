@@ -7,19 +7,24 @@
 
 #include <DirectXMath.h>
 
+#include <algorithm>
+
 using namespace DirectX;
 
-Simulator::Simulator(const std::string& exe, Logger* logger)
-	: m_executable(exe),
+Simulator::Simulator(const std::string& cmdline, Logger* logger)
+	: m_executable(),
+	m_cmdArguments(),
 	m_running(false),
 	m_process(),
 	m_logger(logger)
 {
+	setCommandLine(cmdline);
 }
 
 void Simulator::start(const XMUINT3& resolution, const XMFLOAT3& voxelSize)
 {
 	std::wstring exe(m_executable.begin(), m_executable.end());
+	std::wstring args(m_cmdArguments.begin(), m_cmdArguments.end());
 
 	// Check if simulator exists
 	DWORD attributes = GetFileAttributes(exe.c_str());
@@ -52,7 +57,7 @@ void Simulator::start(const XMUINT3& resolution, const XMFLOAT3& voxelSize)
 
 	ZeroMemory(&m_process, sizeof(m_process));
 
-	if (!CreateProcess(NULL, const_cast<LPWSTR>(exe.c_str()), NULL, NULL, FALSE, 0, NULL, QFileInfo(QString::fromStdWString(exe)).absoluteDir().absolutePath().toStdWString().c_str(), &si, &m_process))
+	if (!CreateProcess(NULL, const_cast<LPWSTR>((exe + args).c_str()), NULL, NULL, FALSE, 0, NULL, QFileInfo(QString::fromStdWString(exe)).absoluteDir().absolutePath().toStdWString().c_str(), &si, &m_process))
 	{
 		log("WARNING: Starting of simulator in '" + m_executable + "' in child process failed!\n" \
 			"         Continuing without simulation.");
@@ -99,12 +104,40 @@ void Simulator::update(std::vector<char>& voxelGrid)
 
 }
 
-bool Simulator::setExecutable(const std::string& executable)
+bool Simulator::setCommandLine(const std::string& cmdline)
 {
-	if (executable == m_executable)
+	std::string exe = "";
+	std::string args = "";
+
+	// Split commandline into executable and arguments
+	if (cmdline[0] == '\"')
+	{
+		auto it = std::find(std::next(cmdline.begin()), cmdline.end(), '\"');
+		if (it == cmdline.end())
+			log("WARNING: No valid Simulator command line specified. Unbalanced quotes in '" + cmdline + "'!\n");
+		else
+		{
+			exe = std::string(cmdline.begin(), it);
+			args = std::string(it, cmdline.end());
+		}
+	}
+	else
+	{
+		auto it = std::find(cmdline.begin(), cmdline.end(), ' ');
+		if (it == cmdline.end())
+			exe = cmdline;
+		else
+		{
+			exe = std::string(cmdline.begin(), it);
+			args = std::string(it, cmdline.end());
+		}
+	}
+
+	if (exe == m_executable && args == m_cmdArguments)
 		return false;
 
-	m_executable = executable;
+	m_executable = exe;
+	m_cmdArguments = args;
 	return true;
 }
 
