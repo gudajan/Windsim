@@ -175,10 +175,12 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	td.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_gridAllTextureStaging));
 
+	Message::Resolution res{ m_resolution.x, m_resolution.y, m_resolution.z };
+	Message::VoxelSize vs{ m_voxelSize.x, m_voxelSize.y, m_voxelSize.z };
 	if (!m_simulator.isRunning())
-		m_simulator.start(m_resolution, m_voxelSize);
+		m_simulator.start(res, vs);
 	else
-		m_simulator.updateDimensions(m_resolution, m_voxelSize);
+		m_simulator.updateDimensions(res, vs);
 
 	return S_OK;
 }
@@ -353,7 +355,9 @@ void VoxelGrid::setSimulator(const std::string& cmdline)
 	if (m_simulator.setCommandLine(cmdline))
 	{
 		m_simulator.stop();
-		m_simulator.start(m_resolution, m_voxelSize);
+		Message::Resolution res{ m_resolution.x, m_resolution.y, m_resolution.z };
+		Message::VoxelSize vs{ m_voxelSize.x, m_voxelSize.y, m_voxelSize.z };
+		m_simulator.start(res, vs);
 	}
 }
 
