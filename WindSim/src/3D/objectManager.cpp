@@ -191,6 +191,7 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
 		act->setSimulator(data["simulator"].toString().toStdString());
 	}
+	voxelizeNextFrame();
 }
 
 void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
@@ -235,6 +236,15 @@ void ObjectManager::voxelizeNextFrame()
 	{
 		if (act.second->getType() == ObjectType::VoxelGrid)
 			std::dynamic_pointer_cast<VoxelGridActor>(act.second)->voxelize();
+	}
+}
+
+void ObjectManager::updateSimulator()
+{
+	for (const auto& act : m_actors)
+	{
+		if (act.second->getType() == ObjectType::VoxelGrid)
+			std::dynamic_pointer_cast<VoxelGridActor>(act.second)->updateSimulator();
 	}
 }
 

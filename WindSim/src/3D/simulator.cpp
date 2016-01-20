@@ -18,6 +18,10 @@ Simulator::Simulator(const std::string& cmdline, Logger* logger)
 	m_cmdArguments(),
 	m_running(false),
 	m_process(),
+	m_pipe(NULL),
+	m_overlap(),
+	m_sharedHandle(NULL),
+	m_sharedAddress(nullptr),
 	m_logger(logger)
 {
 	setCommandLine(cmdline);
@@ -72,26 +76,29 @@ void Simulator::start(const Message::Resolution& res, const Message::VoxelSize& 
 
 	m_running = true;
 
-	// Built message data
-	BYTE data[sizeof(Message::MessageType) + sizeof(Message::Resolution) + sizeof(Message::VoxelSize)];
-	Message::MessageType type = Message::Init;
-	std::memcpy(data, &type, sizeof(type));
-	std::memcpy(data + sizeof(type), &res, sizeof(res));
-	std::memcpy(data + sizeof(type) + sizeof(res), &vs, sizeof(vs));
+	// Create new shared memory
+	createSharedMemory(res.x * res.y * res.z * sizeof(char), L"Local\\voxelgrid");
 
-	sendToProcess(data, sizeof(data));
+	// Built message data
+	std::vector<BYTE> data(sizeof(Message::MessageType) + sizeof(Message::Resolution) + sizeof(Message::VoxelSize), 0);
+	Message::MessageType type = Message::Init;
+	std::memcpy(data.data(), &type, sizeof(type));
+	std::memcpy(data.data() + sizeof(type), &res, sizeof(res));
+	std::memcpy(data.data() + sizeof(type) + sizeof(res), &vs, sizeof(vs));
+
+	sendToProcess(data);
 	log("INFO: Sent Init signal to simulator.");
 }
 
 void Simulator::updateDimensions(const Message::Resolution& res, const Message::VoxelSize& vs)
 {
-	BYTE data[sizeof(Message::MessageType) + sizeof(Message::Resolution) + sizeof(Message::VoxelSize)];
+	std::vector<BYTE> data(sizeof(Message::MessageType) + sizeof(Message::Resolution) + sizeof(Message::VoxelSize), 0);
 	Message::MessageType type = Message::UpdateDimensions;
-	std::memcpy(data, &type, sizeof(type));
-	std::memcpy(data + sizeof(type), &res, sizeof(res));
-	std::memcpy(data + sizeof(type) + sizeof(res), &vs, sizeof(vs));
+	std::memcpy(data.data(), &type, sizeof(type));
+	std::memcpy(data.data() + sizeof(type), &res, sizeof(res));
+	std::memcpy(data.data() + sizeof(type) + sizeof(res), &vs, sizeof(vs));
 
-	if (sendToProcess(data, sizeof(data)))
+	if (sendToProcess(data))
 		log("INFO: Updated voxel grid dimensions of simulator.");
 	else
 		log("ERROR: Failed to update voxel grid dimensions of simulator! Failed to send data!");
@@ -100,14 +107,23 @@ void Simulator::updateDimensions(const Message::Resolution& res, const Message::
 
 void Simulator::stop()
 {
+	removeSharedMemory();
+
 	// Execute only if process was created
 	if (m_process.hProcess != NULL)
 	{
 		DWORD exitCode;
 		BOOL success = GetExitCodeProcess(m_process.hProcess, &exitCode);
 		if (exitCode == STILL_ACTIVE)
-			// TODO: perhaps send signal to simulator, to give it a chance to exit itself (ExitProcess())
-			TerminateProcess(m_process.hProcess, 0);
+		{
+			std::vector<BYTE> data(sizeof(Message::MessageType));
+			Message::MessageType type = Message::Exit;
+			std::memcpy(data.data(), &type, sizeof(Message::MessageType));
+			sendToProcess(data);
+
+			if (WaitForSingleObject(m_process.hProcess, 5000) != WAIT_OBJECT_0) // Wait for 5 seconds
+				TerminateProcess(m_process.hProcess, 0);
+		}
 
 		// Wait until child process exits.
 		WaitForSingleObject(m_process.hProcess, INFINITE);
@@ -120,9 +136,13 @@ void Simulator::stop()
 	}
 }
 
-void Simulator::update(std::vector<char>& voxelGrid)
+void Simulator::update()
 {
+	std::vector<BYTE> data(sizeof(Message::MessageType));
+	Message::MessageType type = Message::UpdateData;
+	std::memcpy(data.data(), &type, sizeof(Message::MessageType));
 
+	sendToProcess(data);
 }
 
 bool Simulator::setCommandLine(const std::string& cmdline)
@@ -226,7 +246,7 @@ bool Simulator::waitForConnect()
 	}
 	}
 
-	DWORD ret = WaitForSingleObject(event, 5000);
+	DWORD ret = WaitForSingleObject(event, INFINITE);
 	if (ret != WAIT_OBJECT_0)
 	{
 		if (ret == WAIT_ABANDONED_0)
@@ -242,20 +262,20 @@ bool Simulator::waitForConnect()
 	return true;
 }
 
-bool Simulator::sendToProcess(const BYTE* msg, int size)
+bool Simulator::sendToProcess(const std::vector<BYTE>& msg)
 {
-	if (size > g_bufsize)
+	if (msg.size() > g_bufsize)
 	{
 		log("ERROR: Message bigger than buffer size '" + std::to_string(g_bufsize) + "'!");
 		return false;
 	}
 
 	DWORD bytesWritten;
-	DWORD success = WriteFile(m_pipe, msg, size, &bytesWritten, &m_overlap);
+	DWORD success = WriteFile(m_pipe, msg.data(), msg.size(), &bytesWritten, &m_overlap);
 
-	if (success && bytesWritten == size) // Write completed
+	if (success && bytesWritten == msg.size()) // Write completed
 	{
-		log("INFO: Written!");
+		log("INFO: Message sent!");
 		return true;
 	}
 
@@ -268,4 +288,36 @@ bool Simulator::sendToProcess(const BYTE* msg, int size)
 
 	log("ERROR: Invalid pipe state!");
 	return false;
+}
+
+bool Simulator::createSharedMemory(int size, const std::wstring& name)
+{
+	m_sharedHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, NULL, size, name.c_str());
+
+	if (m_sharedHandle == NULL)
+	{
+		log("ERROR: CreateFileMapping failed with '" + std::to_string(GetLastError()) + "'!");
+		return false;
+	}
+
+	m_sharedAddress = MapViewOfFile(m_sharedHandle, FILE_MAP_ALL_ACCESS, 0, 0, size);
+
+	if (m_sharedAddress == nullptr)
+	{
+		log("ERROR: MapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
+		CloseHandle(m_sharedHandle);
+		return false;
+	}
+	return true;
+}
+
+bool Simulator::removeSharedMemory()
+{
+	if (m_sharedAddress)
+		UnmapViewOfFile(m_sharedAddress);
+
+	if (m_sharedHandle)
+		CloseHandle(m_sharedHandle);
+
+	return true;
 }

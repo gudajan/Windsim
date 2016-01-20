@@ -51,6 +51,7 @@ public:
 	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
 	void setRenderVoxel(bool renderVoxel) { m_renderVoxel = renderVoxel; };
 	void setSimulator(const std::string& exe);
+	void updateSimulator() { m_simulator.update(); };
 
 private:
 	void createGridData(); // Create cube for line rendering
@@ -98,7 +99,7 @@ private:
 	int m_counter;
 	bool m_renderVoxel;
 
-	std::vector<char> m_grid; // Same type as for simulation
+	char* m_sharedGrid; // Shared with simulation process
 	std::vector<uint32_t> m_tempCells;
 	ID3D11Texture3D* m_gridTextureGPU; // Texture in GPU memory, filled in pixel shader
 	ID3D11Texture3D* m_gridAllTextureGPU; // Texture, containing the voxelizations of all meshes

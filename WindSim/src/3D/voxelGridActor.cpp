@@ -56,3 +56,8 @@ void VoxelGridActor::setSimulator(const std::string& cmdline)
 {
 	m_grid.setSimulator(cmdline);
 }
+
+void VoxelGridActor::updateSimulator()
+{
+	m_grid.updateSimulator();
+}

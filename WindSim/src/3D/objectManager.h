@@ -55,6 +55,7 @@ public:
 private:
 	// Get ID of object with intersection
 	int computeIntersection(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float& distance) const;
+	void updateSimulator(); // Update the simulator
 
 	void log(const std::string& msg);
 

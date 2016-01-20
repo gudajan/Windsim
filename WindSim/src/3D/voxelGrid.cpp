@@ -21,7 +21,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_voxelize(true),
 	m_counter(0),
 	m_renderVoxel(true),
-	m_grid(),
+	m_sharedGrid(nullptr),
 	m_tempCells(),
 	m_gridTextureGPU(nullptr),
 	m_gridAllTextureGPU(nullptr),
@@ -45,7 +45,7 @@ VoxelGrid::VoxelGrid(VoxelGrid&& other)
 	m_voxelize(other.m_voxelize),
 	m_counter(other.m_counter),
 	m_renderVoxel(other.m_renderVoxel),
-	m_grid(std::move(other.m_grid)),
+	m_sharedGrid(other.m_sharedGrid),
 	m_gridTextureGPU(other.m_gridTextureGPU),
 	m_gridAllTextureGPU(other.m_gridAllTextureGPU),
 	m_gridAllTextureStaging(other.m_gridAllTextureStaging),
@@ -134,12 +134,6 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 
 	Object3D::create(device, false); // Create vertex and index buffer for grid rendering and calls release
 
-	// Resize the grid
-	m_grid.resize(m_resolution.x * m_resolution.y * m_resolution.z);
-	std::fill(m_grid.begin(), m_grid.end(), 0);
-	m_tempCells.resize(m_resolution.x / 32 * m_resolution.y * m_resolution.z);
-	std::fill(m_tempCells.begin(), m_tempCells.end(), 0);
-
 	// Create Texture3D for a grid, containing voxelization of one mesh, filled in the pixel shader
 	D3D11_TEXTURE3D_DESC td = {};
 	td.Width = m_resolution.x / 32;  // As we have to use 32 bit unsigned integer, simply encode 32 bool values/voxel in one grid cell
@@ -181,6 +175,10 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 		m_simulator.start(res, vs);
 	else
 		m_simulator.updateDimensions(res, vs);
+
+	// Resize the grid
+	m_sharedGrid = m_simulator.getSharedMemoryAddress();
+	m_tempCells.resize(m_resolution.x / 32 * m_resolution.y * m_resolution.z, 0);
 
 	return S_OK;
 }
@@ -260,6 +258,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		}
 		// Remove CPU Access
 		context->Unmap(m_gridAllTextureStaging, 0);
+		m_counter = counterCopyGPU + 1; // Voxelization cycle finished
 	}
 
 	// Copy the data into own grid for the next few frames
@@ -290,11 +289,13 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 				{
 					cell = m_tempCells[x + y * xRes + z * slice]; // Index in encoded grid
 					index = x * 32 + y * m_resolution.x + z * realSlice; // Index in decoded grid
-					for (int j = index; j < index + 32; ++j)
+					for (int j = 0; j < 32; ++j)
 					{
-						if (static_cast<int>(cell & (1 << j) > 0)) val = CELL_TYPE_SOLID_NO_SLIP;
-						else val = CELL_TYPE_FLUID;
-						m_grid[j] = val; // indicates if j-th bit of i-th cell is set
+						if ((cell & (1 << j)) > 0)
+							val = CELL_TYPE_SOLID_NO_SLIP;
+						else
+							val = CELL_TYPE_FLUID;
+						m_sharedGrid[index + j] = val; // indicates if j-th bit of i-th cell is set
 					}
 				}
 			}
@@ -310,17 +311,26 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		{
 			for (int z = 1; z < m_resolution.z - 1; z++)
 			{
-				m_grid[0 + y * m_resolution.x + z * realSlice] = CELL_TYPE_INFLOW;
-				m_grid[m_resolution.x - 1 + y * m_resolution.x + z * realSlice] = CELL_TYPE_OUTFLOW;
+				m_sharedGrid[0 + y * m_resolution.x + z * realSlice] = CELL_TYPE_INFLOW;
+				m_sharedGrid[m_resolution.x - 1 + y * m_resolution.x + z * realSlice] = CELL_TYPE_OUTFLOW;
 			}
 		}
 
-		for (int x = 0; x < m_resolution.x; x++)
+		for (int y = 0; y < m_resolution.y; y++)
 		{
-			for (int y = 0; y < m_resolution.y; y++)
+			for (int x = 0; x < m_resolution.x; x++)
 			{
-				m_grid[x + y * m_resolution.x + 0] = CELL_TYPE_SOLID_SLIP;
-				m_grid[x + y * m_resolution.x + (m_resolution.z - 1) * realSlice] = CELL_TYPE_SOLID_SLIP;
+				m_sharedGrid[x + y * m_resolution.x + 0] = CELL_TYPE_SOLID_SLIP;
+				m_sharedGrid[x + y * m_resolution.x + (m_resolution.z - 1) * realSlice] = CELL_TYPE_SOLID_SLIP;
+			}
+		}
+
+		for (int z = 0; z < m_resolution.z; z++)
+		{
+			for (int x = 0; x < m_resolution.x; x++)
+			{
+				m_sharedGrid[x + z * realSlice] = CELL_TYPE_SOLID_SLIP;
+				m_sharedGrid[x + (m_resolution.y - 1) * m_resolution.x + z * realSlice] = CELL_TYPE_SOLID_SLIP;
 			}
 		}
 	}
@@ -328,7 +338,8 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	if (m_renderVoxel)
 		renderVoxel(device, context, world, view, projection);
 
-	m_counter++;
+	if (m_counter < counterCopyGPU)
+		m_counter++;
 }
 
 bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)

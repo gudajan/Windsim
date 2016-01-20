@@ -18,6 +18,7 @@ public:
 	void voxelize();
 	void setRenderVoxel(bool renderVoxel);
 	void setSimulator(const std::string& cmdline);
+	void updateSimulator();
 
 private:
 	VoxelGrid& m_grid;
