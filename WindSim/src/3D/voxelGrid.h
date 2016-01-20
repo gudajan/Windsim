@@ -27,6 +27,7 @@ enum VoxelType : char
 	CELL_TYPE_OUTFLOW, // 2
 	CELL_TYPE_SOLID_SLIP, // 3
 	CELL_TYPE_SOLID_NO_SLIP, // 4
+	CELL_TYPE_SOLID_BOUNDARY //5
 };
 
 class VoxelGrid : public Object3D
@@ -99,7 +100,7 @@ private:
 	int m_counter;
 	bool m_renderVoxel;
 
-	char* m_sharedGrid; // Shared with simulation process
+	VoxelType* m_sharedGrid; // Shared with simulation process
 	std::vector<uint32_t> m_tempCells;
 	ID3D11Texture3D* m_gridTextureGPU; // Texture in GPU memory, filled in pixel shader
 	ID3D11Texture3D* m_gridAllTextureGPU; // Texture, containing the voxelizations of all meshes

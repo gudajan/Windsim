@@ -136,7 +136,7 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 
 	// Create Texture3D for a grid, containing voxelization of one mesh, filled in the pixel shader
 	D3D11_TEXTURE3D_DESC td = {};
-	td.Width = m_resolution.x / 32;  // As we have to use 32 bit unsigned integer, simply encode 32 bool values/voxel in one grid cell
+	td.Width = m_resolution.x / 4;  // As we have to use 32 bit unsigned integer, simply encode 4 char values/voxel in one grid cell
 	td.Height = m_resolution.y;
 	td.Depth = m_resolution.z;
 	td.MipLevels = 1;
@@ -177,8 +177,8 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 		m_simulator.updateDimensions(res, vs);
 
 	// Resize the grid
-	m_sharedGrid = m_simulator.getSharedMemoryAddress();
-	m_tempCells.resize(m_resolution.x / 32 * m_resolution.y * m_resolution.z, 0);
+	m_sharedGrid = reinterpret_cast<VoxelType*>(m_simulator.getSharedMemoryAddress());
+	m_tempCells.resize(m_resolution.x / 4 * m_resolution.y * m_resolution.z, 0);
 
 	return S_OK;
 }
@@ -226,7 +226,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	// Make sure, the cpu only accesses the voxel grid if the GPU copiing is done, to avoid pipeline stalling ( GPU copiing needs 1 frame)
 	if (m_counter == counterCopyGPU)
 	{
-		uint32_t xRes = m_resolution.x / 32;
+		uint32_t xRes = m_resolution.x / 4;
 
 		// Get CPU Access
 		D3D11_MAPPED_SUBRESOURCE msr;
@@ -261,79 +261,75 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		m_counter = counterCopyGPU + 1; // Voxelization cycle finished
 	}
 
-	// Copy the data into own grid for the next few frames
-	// As the next few frames until the next voxelization are not so busy,
-	// span this expensive operation over several frames to ensure a smoother frame rate instead of alternating fast and slow frames
-	// THIS IS REALLY SLOW: TODO: Maybe perform in concurrent thread/process
-	if (m_counter >= counterStart && m_counter < counterCopyCPUEnd)
-	{
-		int part = m_counter - counterStart; // Determine the part of the grid, which is copied this frame
-		uint32_t partZSize = m_resolution.z / counterCopyCPUParts; // Depth (z-value) of one part
-		uint32_t partZStart = partZSize * part; // Starting Depth of current part
 
-		// Copy data into own grid and decode 32 bit cells into voxels
-		QElapsedTimer timer;
-		timer.start();
+	//// Copy the data into own grid for the next few frames
+	//// As the next few frames until the next voxelization are not so busy,
+	//// span this expensive operation over several frames to ensure a smoother frame rate instead of alternating fast and slow frames
+	//// THIS IS REALLY SLOW: TODO: Maybe perform in concurrent thread/process
+	//if (m_counter >= counterStart && m_counter < counterCopyCPUEnd)
+	//{
+	//	int part = m_counter - counterStart; // Determine the part of the grid, which is copied this frame
+	//	uint32_t partZSize = m_resolution.z / counterCopyCPUParts; // Depth (z-value) of one part
+	//	uint32_t partZStart = partZSize * part; // Starting Depth of current part
 
-		uint32_t xRes = m_resolution.x / 32;
-		uint32_t slice = xRes * m_resolution.y;
-		uint32_t realSlice = m_resolution.x * m_resolution.y;
-		uint32_t cell = 0;
-		uint32_t index = 0;
-		char val = CELL_TYPE_FLUID;
-		for (int z = partZStart; z < partZStart + partZSize; ++z)
-		{
-			for (int y = 0; y < m_resolution.y; ++y)
-			{
-				for (int x = 0; x < xRes; ++x)
-				{
-					cell = m_tempCells[x + y * xRes + z * slice]; // Index in encoded grid
-					index = x * 32 + y * m_resolution.x + z * realSlice; // Index in decoded grid
-					for (int j = 0; j < 32; ++j)
-					{
-						if ((cell & (1 << j)) > 0)
-							val = CELL_TYPE_SOLID_NO_SLIP;
-						else
-							val = CELL_TYPE_FLUID;
-						m_sharedGrid[index + j] = val; // indicates if j-th bit of i-th cell is set
-					}
-				}
-			}
-		}
-	}
+	//	// Copy data into own grid and decode 32 bit cells into voxels
+	//	QElapsedTimer timer;
+	//	timer.start();
 
-	// Set final types of boundary cells for the simulation
-	// performed within one frame
-	else if (m_counter == counterCopyCPUEnd)
-	{
-		uint32_t realSlice = m_resolution.x * m_resolution.y;
-		for (int y = 1; y < m_resolution.y - 1; y++)
-		{
-			for (int z = 1; z < m_resolution.z - 1; z++)
-			{
-				m_sharedGrid[0 + y * m_resolution.x + z * realSlice] = CELL_TYPE_INFLOW;
-				m_sharedGrid[m_resolution.x - 1 + y * m_resolution.x + z * realSlice] = CELL_TYPE_OUTFLOW;
-			}
-		}
+	//	uint32_t xRes = m_resolution.x / 4;
+	//	uint32_t slice = xRes * m_resolution.y;
+	//	uint32_t realSlice = m_resolution.x * m_resolution.y;
+	//	uint32_t cell = 0;
+	//	uint32_t index = 0;
+	//	for (int z = partZStart; z < partZStart + partZSize; ++z)
+	//	{
+	//		for (int y = 0; y < m_resolution.y; ++y)
+	//		{
+	//			for (int x = 0; x < xRes; ++x)
+	//			{
+	//				cell = m_tempCells[x + y * xRes + z * slice]; // Index in encoded grid
+	//				index = x * 4 + y * m_resolution.x + z * realSlice; // Index in decoded grid
+	//				for (int j = 0; j < 4; ++j)
+	//				{
+	//					m_sharedGrid[index + j] = static_cast<VoxelType>((cell >> (8 * j)) & 0xff); // returns the j-th voxel value of the i-th cell
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
 
-		for (int y = 0; y < m_resolution.y; y++)
-		{
-			for (int x = 0; x < m_resolution.x; x++)
-			{
-				m_sharedGrid[x + y * m_resolution.x + 0] = CELL_TYPE_SOLID_SLIP;
-				m_sharedGrid[x + y * m_resolution.x + (m_resolution.z - 1) * realSlice] = CELL_TYPE_SOLID_SLIP;
-			}
-		}
+	//// Set final types of boundary cells for the simulation
+	//// performed within one frame
+	//else if (m_counter == counterCopyCPUEnd)
+	//{
+	//	uint32_t realSlice = m_resolution.x * m_resolution.y;
+	//	for (int y = 1; y < m_resolution.y - 1; y++)
+	//	{
+	//		for (int z = 1; z < m_resolution.z - 1; z++)
+	//		{
+	//			m_sharedGrid[0 + y * m_resolution.x + z * realSlice] = CELL_TYPE_INFLOW;
+	//			m_sharedGrid[m_resolution.x - 1 + y * m_resolution.x + z * realSlice] = CELL_TYPE_OUTFLOW;
+	//		}
+	//	}
 
-		for (int z = 0; z < m_resolution.z; z++)
-		{
-			for (int x = 0; x < m_resolution.x; x++)
-			{
-				m_sharedGrid[x + z * realSlice] = CELL_TYPE_SOLID_SLIP;
-				m_sharedGrid[x + (m_resolution.y - 1) * m_resolution.x + z * realSlice] = CELL_TYPE_SOLID_SLIP;
-			}
-		}
-	}
+	//	for (int y = 0; y < m_resolution.y; y++)
+	//	{
+	//		for (int x = 0; x < m_resolution.x; x++)
+	//		{
+	//			m_sharedGrid[x + y * m_resolution.x + 0] = CELL_TYPE_SOLID_SLIP;
+	//			m_sharedGrid[x + y * m_resolution.x + (m_resolution.z - 1) * realSlice] = CELL_TYPE_SOLID_SLIP;
+	//		}
+	//	}
+
+	//	for (int z = 0; z < m_resolution.z; z++)
+	//	{
+	//		for (int x = 0; x < m_resolution.x; x++)
+	//		{
+	//			m_sharedGrid[x + z * realSlice] = CELL_TYPE_SOLID_SLIP;
+	//			m_sharedGrid[x + (m_resolution.y - 1) * m_resolution.x + z * realSlice] = CELL_TYPE_SOLID_SLIP;
+	//		}
+	//	}
+	//}
 
 	if (m_renderVoxel)
 		renderVoxel(device, context, world, view, projection);
@@ -493,6 +489,10 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	// Create orthogonal projection aligned with voxel grid looking along x-axis
 	XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0, m_resolution.z, 0, m_resolution.y, 0, m_resolution.x);
 
+	// Compute dispatch numbers for compute shader
+	// yz values are devided by 16 because of the numthreads attribute in the compute shader, x value is devided by 16 because 4 voxels are encoded in one cell and 4 threads are dispatched
+	XMUINT3 dispatch(std::ceil(m_resolution.x / 16.0f), std::ceil(m_resolution.y / 16.0f), std::ceil((m_resolution.z / 16.0f)));
+
 	s_shaderVariables.worldToVoxel->SetMatrix(reinterpret_cast<float*>((worldToGrid * gridToVoxel * voxelizeX).r));
 	s_shaderVariables.voxelProj->SetMatrix(reinterpret_cast<float*>(proj.r));
 	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
@@ -523,9 +523,7 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 			// Mesh Object Space -> World Space:
 			XMMATRIX objToWorld = XMLoadFloat4x4(&ma->getWorld());
 			s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(objToWorld.r));
-			// Set Unordered Access View
 			s_shaderVariables.gridUAV->SetUnorderedAccessView(m_gridUAV);
-
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
 
 			ID3D11Buffer* vb = ma->getMesh().getVertexBuffer();
@@ -534,9 +532,8 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 			context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
 			context->DrawIndexed(ma->getMesh().getNumIndices(), 0, 0);
 
-			// Remove Unordered Access View
-			s_shaderVariables.gridUAV->SetUnorderedAccessView(nullptr);
 
+			s_shaderVariables.gridUAV->SetUnorderedAccessView(nullptr);
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
 
 			// ###################################
@@ -546,21 +543,28 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 			// Set shader resources
 			s_shaderVariables.gridSRV->SetResource(m_gridSRV);
 			s_shaderVariables.gridAllUAV->SetUnorderedAccessView(m_gridAllUAV);
-
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Combine")->Apply(0, context);
-
-			// yz values are devided by 32 because of the numthreads attribute in the compute shader, x value is devided because 32 voxels are encoded in one cell
-			XMUINT3 dispatch( std::ceil(m_resolution.x / 32.0f), std::ceil(m_resolution.y / 32.0f), std::ceil((m_resolution.z / 32.0f)) );
 
 			context->Dispatch(dispatch.x, dispatch.y, dispatch.z);
 
 			// Remove shader resources
 			s_shaderVariables.gridSRV->SetResource(nullptr);
 			s_shaderVariables.gridAllUAV->SetUnorderedAccessView(nullptr);
-
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Combine")->Apply(0, context);
 		}
 	}
+
+	// ###################################
+	// CELLTYPES
+	// ###################################
+	// Use compute shader to compute the specific cell types for each voxel
+	s_shaderVariables.gridAllUAV->SetUnorderedAccessView(m_gridAllUAV);
+	s_effect->GetTechniqueByIndex(0)->GetPassByName("CellType")->Apply(0, context);
+
+	context->Dispatch(dispatch.x, dispatch.y, dispatch.z);
+
+	s_shaderVariables.gridAllUAV->SetUnorderedAccessView(nullptr);
+	s_effect->GetTechniqueByIndex(0)->GetPassByName("CellType")->Apply(0, context);
 
 	// Copy texture from GPU memory to system memory where it is accessable by the cpu
 	context->CopyResource(m_gridAllTextureStaging, m_gridAllTextureGPU);

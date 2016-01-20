@@ -1,11 +1,30 @@
 #include "common.fx"
 
+//enum VoxelType : char
+//{
+//	CELL_TYPE_FLUID = 0,
+//	CELL_TYPE_INFLOW, // 1
+//	CELL_TYPE_OUTFLOW, // 2
+//	CELL_TYPE_SOLID_SLIP, // 3
+//	CELL_TYPE_SOLID_NO_SLIP, // 4
+//  CELL_TYPE_SOLID_BOUNDARY // 5
+//};
+
+#define CELL_TYPE_FLUID 0
+#define CELL_TYPE_INFLOW 1
+#define CELL_TYPE_OUTFLOW 2
+#define CELL_TYPE_SOLID_SLIP 3
+#define CELL_TYPE_SOLID_NO_SLIP 4
+#define CELL_TYPE_SOLID_BOUNDARY 5
+
 // Read-Write and Read texture for the grid, containing a single mesh voxelization
 RWTexture3D<uint> g_gridUAV;
 Texture3D<uint> g_gridSRV;
 // Read-Write and Read texture for the grid, containing all combined voxelizations
 RWTexture3D<uint> g_gridAllUAV;
 Texture3D<uint> g_gridAllSRV;
+
+
 
 cbuffer cb
 {
@@ -61,23 +80,37 @@ struct PSOut
 
 bool inGrid(in float3 pos)
 {
-	if (any(pos < float3(0.0f, 0.0f, 0.0f)) || any(pos > float3(g_vResolution))) // Index out of bounds
-		return false;
-	return true;
+	return all(pos >= float3(0.0f, 0.0f, 0.0f)) && all(pos < float3(g_vResolution)); // Index out of bounds
 }
 
-bool getValue(in float3 posVS, out bool posInGrid)
+bool inCellGrid(in uint3 pos)
+{
+	return all(pos >= uint3(0, 0, 0)) && all(pos < uint3(g_vResolution.x / 4, g_vResolution.yz));
+}
+
+uint getVoxelValue(in uint cell, in uint index)
+{
+	return (cell >> (8 * index)) & 0xff; // shift n-th voxel to front byte
+}
+
+uint setVoxelValue(in uint cell, in uint voxel, in uint index)
+{
+	uint temp = 0xff << 8 * index;
+	cell &= ~temp; // Set voxel to zero
+	cell |= voxel << 8 * index; // Set voxel value
+	return cell;
+}
+
+uint getValue(in float3 posVS, out bool posInGrid)
 {
 	posInGrid = inGrid(posVS);
 	if (!posInGrid)
-		return false;
+		return CELL_TYPE_FLUID;
 
-	uint x = posVS.x / 32;
-	uint n = posVS.x - x * 32;
+	uint x = posVS.x / 4;
+	uint n = posVS.x - x * 4;
 	uint val = g_gridAllSRV[uint3(x, posVS.yz)];
-	// check if nth bit is set
-	val &= (1 << n);
-	return val > 0;
+	return getVoxelValue(val, n);
 }
 
 bool intersectBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 boxMax, out float t0, out float t1)
@@ -102,15 +135,110 @@ bool intersectBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 b
 // COMPUTE SHADER
 // =============================================================================
 
-// 1*32*32 = 1024
-// As one cell contains 32 voxel in x direction
-[numthreads(1, 32, 32)]
+// 4*16*16 = 1024
+// As one cell contains 4 voxel in x direction
+[numthreads(4, 16, 16)]
 void csCombine(uint3 threadID : SV_DispatchThreadID)
 {
-	if (any(threadID < uint3(0, 0, 0)) || any(threadID > uint3(g_vResolution.x / 32, g_vResolution.yz))) // Index out of bounds
+	if (any(threadID < uint3(0, 0, 0)) || any(threadID > uint3(g_vResolution.x / 4, g_vResolution.yz))) // Index out of bounds
 		return;
 
-	g_gridAllUAV[threadID] |= g_gridSRV[threadID]; // Or with new value
+	// At this point the voxel only have values CELL_TYPE_FLUID or CELL_TYPE_SOLID_NO_SLIP (0 and 4 respectively)
+	// -> it is save to just OR the values
+	g_gridAllUAV[threadID] |= g_gridSRV[threadID]; // OR with new value
+}
+
+// Von Neumann Neighbourhood
+static const int3 neighbours[] = { int3(-1, 0, 0), int3(1, 0, 0), int3(0, -1, 0), int3(0, 1, 0), int3(0, 0, -1), int3(0, 0, 1) };
+
+[numthreads(4, 16, 16)]
+void csCellType(uint3 threadID : SV_DispatchThreadID)
+{
+	if (any(threadID < uint3(0, 0, 0)) || any(threadID > uint3(g_vResolution.x / 4, g_vResolution.yz))) // Index out of bounds
+		return;
+
+	// Get voxel values of current cell
+	uint cell = g_gridAllUAV[threadID];
+	uint cellVoxel[4];
+	for (int v = 0; v < 4; ++v)
+	{
+		cellVoxel[v] = getVoxelValue(cell, v);
+	}
+
+	// Get all necessary neighbour cells
+	uint neighbourCells[6];
+	for (int i = 0; i < 6; ++i)
+	{
+		uint3 ni = threadID + neighbours[i];
+		if (inCellGrid(ni))
+		{
+			neighbourCells[i] = g_gridAllUAV[ni];
+		}
+
+	}
+
+	// Iterate all 4 voxels in current cell
+	for (int u = 0; u < 4; ++u)
+	{
+		int3 posVS = uint3(threadID.x * 4 + u, threadID.yz);
+
+		if (posVS.x == 0)
+		{
+			cellVoxel[u] = CELL_TYPE_INFLOW;
+			continue;
+		}
+		else if (posVS.x == int(g_vResolution.x) - 1)
+		{
+			cellVoxel[u] = CELL_TYPE_OUTFLOW;
+			continue;
+		}
+
+		if (posVS.y == 0 || posVS.y == int(g_vResolution.y) - 1 || posVS.z == 0 || posVS.z == int(g_vResolution.z) - 1)
+		{
+			cellVoxel[u] = CELL_TYPE_SOLID_SLIP;
+			continue;
+		}
+
+		if (cellVoxel[u] != CELL_TYPE_SOLID_NO_SLIP)
+			continue;
+
+		// Check if a neighbour exists, which contains fluid -> boundary voxel
+		// 0 -> -x; 1 -> +x; 2 -> -y; 3 -> +y; 4 -> -z; 5 -> +z;
+		for (int i = 0; i < 6; i++)
+		{
+			// Neighbour outside grid
+			if (any(posVS + neighbours[i] < int3(0, 0, 0)) || any(posVS + neighbours[i] >= int3(g_vResolution.x / 4, g_vResolution.yz)))
+				continue;
+
+			uint neighbourVoxel;
+			if (i == 0)
+			{
+				if (u <= 0) neighbourVoxel = getVoxelValue(neighbourCells[i], 3); // left neighbour of left voxel in cell
+				else neighbourVoxel = cellVoxel[u - 1]; // left voxel neighbour in current cell
+			}
+			else if (i == 1)
+			{
+				if (u >= 3) neighbourVoxel = getVoxelValue(neighbourCells[i], 0); // right neighbour of right voxel in cell
+				else neighbourVoxel = cellVoxel[u + 1]; // right voxel neighbour in current cell
+			}
+			else neighbourVoxel = getVoxelValue(neighbourCells[i], u); // y,z neighbours with same index within cell
+
+			if (neighbourVoxel != CELL_TYPE_SOLID_NO_SLIP)
+			{
+				cellVoxel[u] = CELL_TYPE_SOLID_BOUNDARY;
+				break;
+			}
+		}
+	}
+
+	// Build cell from voxels
+	for (int w = 0; w < 4; ++w)
+	{
+		cell = setVoxelValue(cell, cellVoxel[w], w);
+	}
+
+	uint old;
+	InterlockedExchange(g_gridAllUAV[threadID], cell, old);
 }
 
 // =============================================================================
@@ -169,21 +297,23 @@ void psVoxelize(PSVoxelIn psIn)
 	if (inGrid(float3(psIn.voxelPos.zyx)))
 		zRun = index.z;
 
-	// Calculate real index of current cell, which voxel index of current fragment falls into (one cell is 1 * 1 * 32 as one int contains 32 bit/bools -> one cell contains 32 voxel in z direction)
-	uint currentCell = zRun / 32; // Integer division without rest
-	uint n = zRun - currentCell * 32; // = zRun % 32 Voxel index within the current cell
+	// Calculate real index of current cell, which voxel index of current fragment falls into (one cell is 1 * 1 * 4 as one int contains 4 voxels/chars -> one cell contains 4 voxel in z direction)
+	uint currentCell = zRun / 4; // Integer division without rest
+	uint n = zRun - currentCell * 4; // = zRun % 4 Voxel index within the current cell
 
 	// Completely xor the cells in front of the fragment
 	for (uint z = 0; z < currentCell; ++z)
 	{
-		InterlockedXor(g_gridUAV[uint3(z, index.yx)], 0xFFFFFFFF); // Use UINT_MAX
+		// XOR all 4 voxel with CELL_TYPE_SOLID_NO_SLIP = 0x04
+		InterlockedXor(g_gridUAV[uint3(z, index.yx)], 0x04040404);
 	}
 
-	// Xor all bits in current cell up to index of current fragment
-	// For this, set all necessary bits in a temp value to 1 and xor the whole cell with it once
-	uint xorVal = 1 << n; // nth bit is set
-	xorVal -= 1; // all bits 0..n-1 are set as desired
-	InterlockedXor(g_gridUAV[uint3(currentCell, index.yx)], xorVal);
+	if (n > 0)
+	{
+		// Set all voxels in current cell up to index of current fragment to CELL_TYPE_SOLID_NO_SLIP
+		uint xorVal = 0x04040404 >> (8 * (4 - n));
+		InterlockedXor(g_gridUAV[uint3(currentCell, index.yx)], xorVal);
+	}
 }
 
 // Ray casting into voxel grid -> render first voxel
@@ -215,7 +345,7 @@ PSOut psVolume(PSVoxelIn psIn)
 		currentPos = g_vCamPosVS.xyz;
 	bool discarded = false;
 	int counter = 0;
-	bool voxel = false;
+	uint voxel = 0;
 
 	int maxSteps = ceil(length(g_vResolution) / stepSize);
 
@@ -230,7 +360,7 @@ PSOut psVolume(PSVoxelIn psIn)
 			discarded = true;
 			break;
 		}
-		if (voxel) // Found a voxel
+		if (voxel == CELL_TYPE_SOLID_NO_SLIP || voxel == CELL_TYPE_SOLID_BOUNDARY) // Found a voxel
 		{
 			break;
 		}
@@ -243,7 +373,7 @@ PSOut psVolume(PSVoxelIn psIn)
 		discard;
 	}
 
-	if (voxel)
+	if (voxel == CELL_TYPE_SOLID_NO_SLIP || voxel == CELL_TYPE_SOLID_BOUNDARY)
 	{
 		// Calculate output
 		tmin = 0.0f;
@@ -318,5 +448,9 @@ technique11 Voxel
 	pass Combine
 	{
 		SetComputeShader(CompileShader(cs_5_0, csCombine()));
+	}
+	pass CellType
+	{
+		SetComputeShader(CompileShader(cs_5_0, csCellType()));
 	}
 }
