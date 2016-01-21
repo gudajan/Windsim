@@ -148,8 +148,8 @@ bool DX11Renderer::init()
 void DX11Renderer::frame()
 {
 	long long elapsedTime = m_elapsedTimer.nsecsElapsed(); // nanoseconds
-	OutputDebugStringA(("Current FPS: " + std::to_string(m_currentFPS) + "\n").c_str());
-	OutputDebugStringA(("Elapsed: " + std::to_string(elapsedTime * 0.000001) + "msec\n").c_str());
+	//OutputDebugStringA(("Current FPS: " + std::to_string(m_currentFPS) + "\n").c_str());
+	//OutputDebugStringA(("Elapsed: " + std::to_string(elapsedTime * 0.000001) + "msec\n").c_str());
 	m_elapsedTimer.restart();
 	double t = static_cast<double>(elapsedTime)* 0.000000001; // to seconds
 	update(t);
@@ -163,7 +163,7 @@ void DX11Renderer::frame()
 
 void DX11Renderer::issueVoxelization()
 {
-	m_manager.voxelizeNextFrame();
+	//m_manager.voxelizeNextFrame();
 }
 
 void DX11Renderer::execute()

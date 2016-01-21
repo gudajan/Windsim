@@ -65,28 +65,28 @@ void Simulator::start(const Message::Resolution& res, const Message::VoxelSize& 
 		return;
 	}
 
-	//// Create windows child process
-	//if (!createProcess(exe, args)) return;
+	// Create windows child process
+	if (!createProcess(exe, args)) return;
 
-	//if (!waitForConnect())
-	//{
-	//	stop();
-	//	return;
-	//}
+	if (!waitForConnect())
+	{
+		stop();
+		return;
+	}
 
 	m_running = true;
 
-	//// Create new shared memory
-	//createSharedMemory(res.x * res.y * res.z * sizeof(char), L"Local\\voxelgrid");
+	// Create new shared memory
+	createSharedMemory(res.x * res.y * res.z * sizeof(char), L"Local\\voxelgrid");
 
-	//// Built message data
-	//std::vector<BYTE> data(sizeof(Message::MessageType) + sizeof(Message::Resolution) + sizeof(Message::VoxelSize), 0);
-	//Message::MessageType type = Message::Init;
-	//std::memcpy(data.data(), &type, sizeof(type));
-	//std::memcpy(data.data() + sizeof(type), &res, sizeof(res));
-	//std::memcpy(data.data() + sizeof(type) + sizeof(res), &vs, sizeof(vs));
+	// Built message data
+	std::vector<BYTE> data(sizeof(Message::MessageType) + sizeof(Message::Resolution) + sizeof(Message::VoxelSize), 0);
+	Message::MessageType type = Message::Init;
+	std::memcpy(data.data(), &type, sizeof(type));
+	std::memcpy(data.data() + sizeof(type), &res, sizeof(res));
+	std::memcpy(data.data() + sizeof(type) + sizeof(res), &vs, sizeof(vs));
 
-	//sendToProcess(data);
+	sendToProcess(data);
 	log("INFO: Sent Init signal to simulator.");
 }
 
@@ -107,31 +107,31 @@ void Simulator::updateDimensions(const Message::Resolution& res, const Message::
 
 void Simulator::stop()
 {
-	// removeSharedMemory();
+	removeSharedMemory();
 	//TODO: close and remove named pipe
 
 	// Execute only if process was created
 	if (m_process.hProcess != NULL)
 	{
-		//DWORD exitCode;
-		//BOOL success = GetExitCodeProcess(m_process.hProcess, &exitCode);
-		//if (exitCode == STILL_ACTIVE)
-		//{
-		//	std::vector<BYTE> data(sizeof(Message::MessageType));
-		//	Message::MessageType type = Message::Exit;
-		//	std::memcpy(data.data(), &type, sizeof(Message::MessageType));
-		//	sendToProcess(data);
+		DWORD exitCode;
+		BOOL success = GetExitCodeProcess(m_process.hProcess, &exitCode);
+		if (exitCode == STILL_ACTIVE)
+		{
+			std::vector<BYTE> data(sizeof(Message::MessageType));
+			Message::MessageType type = Message::Exit;
+			std::memcpy(data.data(), &type, sizeof(Message::MessageType));
+			sendToProcess(data);
 
-		//	if (WaitForSingleObject(m_process.hProcess, 5000) != WAIT_OBJECT_0) // Wait for 5 seconds
-		//		TerminateProcess(m_process.hProcess, 0);
-		//}
+			if (WaitForSingleObject(m_process.hProcess, 5000) != WAIT_OBJECT_0) // Wait for 5 seconds
+				TerminateProcess(m_process.hProcess, 0);
+		}
 
-		//// Wait until child process exits.
-		//WaitForSingleObject(m_process.hProcess, INFINITE);
+		// Wait until child process exits.
+		WaitForSingleObject(m_process.hProcess, INFINITE);
 
-		//CloseHandle(m_process.hProcess);
+		CloseHandle(m_process.hProcess);
 
-		//ZeroMemory(&m_process, sizeof(m_process)); // i.e. set process handle to NULL
+		ZeroMemory(&m_process, sizeof(m_process)); // i.e. set process handle to NULL
 
 		m_running = false;
 	}

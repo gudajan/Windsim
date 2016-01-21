@@ -83,9 +83,9 @@ bool inGrid(in float3 pos)
 	return all(pos >= float3(0.0f, 0.0f, 0.0f)) && all(pos < float3(g_vResolution)); // Index out of bounds
 }
 
-bool inCellGrid(in uint3 pos)
+bool inCellGrid(in int3 pos)
 {
-	return all(pos >= uint3(0, 0, 0)) && all(pos < uint3(g_vResolution.x / 4, g_vResolution.yz));
+	return all(pos >= int3(0, 0, 0)) && all(pos < int3(g_vResolution.x / 4, g_vResolution.yz));
 }
 
 uint getVoxelValue(in uint cell, in uint index)
@@ -169,7 +169,7 @@ void csCellType(uint3 threadID : SV_DispatchThreadID)
 	uint neighbourCells[6];
 	for (int i = 0; i < 6; ++i)
 	{
-		uint3 ni = threadID + neighbours[i];
+		int3 ni = threadID + neighbours[i];
 		if (inCellGrid(ni))
 		{
 			neighbourCells[i] = g_gridAllUAV[ni];
@@ -207,7 +207,7 @@ void csCellType(uint3 threadID : SV_DispatchThreadID)
 		for (int i = 0; i < 6; i++)
 		{
 			// Neighbour outside grid
-			if (any(posVS + neighbours[i] < int3(0, 0, 0)) || any(posVS + neighbours[i] >= int3(g_vResolution.x / 4, g_vResolution.yz)))
+			if (any(posVS + neighbours[i] < int3(0, 0, 0)) || any(posVS + neighbours[i] >= int3(g_vResolution)))
 				continue;
 
 			uint neighbourVoxel;
@@ -223,7 +223,7 @@ void csCellType(uint3 threadID : SV_DispatchThreadID)
 			}
 			else neighbourVoxel = getVoxelValue(neighbourCells[i], u); // y,z neighbours with same index within cell
 
-			if (neighbourVoxel != CELL_TYPE_SOLID_NO_SLIP)
+			if (neighbourVoxel != CELL_TYPE_SOLID_NO_SLIP && neighbourVoxel != CELL_TYPE_SOLID_BOUNDARY)
 			{
 				cellVoxel[u] = CELL_TYPE_SOLID_BOUNDARY;
 				break;
@@ -409,6 +409,8 @@ PSOut psVolume(PSVoxelIn psIn)
 		nor = mul(float4(nor, 0.0f), g_mVoxelWorldView).xyz;
 		float3 viewDir = mul(float4(rayDir, 0.0f), g_mVoxelWorldView).xyz;
 
+		if (voxel == CELL_TYPE_SOLID_BOUNDARY)
+			voxelColor = float3(1.0f, 0, 0);
 		psOut.col = BlinnPhongIllumination(nor, -viewDir, voxelColor, 0.3f, 0.6f, 0.1f, 4);
 	}
 

@@ -262,74 +262,43 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	}
 
 
-	//// Copy the data into own grid for the next few frames
-	//// As the next few frames until the next voxelization are not so busy,
-	//// span this expensive operation over several frames to ensure a smoother frame rate instead of alternating fast and slow frames
-	//// THIS IS REALLY SLOW: TODO: Maybe perform in concurrent thread/process
-	//if (m_counter >= counterStart && m_counter < counterCopyCPUEnd)
-	//{
-	//	int part = m_counter - counterStart; // Determine the part of the grid, which is copied this frame
-	//	uint32_t partZSize = m_resolution.z / counterCopyCPUParts; // Depth (z-value) of one part
-	//	uint32_t partZStart = partZSize * part; // Starting Depth of current part
+	// Copy the data into own grid for the next few frames
+	// As the next few frames until the next voxelization are not so busy,
+	// span this expensive operation over several frames to ensure a smoother frame rate instead of alternating fast and slow frames
+	// THIS IS REALLY SLOW: TODO: Maybe perform in concurrent thread/process
+	if (m_counter >= counterStart && m_counter < counterCopyCPUEnd)
+	{
+		int part = m_counter - counterStart; // Determine the part of the grid, which is copied this frame
+		uint32_t partZSize = m_resolution.z / counterCopyCPUParts; // Depth (z-value) of one part
+		uint32_t partZStart = partZSize * part; // Starting Depth of current part
 
-	//	// Copy data into own grid and decode 32 bit cells into voxels
-	//	QElapsedTimer timer;
-	//	timer.start();
+		// Copy data into own grid and decode 32 bit cells into voxels
+		QElapsedTimer timer;
+		timer.start();
 
-	//	uint32_t xRes = m_resolution.x / 4;
-	//	uint32_t slice = xRes * m_resolution.y;
-	//	uint32_t realSlice = m_resolution.x * m_resolution.y;
-	//	uint32_t cell = 0;
-	//	uint32_t index = 0;
-	//	for (int z = partZStart; z < partZStart + partZSize; ++z)
-	//	{
-	//		for (int y = 0; y < m_resolution.y; ++y)
-	//		{
-	//			for (int x = 0; x < xRes; ++x)
-	//			{
-	//				cell = m_tempCells[x + y * xRes + z * slice]; // Index in encoded grid
-	//				index = x * 4 + y * m_resolution.x + z * realSlice; // Index in decoded grid
-	//				for (int j = 0; j < 4; ++j)
-	//				{
-	//					m_sharedGrid[index + j] = static_cast<VoxelType>((cell >> (8 * j)) & 0xff); // returns the j-th voxel value of the i-th cell
-	//				}
-	//			}
-	//		}
-	//	}
-	//}
+		uint32_t xRes = m_resolution.x / 4;
+		uint32_t slice = xRes * m_resolution.y;
+		uint32_t realSlice = m_resolution.x * m_resolution.y;
+		uint32_t cell = 0;
+		uint32_t index = 0;
+		for (int z = partZStart; z < partZStart + partZSize; ++z)
+		{
+			for (int y = 0; y < m_resolution.y; ++y)
+			{
+				for (int x = 0; x < xRes; ++x)
+				{
+					cell = m_tempCells[x + y * xRes + z * slice]; // Index in encoded grid
+					index = x * 4 + y * m_resolution.x + z * realSlice; // Index in decoded grid
+					for (int j = 0; j < 4; ++j)
+					{
+						m_sharedGrid[index + j] = static_cast<VoxelType>((cell >> (8 * j)) & 0xff); // returns the j-th voxel value of the i-th cell
+					}
+				}
+			}
+		}
 
-	//// Set final types of boundary cells for the simulation
-	//// performed within one frame
-	//else if (m_counter == counterCopyCPUEnd)
-	//{
-	//	uint32_t realSlice = m_resolution.x * m_resolution.y;
-	//	for (int y = 1; y < m_resolution.y - 1; y++)
-	//	{
-	//		for (int z = 1; z < m_resolution.z - 1; z++)
-	//		{
-	//			m_sharedGrid[0 + y * m_resolution.x + z * realSlice] = CELL_TYPE_INFLOW;
-	//			m_sharedGrid[m_resolution.x - 1 + y * m_resolution.x + z * realSlice] = CELL_TYPE_OUTFLOW;
-	//		}
-	//	}
-
-	//	for (int y = 0; y < m_resolution.y; y++)
-	//	{
-	//		for (int x = 0; x < m_resolution.x; x++)
-	//		{
-	//			m_sharedGrid[x + y * m_resolution.x + 0] = CELL_TYPE_SOLID_SLIP;
-	//			m_sharedGrid[x + y * m_resolution.x + (m_resolution.z - 1) * realSlice] = CELL_TYPE_SOLID_SLIP;
-	//		}
-	//	}
-
-	//	for (int z = 0; z < m_resolution.z; z++)
-	//	{
-	//		for (int x = 0; x < m_resolution.x; x++)
-	//		{
-	//			m_sharedGrid[x + z * realSlice] = CELL_TYPE_SOLID_SLIP;
-	//			m_sharedGrid[x + (m_resolution.y - 1) * m_resolution.x + z * realSlice] = CELL_TYPE_SOLID_SLIP;
-	//		}
-	//	}
-	//}
+		OutputDebugStringA(("Elapsed time: " + std::to_string(timer.nsecsElapsed() * 0.000001) + "msec\n").c_str());
+	}
 
 	if (m_renderVoxel)
 		renderVoxel(device, context, world, view, projection);

@@ -191,7 +191,7 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
 		act->setSimulator(data["simulator"].toString().toStdString());
 	}
-	//voxelizeNextFrame();
+	voxelizeNextFrame();
 }
 
 void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
