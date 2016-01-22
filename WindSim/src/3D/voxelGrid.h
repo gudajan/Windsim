@@ -7,6 +7,7 @@
 #include <DirectXMath.h>
 
 #include <vector>
+#include <thread>
 
 class ObjectManager;
 struct ID3D11UnorderedAccessView;
@@ -37,7 +38,8 @@ public:
 	static void releaseShader();
 
 	VoxelGrid(ObjectManager* manager, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize, const std::string& simulator, Logger* logger);
-	VoxelGrid(VoxelGrid&& other);
+	//VoxelGrid(VoxelGrid&& other);
+	~VoxelGrid();
 
 	HRESULT create(ID3D11Device* device, bool clearClientBuffers = false) override; // Create custom viewport, renderTargets, UAV etc
 	void release() override;
@@ -52,12 +54,12 @@ public:
 	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
 	void setRenderVoxel(bool renderVoxel) { m_renderVoxel = renderVoxel; };
 	void setSimulator(const std::string& exe);
-	void updateSimulator() { m_simulator.update(); };
+	void updateSimulation();
 
 private:
 	void createGridData(); // Create cube for line rendering
 	void renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
-	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world);
+	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, bool copyStaging);
 	void renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 
 	struct ShaderVariables
@@ -94,14 +96,14 @@ private:
 	DirectX::XMFLOAT3 m_voxelSize; // Size of one voxel in object space of the grid
 
 	bool m_reinit; // Indicates if voxelgrid has to be reinitialized, because resolution, voxelSize or simulator changed
+	bool m_initSim; // Indicates that the simulation has to be initialized
+	bool m_updateDimensions; // Indicates that the simulation dimensions have to be updated
 	uint32_t m_cubeIndices;
 
 	bool m_voxelize;
 	int m_counter;
 	bool m_renderVoxel;
 
-	VoxelType* m_sharedGrid; // Shared with simulation process
-	std::vector<uint32_t> m_tempCells;
 	ID3D11Texture3D* m_gridTextureGPU; // Texture in GPU memory, filled in pixel shader
 	ID3D11Texture3D* m_gridAllTextureGPU; // Texture, containing the voxelizations of all meshes
 	ID3D11Texture3D* m_gridAllTextureStaging; // Texture in system memory: The data of gpu texture is copyied here and than may be accessed by the cpu
@@ -111,6 +113,7 @@ private:
 	ID3D11ShaderResourceView* m_gridAllSRV; // SRV for volume rendering
 
 	Simulator m_simulator;
+	std::thread m_simulatorThread;
 
 };
 #endif

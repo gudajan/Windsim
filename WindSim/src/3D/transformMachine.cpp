@@ -318,7 +318,7 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 	else if (m_state == TranslateX || m_state == TranslateY || m_state == TranslateZ) // Move object along global coordinate axes
 	{
 		// Calculate intersection with corresponding global plane and check the distance in the specified direction (x,y,z) (i.e. check that coordinate of the intersection point)
-		// This corresponds to the distanec on the specified axis
+		// This corresponds to the distance on the specified axis
 		// Refer to intersection point at start of the transformation
 		XMVECTOR camPos = XMLoadFloat3(&m_camera->getCamPos());
 		XMVECTOR cursorDir = XMLoadFloat3(&m_camera->getCursorDir(currentCursorPos));
@@ -327,11 +327,11 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		XMVECTOR plane;
 		XMVECTOR oldInt;
 
+		// Choose plane dependent on the current angle of the camera to this plane
+		// If cosine of cursor ray to plane normal is bigger -> plane has a "better" angle to the camera
 		if (m_state == TranslateX)
 		{
 			axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-			// Choose plane dependent on the current angle of the camera to this plane
-			// If cosine of cursor ray to plane normal is bigger -> plane has a "better" angle to the camera
 			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
 			{
 				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)); // XY plane
@@ -346,8 +346,6 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		else if (m_state == TranslateY)
 		{
 			axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-			// Choose plane dependent on the current angle of the camera to this plane
-			// If cosine of cursor ray to plane normal is bigger -> plane has a "better" angle to the camera
 			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
 			{
 				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)); // XY plane
@@ -363,8 +361,6 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		else if (m_state == TranslateZ)
 		{
 			axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-			// Choose plane dependent on the current angle of the camera to this plane
-			// If cosine of cursor ray to plane normal is bigger -> plane has a "better" angle to the camera
 			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
 			{
 				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // XZ plane

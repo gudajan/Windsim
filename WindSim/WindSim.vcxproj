@@ -272,6 +272,7 @@
     <ClCompile Include="src\3D\objLoader.cpp" />
     <ClCompile Include="src\GUI\project.cpp" />
     <ClCompile Include="src\util\logger.cpp" />
+    <ClCompile Include="src\util\pipe.cpp" />
     <ClCompile Include="src\util\settings.cpp" />
     <ClCompile Include="src\GUI\settingsDialog.cpp" />
     <ClCompile Include="src\3D\sky.cpp" />
@@ -419,6 +420,8 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\src\util" "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(SolutionDir)\FX11\inc"</Command>
     </CustomBuild>
     <ClInclude Include="src\util\metaTypes.h" />
+    <ClInclude Include="src\util\msgDef.h" />
+    <ClInclude Include="src\util\pipe.h" />
     <ClInclude Include="src\util\settings.h" />
     <CustomBuild Include="src\GUI\settingsDialog.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

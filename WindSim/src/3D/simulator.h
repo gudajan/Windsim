@@ -1,66 +1,74 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
+#include "msgDef.h"
+#include "pipe.h"
+
 #include <string>
 #include <vector>
+#include <queue>
+#include <atomic>
+#include <mutex>
+#include <memory>
 
 #include <Windows.h>
 
 class Logger;
-
-namespace Message
-{
-	enum MessageType { Init, UpdateDimensions, UpdateData, Exit };
-
-	struct Resolution
-	{
-		int x;
-		int y;
-		int z;
-	};
-	struct VoxelSize
-	{
-		float x;
-		float y;
-		float z;
-	};
-}
-
 
 class Simulator
 {
 public:
 	Simulator(const std::string& cmdline = "", Logger* logger = nullptr);
 
-	void start(const Message::Resolution& res, const Message::VoxelSize& vs); // Create Process
-	void updateDimensions(const Message::Resolution& res, const Message::VoxelSize& vs); // Update VoxelGrid dimensions
-	void stop(); // Exit/Terminate Process
+	void loop(); // Simulator thread loop
 
-	void update(); // Check signals from process (i.e. set ready if signal finished received), send voxelgrid, receive velocity grid
+	void postMessageToSim(const MsgToSim& msg); // Posting message to simulator
+	std::shared_ptr<MsgToRenderer> getMessageFromSim(); // Get message from simulator
+	std::vector<uint32_t>& getCellGrid() { return m_cellGrid; };
+	std::mutex& getCellGridMutex() { return m_cellGridMutex; }
 
-	bool isRunning() const { return m_running; };
-	bool setCommandLine(const std::string& cmdline); // Returns if a simulator restart is necessary
-
-	char* getSharedMemoryAddress() { return static_cast<char*>(m_sharedAddress); }; // VoxelGrid is defined as chars
+	bool isRunning() const { return m_running.load(); };
+	bool isReady() const { return m_ready.load(); };
 
 private:
-	void log(const std::string& msg);
+	void postMessageToRender(const MsgToRenderer& msg);
+	std::shared_ptr<MsgToSim> getMessageFromRender();
+
+	void start(); // Create Process
+	void initSimulation(const DimMsg& msg); // Init simulation, including voxel grid dimensions
+	void stop(); // Exit/Terminate Process
+	void update(); // Send updateGrid signal to simulation process
+	void copyGrid();
+
+	bool setCommandLine(const std::string& cmdline); // Returns if a simulator restart is necessary
 
 	bool createProcess(const std::wstring& exe, const std::wstring& args);
-	bool waitForConnect();
-	bool sendToProcess(const std::vector<BYTE>& msg);
 	bool createSharedMemory(int size, const std::wstring& name);
 	bool removeSharedMemory();
 
+	void log(const std::string& msg);
+
+	std::mutex m_toSimMutex;
+	std::queue<std::shared_ptr<MsgToSim>> m_toSimMsgQueue;
+	std::mutex m_toRenderMutex;
+	std::queue<std::shared_ptr<MsgToRenderer>> m_toRenderMsgQueue;
+
 	std::string m_executable;
 	std::string m_cmdArguments;
-	bool m_running;
+	DimMsg::Resolution m_resolution;
+	DimMsg::VoxelSize m_voxelSize;
+
+	std::atomic_bool m_running;
+	std::atomic_bool m_ready;
+
 	PROCESS_INFORMATION m_process;
-	HANDLE m_pipe;
-	OVERLAPPED m_overlap;
+	Pipe m_pipe;
 
 	HANDLE m_sharedHandle;
-	void * m_sharedAddress;
+	char* m_sharedGrid;
+
+	std::mutex m_cellGridMutex;
+	std::vector<uint32_t> m_cellGrid;
 
 	Logger* m_logger;
 

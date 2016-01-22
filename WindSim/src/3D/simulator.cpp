@@ -14,20 +14,153 @@ using namespace DirectX;
 const static int g_bufsize = 512;
 
 Simulator::Simulator(const std::string& cmdline, Logger* logger)
-	: m_executable(),
+	:
+	m_toSimMutex(),
+	m_toSimMsgQueue(),
+	m_toRenderMutex(),
+	m_toRenderMsgQueue(),
+	m_executable(),
 	m_cmdArguments(),
-	m_running(false),
+	m_resolution({ 0, 0, 0 }),
+	m_voxelSize({ 0.0f, 0.0f, 0.0f }),
+	m_running(std::atomic<bool>(false)),
+	m_ready(std::atomic<bool>(true)),
 	m_process(),
-	m_pipe(NULL),
-	m_overlap(),
+	m_pipe(logger),
 	m_sharedHandle(NULL),
-	m_sharedAddress(nullptr),
+	m_sharedGrid(nullptr),
+	m_cellGrid(),
 	m_logger(logger)
 {
 	setCommandLine(cmdline);
 }
 
-void Simulator::start(const Message::Resolution& res, const Message::VoxelSize& vs)
+void Simulator::loop()
+{
+	bool run = true;
+	while (run)
+	{
+
+		// Check for messages from render thread
+		std::shared_ptr<MsgToSim> msg = getMessageFromRender();
+		switch (msg->type)
+		{
+		case(MsgToSim::StartProcess) :
+		{
+			start();
+			break;
+		}
+		case(MsgToSim::InitSim) :
+		case(MsgToSim::UpdateDimensions) :
+		{
+			// We are now accessing the shared (between render and simulation thread) vector containing the grid cells (4 voxel per cells) -> prevent render thread from writing to the grid cells
+			// Additionally we are accessing the shared memory with the external simulation process
+			// We become ready again when the external simulator process has finished accessing the shared memory, because only then we are allowed to write to the shared memory again
+			m_ready = false;
+			std::shared_ptr<DimMsg> dm = std::dynamic_pointer_cast<DimMsg>(msg);
+			m_resolution = dm->res;
+			m_voxelSize = dm->vs;
+			initSimulation(*dm);
+			break;
+		}
+		case(MsgToSim::UpdateGrid) :
+		{
+			m_ready = false;
+			copyGrid();
+			update();
+			break;
+		}
+		case(MsgToSim::SimulatorCmd) :
+		{
+			std::shared_ptr<StrMsg> sm = std::dynamic_pointer_cast<StrMsg>(msg);
+			if (setCommandLine(sm->str))
+			{
+				stop();
+				start();
+				m_ready = false;
+				DimMsg msg;
+				msg.type = DimMsg::InitSim;
+				msg.res = m_resolution;
+				msg.vs = m_voxelSize;
+				initSimulation(msg);
+			}
+			break;
+		}
+		case(MsgToSim::Exit) :
+			stop();
+			run = false;
+			break;
+		case(MsgToSim::Empty) :
+			break;
+		default:
+			log("WARNING: Simulation thread received invalid message!");
+			break;
+		}
+
+		// Check for messages from simulation process
+		std::vector<std::vector<BYTE>> data;
+		if (m_pipe.receive(data))
+		{
+			for (auto msg : data)
+			{
+				MsgFromSim type;
+				std::memcpy(&type, msg.data(), sizeof(MsgFromSim));
+				if (type == MsgFromSim::FinishedShmAccess)
+				{
+					m_ready = true;
+				}
+				else
+				{
+					log("WARNING: Received invalid Message from external simulation process!");
+				}
+			}
+		}
+	}
+}
+
+void Simulator::postMessageToSim(const MsgToSim& msg)
+{
+	std::lock_guard<std::mutex> guard(m_toSimMutex);
+	MsgToSim* m;
+	if (msg.type == DimMsg::InitSim || msg.type == DimMsg::UpdateDimensions)
+		m = new DimMsg(dynamic_cast<const DimMsg&>(msg));
+	else if (msg.type == StrMsg::SimulatorCmd)
+		m = new StrMsg(dynamic_cast<const StrMsg&>(msg));
+	else
+		m = new MsgToSim(msg);
+	m_toSimMsgQueue.push(std::shared_ptr<MsgToSim>(m));
+}
+
+std::shared_ptr<MsgToRenderer> Simulator::getMessageFromSim()
+{
+	std::lock_guard<std::mutex> guard(m_toRenderMutex);
+	if (m_toRenderMsgQueue.empty())
+		return std::shared_ptr<MsgToRenderer>(new MsgToRenderer{ MsgToRenderer::Empty });
+
+	std::shared_ptr<MsgToRenderer> msg = m_toRenderMsgQueue.front();
+	m_toRenderMsgQueue.pop();
+	return msg;
+}
+
+void Simulator::postMessageToRender(const MsgToRenderer& msg)
+{
+	std::lock_guard<std::mutex> guard(m_toRenderMutex);
+	// Currently only empty messages
+	m_toRenderMsgQueue.push(std::shared_ptr<MsgToRenderer>(new MsgToRenderer(msg)));
+}
+
+std::shared_ptr<MsgToSim> Simulator::getMessageFromRender()
+{
+	std::lock_guard<std::mutex> guard(m_toSimMutex);
+	if (m_toSimMsgQueue.empty())
+		return std::shared_ptr<MsgToSim>(new MsgToSim{ MsgToSim::Empty });
+
+	std::shared_ptr<MsgToSim> msg = m_toSimMsgQueue.front();
+	m_toSimMsgQueue.pop();
+	return msg;
+}
+
+void Simulator::start()
 {
 	std::wstring exe(m_executable.begin(), m_executable.end());
 	std::wstring args(m_cmdArguments.begin(), m_cmdArguments.end());
@@ -39,7 +172,6 @@ void Simulator::start(const Message::Resolution& res, const Message::VoxelSize& 
 	{
 		log("WARNING: No valid Simulator executable specified. Current value is '" + m_executable + "'!\n" \
 		  	"         Continuing without simulation.");
-		m_running = false;
 		return;
 	}
 
@@ -56,53 +188,34 @@ void Simulator::start(const Message::Resolution& res, const Message::VoxelSize& 
 
 	log("INFO: Starting simulator '" + m_executable + m_cmdArguments + "'...");
 
-	// Create named pipe
-	m_pipe = CreateNamedPipe(L"\\\\.\\pipe\\simulatorPipe", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT, 1, g_bufsize, g_bufsize, 1000, NULL);
-	if (m_pipe == INVALID_HANDLE_VALUE)
-	{
-		log("WARNING: Starting of simulator '" + m_executable + m_cmdArguments + "' failed. Failed to create named Pipe with error '" + std::to_string(GetLastError()) + "'!");
-		m_running = false;
-		return;
-	}
-
 	// Create windows child process
 	if (!createProcess(exe, args)) return;
 
-	if (!waitForConnect())
-	{
-		stop();
+	// Create named pipe and wait/block for connection
+	if (!m_pipe.connect(L"\\\\.\\pipe\\simulatorPipe", true))
 		return;
-	}
 
 	m_running = true;
-
-	// Create new shared memory
-	createSharedMemory(res.x * res.y * res.z * sizeof(char), L"Local\\voxelgrid");
-
-	// Built message data
-	std::vector<BYTE> data(sizeof(Message::MessageType) + sizeof(Message::Resolution) + sizeof(Message::VoxelSize), 0);
-	Message::MessageType type = Message::Init;
-	std::memcpy(data.data(), &type, sizeof(type));
-	std::memcpy(data.data() + sizeof(type), &res, sizeof(res));
-	std::memcpy(data.data() + sizeof(type) + sizeof(res), &vs, sizeof(vs));
-
-	sendToProcess(data);
-	log("INFO: Sent Init signal to simulator.");
 }
 
-void Simulator::updateDimensions(const Message::Resolution& res, const Message::VoxelSize& vs)
+void Simulator::initSimulation(const DimMsg& msg)
 {
-	std::vector<BYTE> data(sizeof(Message::MessageType) + sizeof(Message::Resolution) + sizeof(Message::VoxelSize), 0);
-	Message::MessageType type = Message::UpdateDimensions;
-	std::memcpy(data.data(), &type, sizeof(type));
-	std::memcpy(data.data() + sizeof(type), &res, sizeof(res));
-	std::memcpy(data.data() + sizeof(type) + sizeof(res), &vs, sizeof(vs));
+	removeSharedMemory();
+	createSharedMemory(msg.res.x * msg.res.y * msg.res.z * sizeof(char), L"Local\\voxelgrid");
 
-	if (sendToProcess(data))
-		log("INFO: Updated voxel grid dimensions of simulator.");
+	copyGrid();
+
+	// Build message data
+	// Build each member alone to remove padding within the struct
+	std::vector<BYTE> data(sizeof(DimMsg::MsgType) + sizeof(DimMsg::Resolution) + sizeof(DimMsg::VoxelSize), 0);
+	std::memcpy(data.data(), &msg.type, sizeof(DimMsg::MsgType));
+	std::memcpy(data.data() + sizeof(DimMsg::MsgType), &msg.res, sizeof(DimMsg::Resolution));
+	std::memcpy(data.data() + sizeof(DimMsg::MsgType) + sizeof(DimMsg::Resolution), &msg.vs, sizeof(DimMsg::VoxelSize));
+
+	if (m_pipe.send(data))
+		log("INFO: Sent (re-)initialization data to simulator.");
 	else
-		log("ERROR: Failed to update voxel grid dimensions of simulator! Failed to send data!");
-
+		log("ERROR: Failed to (re-)initialize the simulation! Failed to send data!");
 }
 
 void Simulator::stop()
@@ -117,10 +230,12 @@ void Simulator::stop()
 		BOOL success = GetExitCodeProcess(m_process.hProcess, &exitCode);
 		if (exitCode == STILL_ACTIVE)
 		{
-			std::vector<BYTE> data(sizeof(Message::MessageType));
-			Message::MessageType type = Message::Exit;
-			std::memcpy(data.data(), &type, sizeof(Message::MessageType));
-			sendToProcess(data);
+
+			std::vector<BYTE> data(sizeof(MsgToSim::MsgType));
+			MsgToSim::MsgType type = MsgToSim::Exit;
+			std::memcpy(data.data(), &type, sizeof(MsgToSim::MsgType));
+			if (m_pipe.send(data))
+				log("INFO: Sent 'Exit'!");
 
 			if (WaitForSingleObject(m_process.hProcess, 5000) != WAIT_OBJECT_0) // Wait for 5 seconds
 				TerminateProcess(m_process.hProcess, 0);
@@ -139,11 +254,40 @@ void Simulator::stop()
 
 void Simulator::update()
 {
-	//std::vector<BYTE> data(sizeof(Message::MessageType));
-	//Message::MessageType type = Message::UpdateData;
-	//std::memcpy(data.data(), &type, sizeof(Message::MessageType));
+	std::vector<BYTE> data(sizeof(MsgToSim::MsgType));
+	MsgToSim::MsgType type = MsgToSim::UpdateGrid;
+	std::memcpy(data.data(), &type, sizeof(MsgToSim::MsgType));
+	if (m_pipe.send(data))
+		log("INFO: Sent 'UpdateGrid'.");
+}
 
-	//sendToProcess(data);
+void Simulator::copyGrid()
+{
+	// Lock mutex
+	std::lock_guard<std::mutex> guard(m_cellGridMutex);
+
+	// Copy data into grid in shared memory and decode 32 bit cells into voxels
+	uint32_t xRes = m_resolution.x / 4;
+	uint32_t slice = xRes * m_resolution.y;
+	uint32_t realSlice = m_resolution.x * m_resolution.y;
+	uint32_t cell = 0;
+	uint32_t index = 0;
+	for (int z = 0; z < m_resolution.z; ++z)
+	{
+		for (int y = 0; y < m_resolution.y; ++y)
+		{
+			for (int x = 0; x < xRes; ++x)
+			{
+				cell = m_cellGrid[x + y * xRes + z * slice]; // Index in encoded grid
+				index = x * 4 + y * m_resolution.x + z * realSlice; // Index in decoded grid
+				for (int j = 0; j < 4; ++j)
+				{
+					m_sharedGrid[index + j] = static_cast<char>((cell >> (8 * j)) & 0xff); // returns the j-th voxel value of the i-th cell
+				}
+			}
+		}
+	}
+	//Mutex is released
 }
 
 bool Simulator::setCommandLine(const std::string& cmdline)
@@ -183,13 +327,6 @@ bool Simulator::setCommandLine(const std::string& cmdline)
 	return true;
 }
 
-void Simulator::log(const std::string& msg)
-{
-	if (m_logger)
-		m_logger->logit(QString::fromStdString(msg));
-}
-
-
 bool Simulator::createProcess(const std::wstring& exe, const std::wstring& args)
 {
 	STARTUPINFO si;
@@ -212,85 +349,6 @@ bool Simulator::createProcess(const std::wstring& exe, const std::wstring& args)
 	return true;
 }
 
-bool Simulator::waitForConnect()
-{
-	// Wait for connection of simulator
-	HANDLE event = CreateEvent(NULL, TRUE, FALSE, NULL);
-	if (event == NULL)
-	{
-		log("WARNING: Starting of simulator '" + m_executable + m_cmdArguments + "' failed. Failed to create event with error '" + std::to_string(GetLastError()) + "'!");
-		m_running = false;
-		return false;
-	}
-	m_overlap.hEvent = event;
-	m_overlap.Offset = NULL;
-	m_overlap.OffsetHigh = NULL;
-
-	if (ConnectNamedPipe(m_pipe, &m_overlap))
-	{
-		log("WARNING: ConnectNamedPipe failed with '" + std::to_string(GetLastError()) + "'!");
-		m_running = false;
-		return false;
-	}
-	switch (GetLastError())
-	{
-	case ERROR_IO_PENDING:
-		break;
-	case ERROR_PIPE_CONNECTED:
-		if (SetEvent(m_overlap.hEvent))
-			break;
-	default:
-	{
-		log("WARNING: ConnectNamedPipe failed with '" + std::to_string(GetLastError()) + "'!");
-		m_running = false;
-		return false;
-	}
-	}
-
-	DWORD ret = WaitForSingleObject(event, INFINITE);
-	if (ret != WAIT_OBJECT_0)
-	{
-		if (ret == WAIT_ABANDONED_0)
-			log("WARNING: WaitForSingleObject abandoned wait!");
-		else if (ret == WAIT_TIMEOUT)
-			log("WARNING: WaitForSingleObject timed out!");
-		else
-			log("WARNING: WaitForSingleObject failed with '" + std::to_string(GetLastError()) + "'!");
-
-		return false;
-	}
-
-	return true;
-}
-
-bool Simulator::sendToProcess(const std::vector<BYTE>& msg)
-{
-	if (msg.size() > g_bufsize)
-	{
-		log("ERROR: Message bigger than buffer size '" + std::to_string(g_bufsize) + "'!");
-		return false;
-	}
-
-	DWORD bytesWritten;
-	DWORD success = WriteFile(m_pipe, msg.data(), msg.size(), &bytesWritten, &m_overlap);
-
-	if (success && bytesWritten == msg.size()) // Write completed
-	{
-		log("INFO: Message sent!");
-		return true;
-	}
-
-	DWORD error = GetLastError();
-	if (!success && (error == ERROR_IO_PENDING)) // Write is still pending.
-	{
-		log("INFO: Pending write!");
-		return true;
-	}
-
-	log("ERROR: Invalid pipe state!");
-	return false;
-}
-
 bool Simulator::createSharedMemory(int size, const std::wstring& name)
 {
 	m_sharedHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, NULL, size, name.c_str());
@@ -301,9 +359,9 @@ bool Simulator::createSharedMemory(int size, const std::wstring& name)
 		return false;
 	}
 
-	m_sharedAddress = MapViewOfFile(m_sharedHandle, FILE_MAP_ALL_ACCESS, 0, 0, size);
+	m_sharedGrid = static_cast<char*>(MapViewOfFile(m_sharedHandle, FILE_MAP_ALL_ACCESS, 0, 0, size));
 
-	if (m_sharedAddress == nullptr)
+	if (m_sharedGrid == nullptr)
 	{
 		log("ERROR: MapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
 		CloseHandle(m_sharedHandle);
@@ -314,11 +372,17 @@ bool Simulator::createSharedMemory(int size, const std::wstring& name)
 
 bool Simulator::removeSharedMemory()
 {
-	if (m_sharedAddress)
-		UnmapViewOfFile(m_sharedAddress);
+	if (m_sharedGrid)
+		UnmapViewOfFile(m_sharedGrid);
 
 	if (m_sharedHandle)
 		CloseHandle(m_sharedHandle);
 
 	return true;
+}
+
+void Simulator::log(const std::string& msg)
+{
+	if (m_logger)
+		m_logger->logit(QString::fromStdString(msg));
 }

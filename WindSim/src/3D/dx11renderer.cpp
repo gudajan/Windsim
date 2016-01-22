@@ -163,7 +163,7 @@ void DX11Renderer::frame()
 
 void DX11Renderer::issueVoxelization()
 {
-	//m_manager.voxelizeNextFrame();
+	m_manager.voxelizeNextFrame();
 }
 
 void DX11Renderer::execute()
