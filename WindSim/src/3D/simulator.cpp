@@ -42,61 +42,70 @@ void Simulator::loop()
 	{
 
 		// Check for messages from render thread
-		std::shared_ptr<MsgToSim> msg = getMessageFromRender();
-		switch (msg->type)
+		std::vector<std::shared_ptr<MsgToSim>> messages = getAllMessagesFromRender();
+
+		// Filter unneccessary messages (e.g. and UpdateGrid message is unneccessary if afterwards an UpdateDimensions message was received)
+		filterMessages(messages);
+
+		for (auto msg : messages)
 		{
-		case(MsgToSim::StartProcess) :
-		{
-			start();
-			break;
-		}
-		case(MsgToSim::InitSim) :
-		case(MsgToSim::UpdateDimensions) :
-		{
-			// We are now accessing the shared (between render and simulation thread) vector containing the grid cells (4 voxel per cells) -> prevent render thread from writing to the grid cells
-			// Additionally we are accessing the shared memory with the external simulation process
-			// We become ready again when the external simulator process has finished accessing the shared memory, because only then we are allowed to write to the shared memory again
-			m_ready = false;
-			std::shared_ptr<DimMsg> dm = std::dynamic_pointer_cast<DimMsg>(msg);
-			m_resolution = dm->res;
-			m_voxelSize = dm->vs;
-			initSimulation(*dm);
-			break;
-		}
-		case(MsgToSim::UpdateGrid) :
-		{
-			m_ready = false;
-			copyGrid();
-			update();
-			break;
-		}
-		case(MsgToSim::SimulatorCmd) :
-		{
-			std::shared_ptr<StrMsg> sm = std::dynamic_pointer_cast<StrMsg>(msg);
-			if (setCommandLine(sm->str))
+			switch (msg->type)
+			{
+			case(MsgToSim::StartProcess) :
+			{
+				start();
+				break;
+			}
+			case(MsgToSim::InitSim) :
+			case(MsgToSim::UpdateDimensions) :
+			{
+				if (isRunning())
+				{
+					// We are now accessing the shared (between render and simulation thread) vector containing the grid cells (4 voxel per cells) -> prevent render thread from writing to the grid cells
+					// Additionally we are accessing the shared memory with the external simulation process
+					// We become ready again when the external simulator process has finished accessing the shared memory, because only then we are allowed to write to the shared memory again
+					m_ready = false;
+					initSimulation(*std::dynamic_pointer_cast<DimMsg>(msg));
+
+				}
+				break;
+			}
+			case(MsgToSim::UpdateGrid) :
+			{
+				if (isRunning())
+				{
+					m_ready = false;
+					copyGrid();
+					update();
+				}
+				break;
+			}
+			case(MsgToSim::SimulatorCmd) :
 			{
 				stop();
 				start();
-				m_ready = false;
-				DimMsg msg;
-				msg.type = DimMsg::InitSim;
-				msg.res = m_resolution;
-				msg.vs = m_voxelSize;
-				initSimulation(msg);
+				if (isRunning())
+				{
+					m_ready = false;
+					DimMsg msg;
+					msg.type = DimMsg::InitSim;
+					msg.res = m_resolution;
+					msg.vs = m_voxelSize;
+					initSimulation(msg);
+				}
+				break;
 			}
-			break;
+			case(MsgToSim::Exit) :
+				stop();
+				run = false;
+				break;
+			case(MsgToSim::Empty) :
+				break;
+			default:
+				log("WARNING: Simulation thread received invalid message!");
+				break;
+			}
 		}
-		case(MsgToSim::Exit) :
-			stop();
-			run = false;
-			break;
-		case(MsgToSim::Empty) :
-			break;
-		default:
-			log("WARNING: Simulation thread received invalid message!");
-			break;
-		}
-
 		// Check for messages from simulation process
 		std::vector<std::vector<BYTE>> data;
 		if (m_pipe.receive(data))
@@ -128,7 +137,7 @@ void Simulator::postMessageToSim(const MsgToSim& msg)
 		m = new StrMsg(dynamic_cast<const StrMsg&>(msg));
 	else
 		m = new MsgToSim(msg);
-	m_toSimMsgQueue.push(std::shared_ptr<MsgToSim>(m));
+	m_toSimMsgQueue.push_back(std::shared_ptr<MsgToSim>(m));
 }
 
 std::shared_ptr<MsgToRenderer> Simulator::getMessageFromSim()
@@ -138,7 +147,7 @@ std::shared_ptr<MsgToRenderer> Simulator::getMessageFromSim()
 		return std::shared_ptr<MsgToRenderer>(new MsgToRenderer{ MsgToRenderer::Empty });
 
 	std::shared_ptr<MsgToRenderer> msg = m_toRenderMsgQueue.front();
-	m_toRenderMsgQueue.pop();
+	m_toRenderMsgQueue.pop_front();
 	return msg;
 }
 
@@ -146,7 +155,7 @@ void Simulator::postMessageToRender(const MsgToRenderer& msg)
 {
 	std::lock_guard<std::mutex> guard(m_toRenderMutex);
 	// Currently only empty messages
-	m_toRenderMsgQueue.push(std::shared_ptr<MsgToRenderer>(new MsgToRenderer(msg)));
+	m_toRenderMsgQueue.push_back(std::shared_ptr<MsgToRenderer>(new MsgToRenderer(msg)));
 }
 
 std::shared_ptr<MsgToSim> Simulator::getMessageFromRender()
@@ -156,8 +165,117 @@ std::shared_ptr<MsgToSim> Simulator::getMessageFromRender()
 		return std::shared_ptr<MsgToSim>(new MsgToSim{ MsgToSim::Empty });
 
 	std::shared_ptr<MsgToSim> msg = m_toSimMsgQueue.front();
-	m_toSimMsgQueue.pop();
+	m_toSimMsgQueue.pop_front();
 	return msg;
+}
+
+std::vector<std::shared_ptr<MsgToSim>> Simulator::getAllMessagesFromRender()
+{
+	std::lock_guard<std::mutex> guard(m_toSimMutex);
+	std::vector<std::shared_ptr<MsgToSim>> messages;
+	messages.resize(m_toSimMsgQueue.size(), nullptr);
+	std::copy(m_toSimMsgQueue.begin(), m_toSimMsgQueue.end(), messages.begin());
+	m_toSimMsgQueue.clear();
+	return messages;
+}
+
+
+// THIS IS PURE MAGIC
+// Some messages "contain" other messages, some messages make others unnecassary
+// Merge/Discard all unnecessary messages to avoid overhead by additional updates or reinitializations
+void Simulator::filterMessages(std::vector<std::shared_ptr<MsgToSim>>& messages)
+{
+	std::vector<std::shared_ptr<MsgToSim>> filtered;
+
+	// Temporary newest messages
+	std::shared_ptr<MsgToSim> spMsg = nullptr; // StartProcess
+	std::shared_ptr<MsgToSim> initMsg = nullptr; // InitSim
+	std::shared_ptr<MsgToSim> dimMsg = nullptr; // UpdateDimensions
+	std::shared_ptr<MsgToSim> cmdMsg = nullptr; // SimulatorCmd
+	std::shared_ptr<MsgToSim> updateMsg = nullptr; // UpdateGrid
+
+	for (auto msg : messages)
+	{
+		if (msg->type == MsgToSim::Exit)
+		{
+			// Early out
+			filtered.push_back(msg);
+			messages.swap(filtered); // Invalidates iterators
+			return;
+		}
+
+		if (msg->type == MsgToSim::SimulatorCmd)
+		{
+			// Ignore SimulatorCmd if nothing is changed
+			if (setCommandLine(std::dynamic_pointer_cast<StrMsg>(msg)->str))
+			{
+				cmdMsg = msg;
+				// Discard every prior message because simulation restarted anyway
+				spMsg = nullptr;
+				initMsg = nullptr;
+				dimMsg = nullptr;
+				updateMsg = nullptr;
+			}
+		}
+		else if (msg->type == MsgToSim::StartProcess && !cmdMsg) // Only neccessary if no SimulatorCmd message given
+			spMsg = msg;
+		else if (msg->type == MsgToSim::InitSim)
+		{
+			// Update dimensions
+			auto temp = std::dynamic_pointer_cast<DimMsg>(msg);
+			m_resolution = temp->res;
+			m_voxelSize = temp->vs;
+			if (!cmdMsg) // Only necessary if simulator is restarted prior to this message
+			{
+				// Discard prior UpdateDimensions or UpdateGrid messages
+				dimMsg = nullptr;
+				updateMsg = nullptr;
+				initMsg = msg;
+			}
+		}
+		else if (msg->type == MsgToSim::UpdateDimensions)
+		{
+			// Update dimensions
+			auto temp = std::dynamic_pointer_cast<DimMsg>(msg);
+			m_resolution = temp->res;
+			m_voxelSize = temp->vs;
+			if (!cmdMsg && !initMsg)
+			{
+				// Discard prior UpdateGrid messages
+				updateMsg = nullptr;
+				dimMsg = msg;
+			}
+			else if (initMsg) // If prior init message -> Update its dimensions
+			{
+				temp->type = MsgToSim::InitSim;
+				initMsg = temp;
+			}
+		}
+		else if (msg->type == MsgToSim::UpdateGrid)
+		{
+			// Basically only necessary if no other messages (except StartProcess)
+			if (!cmdMsg && !initMsg && !dimMsg)
+				updateMsg = msg;
+		}
+	}
+
+	// Messages are set to nullptr if not needed
+	if (cmdMsg)
+		filtered.push_back(cmdMsg);
+
+	if (spMsg)
+		filtered.push_back(spMsg);
+
+	if (initMsg)
+		filtered.push_back(initMsg);
+
+	if (dimMsg)
+		filtered.push_back(dimMsg);
+
+	if (updateMsg)
+		filtered.push_back(updateMsg);
+
+	messages.swap(filtered);
 }
 
 void Simulator::start()
@@ -282,7 +400,7 @@ void Simulator::copyGrid()
 				index = x * 4 + y * m_resolution.x + z * realSlice; // Index in decoded grid
 				for (int j = 0; j < 4; ++j)
 				{
-					m_sharedGrid[index + j] = static_cast<char>((cell >> (8 * j)) & 0xff); // returns the j-th voxel value of the i-th cell
+					m_sharedGrid[index + j] = static_cast<char>((cell >> (8 * j)) & 0xff); // returns the j-th voxel value of the cell
 				}
 			}
 		}

@@ -21,6 +21,8 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_reinit(false),
 	m_initSim(false),
 	m_updateDimensions(false),
+	m_updateGrid(false),
+	m_copied(false),
 	m_cubeIndices(0),
 	m_voxelize(true),
 	m_counter(-1),
@@ -242,7 +244,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 
 	// Make sure, the cpu only accesses the voxel grid if the GPU copiing is done, to avoid pipeline stalling ( GPU copiing needs 2 frames)
 	// Additionally only copy to cpu if former grid was written to shared memory
-	if (m_counter == 2 && m_simulator.isReady())
+	if (m_counter >= 2 && m_simulator.isReady())
 	{
 		uint32_t xRes = m_resolution.x / 4;
 
@@ -293,6 +295,12 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			m_initSim = false;
 			m_updateDimensions = false;
 		}
+		else if (m_updateGrid && m_copied) // If objects were modified, and those modifications were already copied to the CPU
+		{
+			m_simulator.postMessageToSim({ MsgToSim::UpdateGrid });
+			m_updateGrid = false;
+			m_copied = false;
+		}
 
 		m_counter = -1; // Voxelization cycle finished
 	}
@@ -334,7 +342,7 @@ void VoxelGrid::setSimulator(const std::string& cmdline)
 void VoxelGrid::updateSimulation()
 {
 	// Only update the simulation if there is no reinitialization in process
-	if(!m_reinit) m_simulator.postMessageToSim({ MsgToSim::UpdateGrid });
+	if (!m_reinit) m_updateGrid = true;
 }
 
 void VoxelGrid::createGridData()
@@ -537,7 +545,12 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	// Copy texture from GPU memory to system memory where it is accessable by the cpu
 	if (copyStaging)
+	{
 		context->CopyResource(m_gridAllTextureStaging, m_gridAllTextureGPU);
+		// If we want to update the grid for the simulation, indicate that the latest voxelization was copied to the cpu
+		if (m_updateGrid)
+			m_copied = true;
+	}
 
 	// Restore old render targets and viewport
 	context->OMSetRenderTargets(1, &tempRTV, tempDSV);

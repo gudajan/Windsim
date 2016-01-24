@@ -98,6 +98,9 @@ private:
 	bool m_reinit; // Indicates if voxelgrid has to be reinitialized, because resolution, voxelSize or simulator changed
 	bool m_initSim; // Indicates that the simulation has to be initialized
 	bool m_updateDimensions; // Indicates that the simulation dimensions have to be updated
+	bool m_updateGrid; // Indicates that the simulation should be updated after next voxelization
+	bool m_copied; // Indicates if the voxelization was copied to the cpu since the update command
+
 	uint32_t m_cubeIndices;
 
 	bool m_voxelize;

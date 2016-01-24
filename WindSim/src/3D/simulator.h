@@ -6,7 +6,7 @@
 
 #include <string>
 #include <vector>
-#include <queue>
+#include <deque>
 #include <atomic>
 #include <mutex>
 #include <memory>
@@ -33,6 +33,8 @@ public:
 private:
 	void postMessageToRender(const MsgToRenderer& msg);
 	std::shared_ptr<MsgToSim> getMessageFromRender();
+	std::vector<std::shared_ptr<MsgToSim>> getAllMessagesFromRender();
+	void filterMessages(std::vector<std::shared_ptr<MsgToSim>>& messages);
 
 	void start(); // Create Process
 	void initSimulation(const DimMsg& msg); // Init simulation, including voxel grid dimensions
@@ -49,9 +51,9 @@ private:
 	void log(const std::string& msg);
 
 	std::mutex m_toSimMutex;
-	std::queue<std::shared_ptr<MsgToSim>> m_toSimMsgQueue;
+	std::deque<std::shared_ptr<MsgToSim>> m_toSimMsgQueue;
 	std::mutex m_toRenderMutex;
-	std::queue<std::shared_ptr<MsgToRenderer>> m_toRenderMsgQueue;
+	std::deque<std::shared_ptr<MsgToRenderer>> m_toRenderMsgQueue;
 
 	std::string m_executable;
 	std::string m_cmdArguments;
