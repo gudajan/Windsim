@@ -4,13 +4,13 @@
 #include <string>
 
 // Messages received from the simulation process
-enum class MsgFromSim { FinishedShmAccess };
+enum class MsgFromSim { FinishedShmAccess, ClosedShm };
 
 
 // Messages, posted to the simulator thread and process
 struct MsgToSim
 {
-	enum MsgType { InitSim, UpdateDimensions, UpdateGrid, Exit, SimulatorCmd, StartProcess, Empty } type;
+	enum MsgType { InitSim, UpdateDimensions, UpdateGrid, CloseShm, Exit, SimulatorCmd, StartProcess, Empty } type;
 
 	// Needed to make type polymorphic
 	MsgToSim(MsgType t = Empty) : type(t){};

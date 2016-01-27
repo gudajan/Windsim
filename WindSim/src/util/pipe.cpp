@@ -61,8 +61,26 @@ bool Pipe::connect(const std::wstring& name, bool create)
 	return true;
 }
 
+void Pipe::close(bool isServer)
+{
+	if (isServer)
+	{
+		BOOL success = DisconnectNamedPipe(m_pipe);
+		if (!success)
+			log("WARNING: DisconnectNamedPipe failed with '" + std::to_string(GetLastError()) + "'!");
+	}
+
+	CloseHandle(m_pipe);
+	m_pipe = NULL;
+	ZeroMemory(&m_read, sizeof(OVERLAPPED));
+	ZeroMemory(&m_write, sizeof(OVERLAPPED));
+}
+
 bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
 {
+	if (!m_pipe)
+		return false;
+
 	bool readData = false;
 
 	// Check if currently pending reads
@@ -76,7 +94,10 @@ bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
 	BOOL success = GetOverlappedResult(m_pipe, &m_read, &bytesRead, FALSE);
 	if (!success)
 	{
-		log("ERROR: GetOverlappedResult failed. Error : " + std::to_string(GetLastError()));
+		DWORD error = GetLastError();
+		log("ERROR: GetOverlappedResult failed. Error : " + std::to_string(error));
+		if (error == ERROR_BROKEN_PIPE) // Pipe disconnected/crashed
+			close(false);
 		return false;
 	}
 
@@ -118,6 +139,9 @@ bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
 
 bool Pipe::send(const std::vector<BYTE>& msg)
 {
+	if (!m_pipe)
+		return false;
+
 	if (msg.size() > g_bufferSize)
 	{
 		log("ERROR: Message bigger than buffer size '" + std::to_string(g_bufferSize) + "'!");
@@ -125,7 +149,7 @@ bool Pipe::send(const std::vector<BYTE>& msg)
 	}
 
 	DWORD bytesWritten;
-	BOOL success = WriteFile(m_pipe, msg.data(), msg.size(), &bytesWritten, &m_write);
+	BOOL success = WriteFile(m_pipe, msg.data(), static_cast<DWORD>(msg.size()), &bytesWritten, &m_write);
 
 	if (success && bytesWritten == msg.size()) // Write completed
 	{

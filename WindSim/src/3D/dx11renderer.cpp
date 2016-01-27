@@ -270,6 +270,8 @@ void DX11Renderer::onMousePress(QPoint globalPos, int button, int modifiers)
 	Qt::MouseButton b = Qt::MouseButton(button);
 	Qt::KeyboardModifiers m = Qt::KeyboardModifiers(modifiers);
 
+	bool wasModifying = false;
+
 	switch (m_state)
 	{
 	case(State::Default):
@@ -281,6 +283,7 @@ void DX11Renderer::onMousePress(QPoint globalPos, int button, int modifiers)
 		m_camera.handleMousePress(globalPos, b, m);
 		break;
 	case(State::Modifying) :
+		wasModifying = true;
 		// (righclick -> abort, leftclick -> ok -> create modify cmd
 		m_transformer.handleMousePress(b);
 		if (!m_transformer.isModifying())
@@ -293,7 +296,7 @@ void DX11Renderer::onMousePress(QPoint globalPos, int button, int modifiers)
 		break;
 	}
 
-	if (button == Qt::LeftButton)
+	if (!wasModifying && button == Qt::LeftButton)
 		m_pressedId = m_manager.getHoveredId();
 }
 

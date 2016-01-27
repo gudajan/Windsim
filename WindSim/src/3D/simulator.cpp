@@ -47,6 +47,10 @@ void Simulator::loop()
 		// Filter unneccessary messages (e.g. and UpdateGrid message is unneccessary if afterwards an UpdateDimensions message was received)
 		filterMessages(messages);
 
+		// Dimension updates require the simulation process to close the shared memory first -> delay it until receiving the CloseShm message
+		static DimMsg delayedDimMsg;
+		static bool delayedDimUpdate = false;
+
 		for (auto msg : messages)
 		{
 			switch (msg->type)
@@ -57,7 +61,6 @@ void Simulator::loop()
 				break;
 			}
 			case(MsgToSim::InitSim) :
-			case(MsgToSim::UpdateDimensions) :
 			{
 				if (isRunning())
 				{
@@ -66,7 +69,23 @@ void Simulator::loop()
 					// We become ready again when the external simulator process has finished accessing the shared memory, because only then we are allowed to write to the shared memory again
 					m_ready = false;
 					initSimulation(*std::dynamic_pointer_cast<DimMsg>(msg));
-
+				}
+				break;
+			}
+			case(MsgToSim::UpdateDimensions) :
+			{
+				if (isRunning())
+				{
+					m_ready = false;
+					std::vector<BYTE> data(sizeof(MsgToSim::MsgType));
+					MsgToSim::MsgType type = MsgToSim::CloseShm;
+					std::memcpy(data.data(), &type, sizeof(MsgToSim::MsgType));
+					if (m_pipe.send(data))
+					{
+						log("INFO: Sent 'CloseShm'.");
+						delayedDimMsg = *std::dynamic_pointer_cast<DimMsg>(msg);
+						delayedDimUpdate = true;
+					}
 				}
 				break;
 			}
@@ -114,13 +133,26 @@ void Simulator::loop()
 			{
 				MsgFromSim type;
 				std::memcpy(&type, msg.data(), sizeof(MsgFromSim));
-				if (type == MsgFromSim::FinishedShmAccess)
+				switch (type)
 				{
+				case(MsgFromSim::FinishedShmAccess) :
+					log("INFO: Received 'FinishedShmAccess' message.");
 					m_ready = true;
+					break;
+				case(MsgFromSim::ClosedShm) :
+				{
+					log("INFO: Received 'ClosedShm' message.");
+					if (delayedDimUpdate)
+					{
+						initSimulation(delayedDimMsg);
+						delayedDimUpdate = false;
+					}
+					break;
 				}
-				else
+				default:
 				{
 					log("WARNING: Received invalid Message from external simulation process!");
+				}
 				}
 			}
 		}
@@ -319,7 +351,12 @@ void Simulator::start()
 void Simulator::initSimulation(const DimMsg& msg)
 {
 	removeSharedMemory();
-	createSharedMemory(msg.res.x * msg.res.y * msg.res.z * sizeof(char), L"Local\\voxelgrid");
+	if (!createSharedMemory(msg.res.x * msg.res.y * msg.res.z * sizeof(char), L"Local\\voxelgrid"))
+	{
+		log("ERROR: Failed to create shared memory! Please try to reinitialize the simulation.");
+		m_ready = true;
+		return;
+	}
 
 	copyGrid();
 
@@ -339,7 +376,6 @@ void Simulator::initSimulation(const DimMsg& msg)
 void Simulator::stop()
 {
 	removeSharedMemory();
-	//TODO: close and remove named pipe
 
 	// Execute only if process was created
 	if (m_process.hProcess != NULL)
@@ -354,7 +390,7 @@ void Simulator::stop()
 			std::memcpy(data.data(), &type, sizeof(MsgToSim::MsgType));
 			if (m_pipe.send(data))
 				log("INFO: Sent 'Exit'!");
-
+			m_pipe.close(true);
 			if (WaitForSingleObject(m_process.hProcess, 5000) != WAIT_OBJECT_0) // Wait for 5 seconds
 				TerminateProcess(m_process.hProcess, 0);
 		}
@@ -381,6 +417,12 @@ void Simulator::update()
 
 void Simulator::copyGrid()
 {
+	if (!m_sharedGrid)
+	{
+		m_ready = true;
+		return;
+	}
+
 	// Lock mutex
 	std::lock_guard<std::mutex> guard(m_cellGridMutex);
 
@@ -490,13 +532,31 @@ bool Simulator::createSharedMemory(int size, const std::wstring& name)
 
 bool Simulator::removeSharedMemory()
 {
+	bool error = false;
 	if (m_sharedGrid)
-		UnmapViewOfFile(m_sharedGrid);
+	{
+		BOOL success = UnmapViewOfFile(m_sharedGrid);
+		if (!success)
+		{
+			log("ERROR: UnmapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
+			error = true;
+		}
+	}
 
 	if (m_sharedHandle)
-		CloseHandle(m_sharedHandle);
+	{
+		BOOL success = CloseHandle(m_sharedHandle);
+		if (!success)
+		{
+			log("ERROR: CloseHandle failed with '" + std::to_string(GetLastError()) + "'!");
+			error = true;
+		}
+	}
 
-	return true;
+	m_sharedGrid = nullptr;
+	m_sharedHandle = nullptr;
+
+	return !error;
 }
 
 void Simulator::log(const std::string& msg)
