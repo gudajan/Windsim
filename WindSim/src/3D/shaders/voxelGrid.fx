@@ -17,6 +17,10 @@
 #define CELL_TYPE_SOLID_NO_SLIP 4
 #define CELL_TYPE_SOLID_BOUNDARY 5
 
+#define XY_PLANE 0
+#define XZ_PLANE 1
+#define YZ_PLANE 2
+
 // Read-Write and Read texture for the grid, containing a single mesh voxelization
 RWTexture3D<uint> g_gridUAV;
 Texture3D<uint> g_gridSRV;
@@ -24,20 +28,23 @@ Texture3D<uint> g_gridSRV;
 RWTexture3D<uint> g_gridAllUAV;
 Texture3D<uint> g_gridAllSRV;
 
+Texture3D<float4> g_velocitySRV;
+
 
 
 cbuffer cb
 {
 	float4x4 g_mWorldViewProj; // Object space -> world space -> Camera/View space -> projection space
+
 	float4x4 g_mObjToWorld; // Mesh object space -> world space
+
 	float4x4 g_mGridToVoxel; // Grid Object Space -> Voxel Space (use position as 3D index into voxel grid texture)
 	float4x4 g_mWorldToVoxel; // Combined matrix: world space -> grid object space -> voxel space
 	float4x4 g_mVoxelProj; // Projection matrix for voxelization (orthogonal, aligned with the voxelgrid)
 	float4x4 g_mVoxelWorldViewProj; // Voxel space -> grid object space -> world space -> camera/view space -> projection space
-	float4x4 g_mVoxelWorldViewProjInv; // Inverse of the above
 	float4x4 g_mVoxelWorldView; // Voxel space -> grid object space -> world space -> camera/view space
 
-	float4 g_vCamPosVS; // Camera position in Voxel space
+	float4 g_vCamPos; // Camera position (in currently necessary space)
 	uint3 g_vResolution; // Resolution of voxel grid
 	float3 g_vVoxelSize; // VoxelSize in grid object space
 }
@@ -68,6 +75,11 @@ struct PSVoxelIn
 	float3 voxelPos : INDEX;
 };
 
+struct PSColIn
+{
+	float4 pos : SV_POSITION;
+	float3 col : COLOR;
+};
 struct PSOut
 {
 	float4 col : SV_Target;
@@ -277,6 +289,102 @@ PSVoxelIn vsVolume(VSGridIn vsIn)
 	return vsOut;
 }
 
+uint vsPassId(uint vid : SV_VertexID) : VertexID
+{
+	return vid;
+}
+
+// =============================================================================
+// GEOMETRY SHADER
+// =============================================================================
+
+[maxvertexcount(5)]
+void gsArrowGlyph(point uint input[1] : VertexID, inout LineStream<PSColIn> stream)
+{
+	PSColIn psIn;
+
+	// Definitions
+	float slicePosition = 0.5;
+	uint2 glyphNumber = uint2(128, 32);
+	int orientation = XZ_PLANE;
+	float scale = 0.003f * length(g_vVoxelSize);
+	float arrowHeadSize = 0.5f;
+
+	// Glyph plane orientation
+	float3 slicePlaneNormal;
+	float3 slicePlaneVec1;
+	float3 slicePlaneVec2;
+	if (orientation == XZ_PLANE)
+	{
+		slicePlaneNormal = float3(0, 1, 0);
+		slicePlaneVec1 = float3(1, 0, 0);
+		slicePlaneVec2 = float3(0, 0, 1);
+	}
+	else if (orientation == XY_PLANE)
+	{
+		slicePlaneNormal = float3(1, 0, 0);
+		slicePlaneVec1 = float3(0, 1, 0);
+		slicePlaneVec2 = float3(0, 0, 1);
+	}
+	else if (orientation == YZ_PLANE)
+	{
+		slicePlaneNormal = float3(0, 0, 1);
+		slicePlaneVec1 = float3(1, 0, 0);
+		slicePlaneVec2 = float3(0, 1, 0);
+	}
+
+
+	float3 slicePlanePos = slicePosition * slicePlaneNormal;
+
+	slicePlaneVec1 /= glyphNumber.x;
+	slicePlaneVec2 /= glyphNumber.y;
+
+	uint id = input[0];
+	uint2 index;
+	index.y = id / glyphNumber.x;
+	index.x = id - index.y * glyphNumber.x;
+
+	// Calculate glyph position
+	float3 posTS = slicePlanePos + slicePlaneVec1 * (index.x + 0.5) + slicePlaneVec2 * (index.y + 0.5); // In texture space [0, 1]
+	float3 posOS = posTS * float3(g_vResolution) * g_vVoxelSize; // In object space
+
+	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, posTS, 0).xyz;
+
+	float3 x = float3(0, -1, 0) * scale;
+	float3 y = float3(1, 0, 0) * scale;
+	psIn.col = float3(1, 0, 0);
+	if (length(velocity) != 0.0)
+	{
+		// The orientation of the glyph
+		x = normalize(velocity) * scale * length(velocity);
+		y = normalize(cross(x, normalize((g_vCamPos.xyz * g_vVoxelSize) - posOS))) * scale * length(velocity); // In voxel grid object space
+		psIn.col = float3(0, 1, 0);
+	}
+
+	//Arrow end
+	psIn.pos = mul(float4(posOS - x, 1.0f), g_mWorldViewProj);
+	stream.Append(psIn);
+
+	//Arrow head
+	psIn.pos = mul(float4(posOS + x, 1.0f), g_mWorldViewProj);
+	float4 head = psIn.pos;
+	stream.Append(psIn);
+
+	//Arrow head UP
+	psIn.pos = mul(float4(posOS + y * arrowHeadSize + x * (1 - arrowHeadSize), 1.0f), g_mWorldViewProj);
+	stream.Append(psIn);
+
+	stream.RestartStrip();
+
+	//Arrow head
+	psIn.pos = head;
+	stream.Append(psIn);
+
+	//Arrow head DOWN
+	psIn.pos = mul(float4(posOS - y  * arrowHeadSize + x * (1 - arrowHeadSize), 1.0f), g_mWorldViewProj);
+	stream.Append(psIn);
+}
+
 // =============================================================================
 // PIXEL SHADER
 // =============================================================================
@@ -326,13 +434,13 @@ PSOut psVolume(PSVoxelIn psIn)
 	psOut.col = float4(0.0, 0.0f, 0.0f, 1.0f);
 	psOut.depth = 0.0f;
 
-	float3 rayDir = normalize(psIn.voxelPos - g_vCamPosVS.xyz);
+	float3 rayDir = normalize(psIn.voxelPos - g_vCamPos.xyz);
 
 	float tmin = 0.0;
 	float tmax = -1.0;
 	// Add/Subtract small value because of numerical inaccuracies, which would lead to discarded pixels later
 	// (i.e. the intersection position may lie just outside the grid and therefore the raycasting is immediately stopped)
-	if (!intersectBox(g_vCamPosVS.xyz, rayDir, float3(0.001f, 0.001f, 0.001f), float3(g_vResolution - 0.001), tmin, tmax))
+	if (!intersectBox(g_vCamPos.xyz, rayDir, float3(0.001f, 0.001f, 0.001f), float3(g_vResolution - 0.001), tmin, tmax))
 	{
 		discard;
 		return psOut;
@@ -340,9 +448,9 @@ PSOut psVolume(PSVoxelIn psIn)
 
 	float stepSize = 0.1; // In Voxel space, all sides of a voxel are of length 1
 	float3 rayInc = stepSize * rayDir;
-	float3 currentPos = g_vCamPosVS.xyz + tmin * rayDir; // Start raycasting at the incoming fragment, which corresponds to the border of the voxel grid
-	if (inGrid(g_vCamPosVS.xyz))
-		currentPos = g_vCamPosVS.xyz;
+	float3 currentPos = g_vCamPos.xyz + tmin * rayDir; // Start raycasting at the incoming fragment, which corresponds to the border of the voxel grid
+	if (inGrid(g_vCamPos.xyz))
+		currentPos = g_vCamPos.xyz;
 	bool discarded = false;
 	int counter = 0;
 	uint voxel = 0;
@@ -380,9 +488,9 @@ PSOut psVolume(PSVoxelIn psIn)
 		tmax = -1.0f;
 		float3 boxMin = floor(currentPos);
 		float3 boxMax = ceil(currentPos);
-		intersectBox(g_vCamPosVS.xyz, rayDir, boxMin, boxMax, tmin, tmax); // Get intersection point of voxel and ray
+		intersectBox(g_vCamPos.xyz, rayDir, boxMin, boxMax, tmin, tmax); // Get intersection point of voxel and ray
 
-		float3 voxelPos = g_vCamPosVS.xyz + tmin * rayDir;
+		float3 voxelPos = g_vCamPos.xyz + tmin * rayDir;
 		float4 pos = mul(float4(voxelPos, 1.0f), g_mVoxelWorldViewProj);
 		psOut.depth = pos.z / pos.w;
 
@@ -417,6 +525,10 @@ PSOut psVolume(PSVoxelIn psIn)
 	return psOut;
 }
 
+float4 psCol(PSColIn frag) : SV_Target
+{
+	return float4(frag.col, 1.0f);
+}
 
 technique11 Voxel
 {
@@ -444,6 +556,15 @@ technique11 Voxel
 		SetGeometryShader(NULL);
 		SetPixelShader(CompileShader(ps_5_0, psVolume()));
 		SetRasterizerState(CullFront);
+		SetDepthStencilState(DepthDefault, 0);
+		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+	pass VelocityGlyph
+	{
+		SetVertexShader(CompileShader(vs_5_0, vsPassId()));
+		SetGeometryShader(CompileShader(gs_5_0, gsArrowGlyph()));
+		SetPixelShader(CompileShader(ps_5_0, psCol()));
+		SetRasterizerState(CullNone);
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}

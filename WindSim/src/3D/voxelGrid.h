@@ -58,9 +58,12 @@ public:
 
 private:
 	void createGridData(); // Create cube for line rendering
+	void updateVelocity(ID3D11DeviceContext* context);
+
 	void renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, bool copyStaging);
 	void renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
+	void renderVelocity(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 
 	struct ShaderVariables
 	{
@@ -71,16 +74,16 @@ private:
 		ID3DX11EffectMatrixVariable* worldToVoxel; // Combined matrix: world space -> grid object space -> voxel space
 		ID3DX11EffectMatrixVariable* voxelProj; // Projection matrix for voxelization (orthogonal, aligned with the voxelgrid)
 		ID3DX11EffectMatrixVariable* voxelWorldViewProj; // Voxel space -> grid object space -> world space -> camera/view space -> projection space
-		ID3DX11EffectMatrixVariable* voxelWorldViewProjInv;
 		ID3DX11EffectMatrixVariable* voxelWorldView; // Voxel space -> grid object space -> world space -> camera/view space -> projection space
 
-		ID3DX11EffectVectorVariable* camPosVS;
+		ID3DX11EffectVectorVariable* camPos;
 		ID3DX11EffectVectorVariable* resolution;
 		ID3DX11EffectVectorVariable* voxelSize;
 		ID3DX11EffectUnorderedAccessViewVariable* gridUAV;
 		ID3DX11EffectShaderResourceVariable* gridSRV;
 		ID3DX11EffectUnorderedAccessViewVariable* gridAllUAV;
 		ID3DX11EffectShaderResourceVariable* gridAllSRV;
+		ID3DX11EffectShaderResourceVariable* velocityField;
 
 
 	};
@@ -114,6 +117,9 @@ private:
 	ID3D11ShaderResourceView* m_gridSRV; // SRV for one voxelization, used in compute shader
 	ID3D11UnorderedAccessView* m_gridAllUAV; // UAV for all Voxelizations
 	ID3D11ShaderResourceView* m_gridAllSRV; // SRV for volume rendering
+	ID3D11Texture3D* m_velocityTexture;
+	ID3D11Texture3D* m_velocityTextureStaging;
+	ID3D11ShaderResourceView* m_velocitySRV;
 
 	Simulator m_simulator;
 	std::thread m_simulatorThread;

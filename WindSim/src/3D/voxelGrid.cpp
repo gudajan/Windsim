@@ -34,34 +34,15 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_gridSRV(nullptr),
 	m_gridAllUAV(nullptr),
 	m_gridAllSRV(nullptr),
+	m_velocityTexture(nullptr),
+	m_velocityTextureStaging(nullptr),
+	m_velocitySRV(nullptr),
 	m_simulator(simulator, logger),
 	m_simulatorThread(&Simulator::loop, &m_simulator)
 {
 	createGridData();
 	m_simulator.postMessageToSim({ MsgToSim::StartProcess }); // Start simulator process
 }
-
-//VoxelGrid::VoxelGrid(VoxelGrid&& other)
-//	: Object3D(std::move(other)),
-//	m_manager(other.m_manager),
-//	m_resolution(std::move(other.m_resolution)),
-//	m_voxelSize(std::move(other.m_voxelSize)),
-//	m_reinit(other.m_reinit),
-//	m_cubeIndices(other.m_cubeIndices),
-//	m_voxelize(other.m_voxelize),
-//	m_counter(other.m_counter),
-//	m_renderVoxel(other.m_renderVoxel),
-//	m_gridTextureGPU(other.m_gridTextureGPU),
-//	m_gridAllTextureGPU(other.m_gridAllTextureGPU),
-//	m_gridAllTextureStaging(other.m_gridAllTextureStaging),
-//	m_gridUAV(other.m_gridUAV),
-//	m_gridSRV(other.m_gridSRV),
-//	m_gridAllUAV(other.m_gridAllUAV),
-//	m_gridAllSRV(other.m_gridAllSRV),
-//	m_simulator(std::move(other.m_simulator)),
-//	m_simulatorThread(std::move(other.m_simulatorThread))
-//{
-//}
 
 VoxelGrid::~VoxelGrid()
 {
@@ -97,10 +78,9 @@ HRESULT VoxelGrid::createShaderFromFile(const std::wstring& shaderPath, ID3D11De
 	s_shaderVariables.worldToVoxel = s_effect->GetVariableByName("g_mWorldToVoxel")->AsMatrix();
 	s_shaderVariables.voxelProj = s_effect->GetVariableByName("g_mVoxelProj")->AsMatrix();
 	s_shaderVariables.voxelWorldViewProj = s_effect->GetVariableByName("g_mVoxelWorldViewProj")->AsMatrix();
-	s_shaderVariables.voxelWorldViewProjInv = s_effect->GetVariableByName("g_mVoxelWorldViewProjInv")->AsMatrix();
 	s_shaderVariables.voxelWorldView = s_effect->GetVariableByName("g_mVoxelWorldView")->AsMatrix();
 
-	s_shaderVariables.camPosVS = s_effect->GetVariableByName("g_vCamPosVS")->AsVector();
+	s_shaderVariables.camPos = s_effect->GetVariableByName("g_vCamPos")->AsVector();
 	s_shaderVariables.resolution = s_effect->GetVariableByName("g_vResolution")->AsVector();
 	s_shaderVariables.voxelSize = s_effect->GetVariableByName("g_vVoxelSize")->AsVector();
 
@@ -108,6 +88,7 @@ HRESULT VoxelGrid::createShaderFromFile(const std::wstring& shaderPath, ID3D11De
 	s_shaderVariables.gridSRV = s_effect->GetVariableByName("g_gridSRV")->AsShaderResource();
 	s_shaderVariables.gridAllUAV = s_effect->GetVariableByName("g_gridAllUAV")->AsUnorderedAccessView();
 	s_shaderVariables.gridAllSRV = s_effect->GetVariableByName("g_gridAllSRV")->AsShaderResource();
+	s_shaderVariables.velocityField = s_effect->GetVariableByName("g_velocitySRV")->AsShaderResource();
 
 	// The same layout as meshes, as only they are voxelized
 	D3D11_INPUT_ELEMENT_DESC meshLayout[] =
@@ -182,6 +163,28 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_gridAllTextureStaging));
 
 
+	// Create velocity field textures
+	// Use one staging texture for writing the velocities from CPU to GPU and use CopyResource to copy the staging texture to a GPU usable default texture
+
+	// Default texture
+	td.Width = m_resolution.x;
+	td.Height = m_resolution.y;
+	td.Depth = m_resolution.z;
+	td.MipLevels = 1;
+	td.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // 3D velocity vector per voxel
+	td.Usage = D3D11_USAGE_DEFAULT;
+	td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	td.CPUAccessFlags = 0; // No CPU Access for this texture
+	td.MiscFlags = 0;
+	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_velocityTexture));
+	V_RETURN(device->CreateShaderResourceView(m_velocityTexture, nullptr, &m_velocitySRV));
+
+	// Staging texture
+	td.Usage = D3D11_USAGE_STAGING;
+	td.BindFlags = 0;
+	td.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_velocityTextureStaging));
+
 	// Delay simulation update by setting a flag. This way, the update/initialization occurs not until the voxelization was performed once.
 	if (!m_simulator.isRunning())
 		m_initSim = true;
@@ -208,7 +211,9 @@ void VoxelGrid::release()
 	SAFE_RELEASE(m_gridSRV);
 	SAFE_RELEASE(m_gridAllUAV);
 	SAFE_RELEASE(m_gridAllSRV);
-
+	SAFE_RELEASE(m_velocityTexture);
+	SAFE_RELEASE(m_velocityTextureStaging);
+	SAFE_RELEASE(m_velocitySRV);
 }
 
 void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
@@ -222,9 +227,18 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	}
 
 	// Check for messages from simulator
-	std::shared_ptr<MsgToRenderer> msg = m_simulator.getMessageFromSim();
-
-	// TODO: Handle msg if type != Empty
+	std::shared_ptr<MsgToRenderer> msg = nullptr;
+	bool updatedVelocity = false;
+	do
+	{
+		msg = m_simulator.getMessageFromSim();
+		if (msg->type == MsgToRenderer::UpdateVelocity && !updatedVelocity) // Avoid updating velocities twice
+		{
+			updateVelocity(context);
+			m_simulator.postMessageToSim({ MsgToSim::FinishedVelocityAccess });
+			updatedVelocity = true;
+		}
+	} while (msg->type != MsgToRenderer::Empty);
 
 	renderGridBox(device, context, world, view, projection);
 
@@ -242,7 +256,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		m_voxelize = false;
 	}
 
-	// Make sure, the cpu only accesses the voxel grid if the GPU copiing is done, to avoid pipeline stalling ( GPU copiing needs 2 frames)
+	// Make sure, the cpu only accesses the voxel grid if the GPU copying is done, to avoid pipeline stalling ( GPU copying needs 2 frames)
 	// Additionally only copy to cpu if former grid was written to shared memory
 	if (m_counter >= 2 && m_simulator.isReady())
 	{
@@ -255,7 +269,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		{
 			// The mapped data may include padding in the memory, because of GPU optimizations
 			// This means a 10x10x10 texture may be mapped as a 16x16x16 block
-			// The real pitches from one row/depth slice to another are givem by the D3D11_MAPPED_SUBRESOURCE
+			// The real pitches from one row/depth slice to another are given by the D3D11_MAPPED_SUBRESOURCE
 
 			uint32_t* cells = reinterpret_cast<uint32_t*>(msr.pData);
 
@@ -307,6 +321,8 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 
 	if (m_renderVoxel)
 		renderVoxel(device, context, world, view, projection);
+
+	renderVelocity(device, context, world, view, projection);
 
 	if (m_counter > -1)
 		m_counter++;
@@ -395,6 +411,53 @@ void VoxelGrid::createGridData()
 	m_numIndices = 12 * 2; // 12 lines with 2 vertices
 	m_cubeIndices = 12 * 3; // 12 triangles with 3 vertices
 
+}
+
+void VoxelGrid::updateVelocity(ID3D11DeviceContext* context)
+{
+	// Map staging texture, write velocity field to it, unmap, copy resource to gpu
+	D3D11_MAPPED_SUBRESOURCE msr;
+	context->Map(m_velocityTextureStaging, 0, D3D11_MAP_WRITE, 0, &msr);
+	if (msr.pData)
+	{
+		//if (msr.RowPitch == m_resolution.x * sizeof(float) * 3 && msr.DepthPitch == m_resolution.x * m_resolution.y * sizeof(float) * 3)
+		//	std::memcpy(msr.pData, m_simulator.getVelocity(), m_resolution.x * m_resolution.y * m_resolution.z * sizeof(float) * 3);
+		//else
+		{
+			int paddedRowPitch = msr.RowPitch / sizeof(float);
+			int paddedDepthPitch = msr.DepthPitch / sizeof(float);
+			int rowPitch = m_resolution.x * 3; // three floats in original buffer
+			int depthPitch = rowPitch * m_resolution.y;
+
+			float* data = static_cast<float*>(msr.pData);
+			float* velocity = m_simulator.getVelocity();
+
+			for (int z = 0; z < m_resolution.z; ++z)
+			{
+				for (int y = 0; y < m_resolution.y; ++y)
+				{
+					for (int x = 0; x < m_resolution.x; ++x)
+					{
+						for (int i = 0; i < 3; ++i)
+						{
+							data[(x * 4) + i + y * paddedRowPitch + z * paddedDepthPitch] = velocity[(x * 3) + i + y * rowPitch + z * depthPitch];
+						}
+						data[(x * 4) + 3 + y * paddedRowPitch + z * paddedDepthPitch] = 0;
+					}
+				}
+			}
+			//for (int z = 0; z < m_resolution.z; ++z)
+			//{
+			//	for (int y = 0; y < m_resolution.y; ++y)
+			//	{
+			//		std::memcpy(data + y * paddedRowPitch + z * paddedDepthPitch, velocity + y * rowPitch + z * depthPitch, rowPitch * sizeof(float)); // Copy whole row
+			//	}
+			//}
+		}
+	}
+	context->Unmap(m_velocityTextureStaging, 0);
+
+	context->CopyResource(m_velocityTexture, m_velocityTextureStaging);
 }
 
 void VoxelGrid::renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
@@ -577,9 +640,7 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 	XMMATRIX voxelWorldViewProj = voxelWorldView * p;
 	XMMATRIX viewInv = XMMatrixInverse(nullptr, v);
 	XMMATRIX worldInv = XMMatrixInverse(nullptr, w);
-	XMMATRIX projInv = XMMatrixInverse(nullptr, p);
 	s_shaderVariables.voxelWorldViewProj->SetMatrix(reinterpret_cast<float*>(voxelWorldViewProj.r));
-	s_shaderVariables.voxelWorldViewProjInv->SetMatrix(reinterpret_cast<float*>((projInv * viewInv * worldInv * gridToVoxel).r));
 	s_shaderVariables.voxelWorldView->SetMatrix(reinterpret_cast<float*>(voxelWorldView.r));
 
 	s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(voxelToGrid.r));
@@ -591,7 +652,7 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 	camPos = XMVector3Transform(camPos, viewInv); // World Space
 	camPos = XMVector3Transform(camPos, worldInv); // Grid Object Space
 	camPos = XMVector3Transform(camPos, gridToVoxel); // Voxel Space
-	s_shaderVariables.camPosVS->SetFloatVector(camPos.m128_f32);
+	s_shaderVariables.camPos->SetFloatVector(camPos.m128_f32);
 
 	s_shaderVariables.gridAllSRV->SetResource(m_gridAllSRV);
 
@@ -611,6 +672,41 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 
 }
 
+void VoxelGrid::renderVelocity(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
+{
+	XMMATRIX w = XMLoadFloat4x4(&world);
+	XMMATRIX v = XMLoadFloat4x4(&view);
+	XMMATRIX p = XMLoadFloat4x4(&projection);
+	XMMATRIX worldViewProj = w * v * p;
+	s_shaderVariables.worldViewProj->SetMatrix(reinterpret_cast<float*>((worldViewProj).r));
+
+	XMMATRIX viewInv = XMMatrixInverse(nullptr, v);
+	XMMATRIX worldInv = XMMatrixInverse(nullptr, w);
+
+	XMVECTOR camPos = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f); // In camera space
+	camPos = XMVector3Transform(camPos, viewInv); // World Space
+	camPos = XMVector3Transform(camPos, worldInv); // Grid Object Space
+	s_shaderVariables.camPos->SetFloatVector(camPos.m128_f32);
+
+	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
+	s_shaderVariables.voxelSize->SetFloatVector(reinterpret_cast<float*>(&m_voxelSize));
+
+	s_shaderVariables.velocityField->SetResource(m_velocitySRV);
+
+	s_effect->GetTechniqueByIndex(0)->GetPassByName("VelocityGlyph")->Apply(0, context);
+
+	UINT stride = 0;
+	UINT offset = 0;
+	context->IASetInputLayout(nullptr);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+	context->IASetVertexBuffers(0, 0, nullptr, &stride, &offset);
+	context->Draw(128 * 32, 0);
+
+	s_shaderVariables.velocityField->SetResource(nullptr);
+
+	s_effect->GetTechniqueByIndex(0)->GetPassByName("VelocityGlyph")->Apply(0, context);
+}
+
 VoxelGrid::ShaderVariables::ShaderVariables()
 	: worldViewProj(nullptr),
 	objToWorld(nullptr),
@@ -618,13 +714,13 @@ VoxelGrid::ShaderVariables::ShaderVariables()
 	worldToVoxel(nullptr),
 	voxelProj(nullptr),
 	voxelWorldViewProj(nullptr),
-	voxelWorldViewProjInv(nullptr),
 	voxelWorldView(nullptr),
-	camPosVS(nullptr),
+	camPos(nullptr),
 	resolution(nullptr),
 	gridUAV(nullptr),
 	gridAllUAV(nullptr),
-	gridAllSRV(nullptr)
+	gridAllSRV(nullptr),
+	velocityField(nullptr)
 {
 }
 

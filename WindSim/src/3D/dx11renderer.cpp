@@ -71,13 +71,13 @@ bool DX11Renderer::init()
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-	const D3D_FEATURE_LEVEL required[] = { D3D_FEATURE_LEVEL_11_1 };
+	const D3D_FEATURE_LEVEL required[] = { D3D_FEATURE_LEVEL_11_0 };
 	D3D_FEATURE_LEVEL featureLevel;
 
 	if (FAILED(D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, required, 1, D3D11_SDK_VERSION, &m_device, &featureLevel, &m_context)))
 		return false;
 
-	if (featureLevel != D3D_FEATURE_LEVEL_11_1)
+	if (featureLevel != D3D_FEATURE_LEVEL_11_0)
 		return false;
 
 	// Create rasterizerstate

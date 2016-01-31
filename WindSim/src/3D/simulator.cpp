@@ -27,8 +27,11 @@ Simulator::Simulator(const std::string& cmdline, Logger* logger)
 	m_ready(std::atomic<bool>(true)),
 	m_process(),
 	m_pipe(logger),
-	m_sharedHandle(NULL),
+	m_sharedGridHandle(NULL),
 	m_sharedGrid(nullptr),
+	m_sharedVelocityHandle(NULL),
+	m_sharedVelocity(nullptr),
+	m_cellGridMutex(),
 	m_cellGrid(),
 	m_logger(logger)
 {
@@ -77,9 +80,9 @@ void Simulator::loop()
 				if (isRunning())
 				{
 					m_ready = false;
-					std::vector<BYTE> data(sizeof(MsgToSim::MsgType));
-					MsgToSim::MsgType type = MsgToSim::CloseShm;
-					std::memcpy(data.data(), &type, sizeof(MsgToSim::MsgType));
+					std::vector<BYTE> data(sizeof(MsgToSimProc));
+					MsgToSimProc type = MsgToSimProc::CloseShm;
+					std::memcpy(data.data(), &type, sizeof(MsgToSimProc));
 					if (m_pipe.send(data))
 					{
 						log("INFO: Sent 'CloseShm'.");
@@ -96,6 +99,17 @@ void Simulator::loop()
 					m_ready = false;
 					copyGrid();
 					update();
+				}
+				break;
+			}
+			case(MsgToSim::FinishedVelocityAccess):
+			{
+				std::vector<BYTE> data(sizeof(MsgToSimProc));
+				MsgToSimProc type = MsgToSimProc::FillVelocity;
+				std::memcpy(data.data(), &type, sizeof(MsgToSimProc));
+				if (m_pipe.send(data))
+				{
+					//log("INFO: Sent 'FillVelocity'.");
 				}
 				break;
 			}
@@ -131,15 +145,19 @@ void Simulator::loop()
 		{
 			for (auto msg : data)
 			{
-				MsgFromSim type;
-				std::memcpy(&type, msg.data(), sizeof(MsgFromSim));
+				MsgFromSimProc type;
+				std::memcpy(&type, msg.data(), sizeof(MsgFromSimProc));
 				switch (type)
 				{
-				case(MsgFromSim::FinishedShmAccess) :
-					log("INFO: Received 'FinishedShmAccess' message.");
+				case(MsgFromSimProc::FinishedVoxelGridAccess) :
+					log("INFO: Received 'FinishedVoxelGridAccess' message.");
 					m_ready = true;
 					break;
-				case(MsgFromSim::ClosedShm) :
+				case(MsgFromSimProc::FinishedVelocityAccess) :
+					// log("INFO: Received 'FinishedVelocityAccess' message.");
+					postMessageToRender({ MsgToRenderer::UpdateVelocity });
+					break;
+				case(MsgFromSimProc::ClosedShm) :
 				{
 					log("INFO: Received 'ClosedShm' message.");
 					if (delayedDimUpdate)
@@ -225,6 +243,7 @@ void Simulator::filterMessages(std::vector<std::shared_ptr<MsgToSim>>& messages)
 	std::shared_ptr<MsgToSim> dimMsg = nullptr; // UpdateDimensions
 	std::shared_ptr<MsgToSim> cmdMsg = nullptr; // SimulatorCmd
 	std::shared_ptr<MsgToSim> updateMsg = nullptr; // UpdateGrid
+	std::shared_ptr<MsgToSim> velMsg = nullptr; // FinishedVelocityAccess
 
 	for (auto msg : messages)
 	{
@@ -247,6 +266,7 @@ void Simulator::filterMessages(std::vector<std::shared_ptr<MsgToSim>>& messages)
 				initMsg = nullptr;
 				dimMsg = nullptr;
 				updateMsg = nullptr;
+				velMsg = nullptr;
 			}
 		}
 		else if (msg->type == MsgToSim::StartProcess && !cmdMsg) // Only neccessary if no SimulatorCmd message given
@@ -289,6 +309,11 @@ void Simulator::filterMessages(std::vector<std::shared_ptr<MsgToSim>>& messages)
 			if (!cmdMsg && !initMsg && !dimMsg)
 				updateMsg = msg;
 		}
+		else if (msg->type == MsgToSim::FinishedVelocityAccess)
+		{
+			if (!cmdMsg)
+				velMsg = msg;
+		}
 	}
 
 	// Messages are set to nullptr if not needed
@@ -306,6 +331,9 @@ void Simulator::filterMessages(std::vector<std::shared_ptr<MsgToSim>>& messages)
 
 	if (updateMsg)
 		filtered.push_back(updateMsg);
+
+	if (velMsg)
+		filtered.push_back(velMsg);
 
 	messages.swap(filtered);
 }
@@ -351,7 +379,7 @@ void Simulator::start()
 void Simulator::initSimulation(const DimMsg& msg)
 {
 	removeSharedMemory();
-	if (!createSharedMemory(msg.res.x * msg.res.y * msg.res.z * sizeof(char), L"Local\\voxelgrid"))
+	if (!createSharedMemory(msg.res.x * msg.res.y * msg.res.z, L"Local\\voxelgrid", L"Local\\velocity"))
 	{
 		log("ERROR: Failed to create shared memory! Please try to reinitialize the simulation.");
 		m_ready = true;
@@ -385,14 +413,14 @@ void Simulator::stop()
 		if (exitCode == STILL_ACTIVE)
 		{
 
-			std::vector<BYTE> data(sizeof(MsgToSim::MsgType));
-			MsgToSim::MsgType type = MsgToSim::Exit;
-			std::memcpy(data.data(), &type, sizeof(MsgToSim::MsgType));
+			std::vector<BYTE> data(sizeof(MsgToSimProc));
+			MsgToSimProc type = MsgToSimProc::Exit;
+			std::memcpy(data.data(), &type, sizeof(MsgToSimProc));
 			if (m_pipe.send(data))
 				log("INFO: Sent 'Exit'!");
-			m_pipe.close(true);
 			if (WaitForSingleObject(m_process.hProcess, 5000) != WAIT_OBJECT_0) // Wait for 5 seconds
 				TerminateProcess(m_process.hProcess, 0);
+			m_pipe.close(true);
 		}
 
 		// Wait until child process exits.
@@ -509,52 +537,71 @@ bool Simulator::createProcess(const std::wstring& exe, const std::wstring& args)
 	return true;
 }
 
-bool Simulator::createSharedMemory(int size, const std::wstring& name)
+bool Simulator::createSharedMemory(int size, const std::wstring& gridName, const std::wstring& velocityName)
 {
-	m_sharedHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, NULL, size, name.c_str());
-
-	if (m_sharedHandle == NULL)
+	// Open grid from shared memory
+	m_sharedGridHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, NULL, size * sizeof(char), gridName.c_str());
+	if (m_sharedGridHandle == NULL)
 	{
-		log("ERROR: CreateFileMapping failed with '" + std::to_string(GetLastError()) + "'!");
+		log("ERROR: CreateFileMapping faild to open shared memory with '" + std::to_string(GetLastError()) + "'!");
 		return false;
 	}
 
-	m_sharedGrid = static_cast<char*>(MapViewOfFile(m_sharedHandle, FILE_MAP_ALL_ACCESS, 0, 0, size));
-
+	m_sharedGrid = static_cast<char*>(MapViewOfFile(m_sharedGridHandle, FILE_MAP_WRITE, 0, 0, size * sizeof(char)));
 	if (m_sharedGrid == nullptr)
 	{
-		log("ERROR: MapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
-		CloseHandle(m_sharedHandle);
+		log("ERROR: MapViewOfFile failed to create view of shared memory with '" + std::to_string(GetLastError()) + "'!");
+		CloseHandle(m_sharedGridHandle);
 		return false;
 	}
+
+	m_sharedVelocityHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, NULL, size * sizeof(float) * 3, velocityName.c_str());
+	if (m_sharedVelocityHandle == NULL)
+	{
+		log("ERROR: CreateFileMapping faild to open shared memory with '" + std::to_string(GetLastError()) + "'!");
+		return false;
+	}
+
+	m_sharedVelocity = static_cast<float*>(MapViewOfFile(m_sharedVelocityHandle, FILE_MAP_READ, 0, 0, size * sizeof(float) * 3));
+	if (m_sharedVelocity == nullptr)
+	{
+		log("ERROR: MapViewOfFile failed to create view of shared memory with '" + std::to_string(GetLastError()) + "'!");
+		CloseHandle(m_sharedVelocityHandle);
+		return false;
+	}
+
 	return true;
 }
 
 bool Simulator::removeSharedMemory()
 {
 	bool error = false;
-	if (m_sharedGrid)
+	for (auto& it : std::vector<void*>{ m_sharedGrid, m_sharedVelocity })
 	{
-		BOOL success = UnmapViewOfFile(m_sharedGrid);
-		if (!success)
+		if (it)
 		{
-			log("ERROR: UnmapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
-			error = true;
+			BOOL success = UnmapViewOfFile(it);
+			if (!success)
+			{
+				log("ERROR: UnmapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
+				error = true;
+			}
 		}
+		it = nullptr;
 	}
-
-	if (m_sharedHandle)
+	for (auto& it : std::vector<HANDLE>{ m_sharedGridHandle, m_sharedVelocityHandle })
 	{
-		BOOL success = CloseHandle(m_sharedHandle);
-		if (!success)
+		if (it)
 		{
-			log("ERROR: CloseHandle failed with '" + std::to_string(GetLastError()) + "'!");
-			error = true;
+			BOOL success = CloseHandle(it);
+			if (!success)
+			{
+				log("ERROR: CloseHandle failed with '" + std::to_string(GetLastError()) + "'!");
+				error = true;
+			}
 		}
+		it = NULL;
 	}
-
-	m_sharedGrid = nullptr;
-	m_sharedHandle = nullptr;
 
 	return !error;
 }

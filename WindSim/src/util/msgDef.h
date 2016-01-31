@@ -4,13 +4,15 @@
 #include <string>
 
 // Messages received from the simulation process
-enum class MsgFromSim { FinishedShmAccess, ClosedShm };
+enum class MsgFromSimProc { FinishedVoxelGridAccess, FinishedVelocityAccess, ClosedShm };
+
+enum class MsgToSimProc { InitSim, UpdateDimensions, UpdateGrid, FillVelocity, CloseShm, Exit };
 
 
 // Messages, posted to the simulator thread and process
 struct MsgToSim
 {
-	enum MsgType { InitSim, UpdateDimensions, UpdateGrid, CloseShm, Exit, SimulatorCmd, StartProcess, Empty } type;
+	enum MsgType { InitSim, UpdateDimensions, UpdateGrid, FinishedVelocityAccess, Exit, SimulatorCmd, StartProcess, Empty } type;
 
 	// Needed to make type polymorphic
 	MsgToSim(MsgType t = Empty) : type(t){};
@@ -44,7 +46,7 @@ struct DimMsg : MsgToSim
 // Messages, posted to the renderer thread
 struct MsgToRenderer
 {
-	enum MsgType { Empty } type;
+	enum MsgType { UpdateVelocity, Empty } type;
 };
 
 

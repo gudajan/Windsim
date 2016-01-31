@@ -25,7 +25,8 @@ public:
 	void postMessageToSim(const MsgToSim& msg); // Posting message to simulator
 	std::shared_ptr<MsgToRenderer> getMessageFromSim(); // Get message from simulator
 	std::vector<uint32_t>& getCellGrid() { return m_cellGrid; };
-	std::mutex& getCellGridMutex() { return m_cellGridMutex; }
+	std::mutex& getCellGridMutex() { return m_cellGridMutex; };
+	float* getVelocity() { return m_sharedVelocity; };
 
 	bool isRunning() const { return m_running.load(); };
 	bool isReady() const { return m_ready.load(); };
@@ -45,7 +46,7 @@ private:
 	bool setCommandLine(const std::string& cmdline); // Returns if a simulator restart is necessary
 
 	bool createProcess(const std::wstring& exe, const std::wstring& args);
-	bool createSharedMemory(int size, const std::wstring& name);
+	bool createSharedMemory(int size, const std::wstring& gridName, const std::wstring& velocityName);
 	bool removeSharedMemory();
 
 	void log(const std::string& msg);
@@ -66,8 +67,10 @@ private:
 	PROCESS_INFORMATION m_process;
 	Pipe m_pipe;
 
-	HANDLE m_sharedHandle;
+	HANDLE m_sharedGridHandle;
 	char* m_sharedGrid;
+	HANDLE m_sharedVelocityHandle;
+	float* m_sharedVelocity;
 
 	std::mutex m_cellGridMutex;
 	std::vector<uint32_t> m_cellGrid;

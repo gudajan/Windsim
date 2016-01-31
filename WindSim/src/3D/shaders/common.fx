@@ -44,6 +44,10 @@ BlendState BlendBackToFront
 	BlendOpAlpha = ADD;
 };
 
+SamplerState SamLinear
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+};
 
 // normal dir, view dir, diffuse color, ambient constant, diffuse constant, specular constant, shininess constant
 float4 BlinnPhongIllumination(in float3 n, in float3 v, in float3 col, in float ca, in float cd, in float cs, in int css)
