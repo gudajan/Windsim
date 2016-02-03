@@ -3,6 +3,7 @@
 
 #include <QResizeEvent>
 #include <QApplication>
+#include <QMessageBox>
 
 DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	: QWidget(parent, flags),
@@ -13,7 +14,10 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	m_renderer= new DX11Renderer(winId(), width(), height(), nullptr);
 
 	if (!m_renderer->init())
-		throw std::runtime_error("Failed to initialize renderer!");
+	{
+		QMessageBox::critical(parent, "DirectX Error", "Initialization of DirectX 11 failed. Please check stdout for more information!");
+		throw std::runtime_error("ERROR: Failed to initialize DirectX 11!");
+	}
 
 	// Rendering should be executed in another thread, so 3D rendering does not block the GUI
 	m_renderer->moveToThread(&m_renderThread);
@@ -48,7 +52,6 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	setMouseTracking(true);
 
 	m_renderThread.start();
-
 
 	OutputDebugStringA(("MAIN THREAD: " + std::to_string(reinterpret_cast<int>(thread()->currentThreadId())) + "\n").c_str());
 }

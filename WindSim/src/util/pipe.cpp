@@ -107,7 +107,6 @@ bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
 		data.push_back(std::vector<BYTE>(bytesRead, 0));
 		std::copy(m_readData.begin(), std::next(m_readData.begin(), bytesRead), data[0].begin());
 		readData = true;
-		log("INFO: Received message from overlapped!");
 	}
 
 	// Start next async read operation
@@ -120,7 +119,6 @@ bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
 			data.push_back(std::vector<BYTE>(bytesRead, 0));
 			std::copy(m_readData.begin(), std::next(m_readData.begin(), bytesRead), data[data.size()-1].begin());
 			readData = true;
-			log("INFO: Received message immediately!");
 			continue;
 		}
 		DWORD error = GetLastError();

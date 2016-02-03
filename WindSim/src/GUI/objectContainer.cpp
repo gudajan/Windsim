@@ -237,7 +237,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 	}
 	if (type == ObjectType::VoxelGrid)
 	{
-		// Verify mandatory keys for meshes
+		// Verify mandatory keys for voxel grids
 		if (!object.contains("resolution"))
 		{
 			StaticLogger::logit("WARNING: Found no resolution for Voxel Grid '" + name + "' in project file!");
@@ -249,7 +249,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			return false;
 		}
 
-		// Insert all non-existent keys for meshes with default values
+		// Insert all non-existent keys for voxel grids with default values
 		if (!object.contains("Position"))
 			object["Position"] = QJsonObject{ { "x", 0.0 }, { "y", 0.0 }, { "z", 0.0 } };
 		if (!object.contains("Scaling"))
@@ -260,6 +260,11 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["renderVoxel"] = Qt::Checked;
 		if (!object.contains("simulator"))
 			object["simulator"] = ""; // Empty simulator is ok, as simulation simply does not run in this case
+		if (!object.contains("glyphs"))
+		{
+			QJsonObject tmp{ { "x", object["resolution"].toObject()["x"].toInt() }, { "y", object["resolution"].toObject()["y"].toInt() } };
+			object["glyphs"] = QJsonObject{ { "enabled", false }, { "orientation", XY_PLANE }, { "position", 0.5}, {"quantity", tmp} };
+		}
 	}
 
 	return true;

@@ -26,6 +26,7 @@ private slots:
 	void positionChanged();
 	void resolutionChanged();
 	void voxelSizeChanged();
+	void glyphSettingsChanged();
 
 	void chooseSimulator(); // Open Filedialog to choose executable
 

@@ -19,7 +19,7 @@
 
 namespace State
 {
-	enum RendererState { CameraMove, Modifying, Default };
+	enum RendererState { CameraMove, Modifying, Default, ShaderError };
 }
 
 struct ID3D11Devicee;

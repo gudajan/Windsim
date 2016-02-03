@@ -61,3 +61,10 @@ void VoxelGridActor::updateSimulation()
 {
 	m_grid.updateSimulation();
 }
+
+void VoxelGridActor::setGlyphSettings(bool render, Orientation orientation, float position, const XMUINT2& quantity)
+{
+	m_grid.setRenderGlyphs(render);
+	m_grid.setGlyphSettings(orientation, position);
+	m_grid.setGlyphQuantity(quantity);
+}

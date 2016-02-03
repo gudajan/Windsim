@@ -16,6 +16,8 @@
 #include <d3d11.h>
 #include <d3dx11effect.h>
 
+#include <comdef.h>
+
 #include <QCoreApplication>
 #include <QDir>
 #include <QThread>
@@ -74,11 +76,19 @@ bool DX11Renderer::init()
 	const D3D_FEATURE_LEVEL required[] = { D3D_FEATURE_LEVEL_11_0 };
 	D3D_FEATURE_LEVEL featureLevel;
 
-	if (FAILED(D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, required, 1, D3D11_SDK_VERSION, &m_device, &featureLevel, &m_context)))
+	HRESULT result = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, required, 1, D3D11_SDK_VERSION, &m_device, &featureLevel, &m_context);
+	if (FAILED(result))
+	{
+		_com_error err(result);
+		std::cout << "ERROR: Failed to create directX device with message '" << err.ErrorMessage() << "'\n";
 		return false;
+	}
 
 	if (featureLevel != D3D_FEATURE_LEVEL_11_0)
+	{
+		std::cout << "ERROR: Failed to create directX device. Feature level is different to DirectX 11.0.\n";
 		return false;
+	}
 
 	// Create rasterizerstate
 	// set default render state to msaa disabled
@@ -94,8 +104,13 @@ bool DX11Renderer::init()
 		TRUE,//BOOL MultisampleEnable;
 		FALSE//BOOL AntialiasedLineEnable;
 	};
-	if (FAILED(m_device->CreateRasterizerState(&drd, &m_rasterizerState)))
+	result = m_device->CreateRasterizerState(&drd, &m_rasterizerState);
+	if (FAILED(result))
+	{
+		_com_error err(result);
+		std::cout << "ERROR: Failed to create rasterizer state with message '" << err.ErrorMessage() << "'\n";
 		return false;
+	}
 
 	m_context->RSSetState(m_rasterizerState);
 
@@ -128,8 +143,13 @@ bool DX11Renderer::init()
 	IDXGIFactory* dxgiFactory = nullptr;
 	dxgiAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<LPVOID*>(&dxgiFactory));
 
-	if (FAILED(dxgiFactory->CreateSwapChain(m_device, &scDesc, &m_swapChain)))
+	result = dxgiFactory->CreateSwapChain(m_device, &scDesc, &m_swapChain);
+	if (FAILED(result))
+	{
+		_com_error err(result);
+		std::cout << "ERROR: Failed to create directX swapchain with message '" << err.ErrorMessage() << "'\n";
 		return false;
+	}
 
 	SAFE_RELEASE(dxgiDevice);
 	SAFE_RELEASE(dxgiAdapter);
@@ -147,6 +167,9 @@ bool DX11Renderer::init()
 
 void DX11Renderer::frame()
 {
+	if (m_state == State::ShaderError)
+		return;
+
 	long long elapsedTime = m_elapsedTimer.nsecsElapsed(); // nanoseconds
 	//OutputDebugStringA(("Current FPS: " + std::to_string(m_currentFPS) + "\n").c_str());
 	//OutputDebugStringA(("Elapsed: " + std::to_string(elapsedTime * 0.000001) + "msec\n").c_str());
@@ -423,22 +446,49 @@ void DX11Renderer::onSelectionChanged(std::unordered_set<int> ids)
 
 bool DX11Renderer::reloadShaders()
 {
+	bool reloaded = true;
 	if (FAILED(Mesh3D::createShaderFromFile(L"src\\3D\\shaders\\mesh.fx", m_device, true)))
-		return false;
+	{
+		m_logger.logit("WARNING: Failed to reload shader file 'src\\3D\\shaders\\mesh.fx'! Stopped rendering.");
+		m_state = State::ShaderError;
+		reloaded = false;
+	}
 
 	if (FAILED(Sky::createShaderFromFile(L"src\\3D\\shaders\\sky.fx", m_device, true)))
-		return false;
+	{
+		m_logger.logit("WARNING: Failed to reload shader file 'src\\3D\\shaders\\sky.fx'! Stopped rendering.");
+		m_state = State::ShaderError;
+		reloaded = false;
+	}
 
 	if (FAILED(Axes::createShaderFromFile(L"src\\3D\\shaders\\axes.fx", m_device, true)))
-		return false;
+	{
+		m_logger.logit("WARNING: Failed to reload shader file 'src\\3D\\shaders\\axes.fx'! Stopped rendering.");
+		m_state = State::ShaderError;
+		reloaded = false;
+	}
 
 	if (FAILED(Marker::createShaderFromFile(L"src\\3D\\shaders\\marker.fx", m_device, true)))
-		return false;
+	{
+		m_logger.logit("WARNING: Failed to reload shader file 'src\\3D\\shaders\\marker.fx'! Stopped rendering.");
+		m_state = State::ShaderError;
+		reloaded = false;
+	}
 
 	if (FAILED(VoxelGrid::createShaderFromFile(L"src\\3D\\shaders\\voxelGrid.fx", m_device, true)))
-		return false;
+	{
+		m_logger.logit("WARNING: Failed to reload shader file 'src\\3D\\shaders\\voxelGrid.fx'! Stopped rendering.");
+		m_state = State::ShaderError;
+		reloaded = false;
+	}
 
-	return true;
+	if (reloaded)
+	{
+		m_logger.logit("INFO: Shaders successfully reloaded.");
+		m_state = State::Default;
+	}
+
+	return reloaded;
 }
 
 void DX11Renderer::reloadIni()

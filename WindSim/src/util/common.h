@@ -49,6 +49,8 @@ enum CameraType { FirstPerson, ModelView };
 
 enum class Shading{ Smooth, Flat }; // Mesh Shading type
 
+enum Orientation {XY_PLANE, XZ_PLANE, YZ_PLANE};
+
 enum Modification
 {
 	Position = 0x1,
@@ -61,6 +63,7 @@ enum Modification
 	Resolution = 0x80,
 	VoxelSize = 0x100,
 	SimulatorExe = 0x200,
+	GlyphSettings = 0x400,
 	All = UINT_MAX
 };
 

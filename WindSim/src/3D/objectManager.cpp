@@ -129,6 +129,23 @@ void ObjectManager::modify(const QJsonObject& data)
 		throw std::runtime_error("Failed to modify object with id '" + std::to_string(id) + "' as the id was not found!");
 	}
 
+	// Check if, according to the modifications, which are made, a update of the simulation is necessary
+	bool updateSim = false;
+	if (!data.contains("modifications"))
+		updateSim = true;
+	else
+	{
+		Modifications mod = data["modifications"].toInt();
+		for (auto m : { Position, Scaling, Rotation, Visibility, Resolution, VoxelSize, SimulatorExe, All })
+		{
+			if (mod.testFlag(m))
+			{
+				updateSim = true;
+				break;
+			}
+		}
+	}
+
 	// Modify general data
 	bool render = data["disabled"].toInt() == Qt::Unchecked;
 	bool oldRender = it->second->getRender();
@@ -183,6 +200,12 @@ void ObjectManager::modify(const QJsonObject& data)
 		QJsonObject jVs = data["voxelSize"].toObject();
 		XMFLOAT3 vs(jVs["x"].toDouble(), jVs["y"].toDouble(), jVs["z"].toDouble());
 
+		QJsonObject jGs = data["glyphs"].toObject();
+		bool renderGlyphs = jGs["enabled"].toBool();
+		Orientation orientation = static_cast<Orientation>(jGs["orientation"].toInt());
+		float position = jGs["position"].toDouble();
+		QJsonObject jGq = jGs["quantity"].toObject();
+		XMUINT2 quantity(jGq["x"].toInt(), jGq["y"].toInt());
 
 		std::shared_ptr<VoxelGridActor> act = std::dynamic_pointer_cast<VoxelGridActor>(it->second);
 		act->setPos(pos);
@@ -190,8 +213,10 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->resize(res, vs);
 		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
 		act->setSimulator(data["simulator"].toString().toStdString());
+		act->setGlyphSettings(renderGlyphs, orientation, position, quantity);
 	}
-	updateSimulation();
+	if (updateSim)
+		updateSimulation();
 }
 
 void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)

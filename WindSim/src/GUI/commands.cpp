@@ -73,6 +73,10 @@ ModifyObjectCmd::ModifyObjectCmd(QJsonObject oldData, QJsonObject newData, Objec
 		else if (it->isBool()) m_newData[it.key()] = it->toBool();
 	}
 
+	// Set the type of modification for the data
+	m_oldData["modifications"] = static_cast<int>(mod);
+	m_newData["modifications"] = static_cast<int>(mod);
+
 	setText(QObject::tr(qPrintable("Modify " + newData["type"].toString() + " " + newData["name"].toString())));
 }
 
@@ -127,5 +131,7 @@ bool ModifyObjectCmd::mergeWith(const QUndoCommand* cmd)
 	if (m.testFlag(Color)) m_newData["Color"] = json["Color"].toObject();
 	if (m.testFlag(Resolution)) m_newData["resolution"] = json["resolution"].toObject();
 	if (m.testFlag(VoxelSize)) m_newData["voxelSize"] = json["voxelSize"].toObject();
+	if (m.testFlag(GlyphSettings)) m_newData["glyphs"] = json["glyphs"].toObject();
+
 	return true;
 }

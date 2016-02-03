@@ -19,6 +19,7 @@ public:
 	void setRenderVoxel(bool renderVoxel);
 	void setSimulator(const std::string& cmdline);
 	void updateSimulation();
+	void setGlyphSettings(bool render, Orientation orientation, float position, const DirectX::XMUINT2& quantity);
 
 private:
 	VoxelGrid& m_grid;

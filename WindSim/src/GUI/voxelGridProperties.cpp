@@ -38,6 +38,15 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	connect(ui.dspSizeY, SIGNAL(valueChanged(double)), this, SLOT(voxelSizeChanged()));
 	connect(ui.dspSizeZ, SIGNAL(valueChanged(double)), this, SLOT(voxelSizeChanged()));
 
+	// Glyph settings
+	connect(ui.gbGlyph, SIGNAL(toggled(bool)), this, SLOT(glyphSettingsChanged()));
+	connect(ui.rbOriX, SIGNAL(toggled(bool)), this, SLOT(glyphSettingsChanged()));
+	connect(ui.rbOriY, SIGNAL(toggled(bool)), this, SLOT(glyphSettingsChanged()));
+	connect(ui.rbOriZ, SIGNAL(toggled(bool)), this, SLOT(glyphSettingsChanged()));
+	connect(ui.hsPos, SIGNAL(valueChanged(int)), this, SLOT(glyphSettingsChanged()));
+	connect(ui.sbOriX, SIGNAL(valueChanged(int)), this, SLOT(glyphSettingsChanged()));
+	connect(ui.sbOriY, SIGNAL(valueChanged(int)), this, SLOT(glyphSettingsChanged()));
+
 	// Button
 	connect(ui.buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(buttonClicked(QAbstractButton*)));
 
@@ -88,6 +97,19 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		ui.dspSizeX->setValue(vs.find("x")->toDouble());
 		ui.dspSizeY->setValue(vs.find("y")->toDouble());
 		ui.dspSizeZ->setValue(vs.find("z")->toDouble());
+
+		// Glyph settings
+		const QJsonObject& gs = properties.find("glyphs")->toObject();
+		ui.gbGlyph->setChecked(gs["enabled"].toBool());
+		Orientation o = static_cast<Orientation>(gs["orientation"].toInt());
+		if (o == XY_PLANE) ui.rbOriZ->setChecked(true);
+		else if (o == XZ_PLANE) ui.rbOriY->setChecked(true);
+		else ui.rbOriX->setChecked(true);
+		ui.hsPos->setValue(gs["position"].toDouble() * ui.hsPos->maximum());
+		const QJsonObject& quant = gs["quantity"].toObject();
+		ui.sbOriX->setValue(quant["x"].toInt());
+		ui.sbOriY->setValue(quant["y"].toInt());
+
 
 		m_properties = properties; // Copy properties
 	}
@@ -209,6 +231,21 @@ void VoxelGridProperties::voxelSizeChanged()
 	m_properties["voxelSize"] = vs;
 }
 
+void VoxelGridProperties::glyphSettingsChanged()
+{
+	QJsonObject quantity{ { "x", ui.sbOriX->value() }, { "y", ui.sbOriY->value() } };
+	QJsonObject gs
+	{
+		{ "enabled", ui.gbGlyph->isChecked() },
+		{ "orientation", ui.rbOriX->isChecked() ? YZ_PLANE : ui.rbOriY->isChecked() ? XZ_PLANE : XY_PLANE },
+		{ "position", static_cast<float>(ui.hsPos->value()) / static_cast<float>(ui.hsPos->maximum()) }, // Assume minimum slider value is zero -> transform to [0 - 1]
+		{ "quantity", quantity }
+	};
+	m_properties["glyphs"] = gs;
+
+	emit propertiesChanged( m_properties, GlyphSettings);
+}
+
 void VoxelGridProperties::buttonClicked(QAbstractButton* button)
 {
 	// Apply or Ok button was clicked
@@ -244,6 +281,15 @@ void VoxelGridProperties::blockSignals()
 	ui.dspSizeX->blockSignals(true);
 	ui.dspSizeY->blockSignals(true);
 	ui.dspSizeZ->blockSignals(true);
+
+	// GlyphSettings
+	ui.gbGlyph->blockSignals(true);
+	ui.rbOriX->blockSignals(true);
+	ui.rbOriY->blockSignals(true);
+	ui.rbOriZ->blockSignals(true);
+	ui.hsPos->blockSignals(true);
+	ui.sbOriX->blockSignals(true);
+	ui.sbOriY->blockSignals(true);
 }
 
 void VoxelGridProperties::enableSignals()
@@ -271,4 +317,13 @@ void VoxelGridProperties::enableSignals()
 	ui.dspSizeX->blockSignals(false);
 	ui.dspSizeY->blockSignals(false);
 	ui.dspSizeZ->blockSignals(false);
+
+	// GlyphSettings
+	ui.gbGlyph->blockSignals(false);
+	ui.rbOriX->blockSignals(false);
+	ui.rbOriY->blockSignals(false);
+	ui.rbOriZ->blockSignals(false);
+	ui.hsPos->blockSignals(false);
+	ui.sbOriX->blockSignals(false);
+	ui.sbOriY->blockSignals(false);
 }

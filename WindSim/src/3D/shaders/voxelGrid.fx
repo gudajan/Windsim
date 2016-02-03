@@ -47,6 +47,10 @@ cbuffer cb
 	float4 g_vCamPos; // Camera position (in currently necessary space)
 	uint3 g_vResolution; // Resolution of voxel grid
 	float3 g_vVoxelSize; // VoxelSize in grid object space
+
+	int g_sGlyphOrientation;
+	uint2 g_vGlyphQuantity;
+	float g_sGlyphPosition;
 }
 
 // =============================================================================
@@ -304,10 +308,10 @@ void gsArrowGlyph(point uint input[1] : VertexID, inout LineStream<PSColIn> stre
 	PSColIn psIn;
 
 	// Definitions
-	float slicePosition = 0.5;
-	uint2 glyphNumber = uint2(128, 32);
-	int orientation = XZ_PLANE;
-	float scale = 0.003f * length(g_vVoxelSize);
+	float slicePosition = g_sGlyphPosition;
+	uint2 glyphNumber = g_vGlyphQuantity;
+	int orientation = g_sGlyphOrientation;
+	float scale = 0.15 * length(g_vVoxelSize) / length(glyphNumber); // Scaling depends on size of voxel and number of glyphs + magic value
 	float arrowHeadSize = 0.5f;
 
 	// Glyph plane orientation
@@ -322,14 +326,14 @@ void gsArrowGlyph(point uint input[1] : VertexID, inout LineStream<PSColIn> stre
 	}
 	else if (orientation == XY_PLANE)
 	{
-		slicePlaneNormal = float3(1, 0, 0);
-		slicePlaneVec1 = float3(0, 1, 0);
-		slicePlaneVec2 = float3(0, 0, 1);
+		slicePlaneNormal = float3(0, 0, 1);
+		slicePlaneVec1 = float3(1, 0, 0);
+		slicePlaneVec2 = float3(0, 1, 0);
 	}
 	else if (orientation == YZ_PLANE)
 	{
-		slicePlaneNormal = float3(0, 0, 1);
-		slicePlaneVec1 = float3(1, 0, 0);
+		slicePlaneNormal = float3(1, 0, 0);
+		slicePlaneVec1 = float3(0, 0, 1);
 		slicePlaneVec2 = float3(0, 1, 0);
 	}
 

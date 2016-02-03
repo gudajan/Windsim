@@ -18,6 +18,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_manager(manager),
 	m_resolution(resolution),
 	m_voxelSize(voxelSize),
+	m_glyphQuantity(32,32),
 	m_reinit(false),
 	m_initSim(false),
 	m_updateDimensions(false),
@@ -27,6 +28,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_voxelize(true),
 	m_counter(-1),
 	m_renderVoxel(true),
+	m_renderGlyphs(true),
 	m_gridTextureGPU(nullptr),
 	m_gridAllTextureGPU(nullptr),
 	m_gridAllTextureStaging(nullptr),
@@ -83,6 +85,10 @@ HRESULT VoxelGrid::createShaderFromFile(const std::wstring& shaderPath, ID3D11De
 	s_shaderVariables.camPos = s_effect->GetVariableByName("g_vCamPos")->AsVector();
 	s_shaderVariables.resolution = s_effect->GetVariableByName("g_vResolution")->AsVector();
 	s_shaderVariables.voxelSize = s_effect->GetVariableByName("g_vVoxelSize")->AsVector();
+
+	s_shaderVariables.glyphOrientation = s_effect->GetVariableByName("g_sGlyphOrientation")->AsScalar();
+	s_shaderVariables.glyphQuantity = s_effect->GetVariableByName("g_vGlyphQuantity")->AsVector();
+	s_shaderVariables.glyphPosition = s_effect->GetVariableByName("g_sGlyphPosition")->AsScalar();
 
 	s_shaderVariables.gridUAV = s_effect->GetVariableByName("g_gridUAV")->AsUnorderedAccessView();
 	s_shaderVariables.gridSRV = s_effect->GetVariableByName("g_gridSRV")->AsShaderResource();
@@ -322,7 +328,8 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	if (m_renderVoxel)
 		renderVoxel(device, context, world, view, projection);
 
-	renderVelocity(device, context, world, view, projection);
+	if (m_renderGlyphs)
+		renderVelocity(device, context, world, view, projection);
 
 	if (m_counter > -1)
 		m_counter++;
@@ -345,6 +352,18 @@ bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
 	m_voxelSize = voxelSize;
 	m_reinit = true; // Cannot resize here, because we have no dx11 device
 	return true;
+}
+
+void VoxelGrid::setGlyphSettings(Orientation orientation, float position)
+{
+	s_shaderVariables.glyphOrientation->SetInt(orientation);
+	s_shaderVariables.glyphPosition->SetFloat(position);
+}
+
+void VoxelGrid::setGlyphQuantity(const XMUINT2& quantity)
+{
+	m_glyphQuantity = quantity;
+	s_shaderVariables.glyphQuantity->SetIntVector(reinterpret_cast<int*>(&m_glyphQuantity));
 }
 
 void VoxelGrid::setSimulator(const std::string& cmdline)
@@ -700,7 +719,7 @@ void VoxelGrid::renderVelocity(ID3D11Device* device, ID3D11DeviceContext* contex
 	context->IASetInputLayout(nullptr);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
 	context->IASetVertexBuffers(0, 0, nullptr, &stride, &offset);
-	context->Draw(128 * 32, 0);
+	context->Draw(m_glyphQuantity.x * m_glyphQuantity.y, 0);
 
 	s_shaderVariables.velocityField->SetResource(nullptr);
 
@@ -720,7 +739,10 @@ VoxelGrid::ShaderVariables::ShaderVariables()
 	gridUAV(nullptr),
 	gridAllUAV(nullptr),
 	gridAllSRV(nullptr),
-	velocityField(nullptr)
+	velocityField(nullptr),
+	glyphOrientation(nullptr),
+	glyphQuantity(nullptr),
+	glyphPosition(nullptr)
 {
 }
 

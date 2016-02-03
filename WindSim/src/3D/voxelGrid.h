@@ -3,6 +3,7 @@
 
 #include "object3D.h"
 #include "simulator.h"
+#include "common.h"
 
 #include <DirectXMath.h>
 
@@ -15,6 +16,7 @@ struct ID3D11ShaderResourceView;
 struct ID3D11Texture3D;
 struct ID3DX11EffectMatrixVariable;
 struct ID3DX11EffectVectorVariable;
+struct ID3DX11EffectScalarVariable;
 struct ID3DX11EffectUnorderedAccessViewVariable;
 struct ID3DX11EffectShaderResourceVariable;
 struct ID3DX11Effect;
@@ -53,6 +55,9 @@ public:
 	bool resize(DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize);
 	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
 	void setRenderVoxel(bool renderVoxel) { m_renderVoxel = renderVoxel; };
+	void setRenderGlyphs(bool renderGlyphs) { m_renderGlyphs = renderGlyphs; };
+	void setGlyphSettings(Orientation orientation, float position);
+	void setGlyphQuantity(const DirectX::XMUINT2& quantity);
 	void setSimulator(const std::string& exe);
 	void updateSimulation();
 
@@ -85,7 +90,9 @@ private:
 		ID3DX11EffectShaderResourceVariable* gridAllSRV;
 		ID3DX11EffectShaderResourceVariable* velocityField;
 
-
+		ID3DX11EffectScalarVariable* glyphOrientation;
+		ID3DX11EffectVectorVariable* glyphQuantity;
+		ID3DX11EffectScalarVariable* glyphPosition;
 	};
 
 	static ShaderVariables s_shaderVariables;
@@ -97,6 +104,7 @@ private:
 
 	DirectX::XMUINT3 m_resolution; // Resolution of the grid
 	DirectX::XMFLOAT3 m_voxelSize; // Size of one voxel in object space of the grid
+	DirectX::XMUINT2 m_glyphQuantity;
 
 	bool m_reinit; // Indicates if voxelgrid has to be reinitialized, because resolution, voxelSize or simulator changed
 	bool m_initSim; // Indicates that the simulation has to be initialized
@@ -109,6 +117,7 @@ private:
 	bool m_voxelize;
 	int m_counter;
 	bool m_renderVoxel;
+	bool m_renderGlyphs;
 
 	ID3D11Texture3D* m_gridTextureGPU; // Texture in GPU memory, filled in pixel shader
 	ID3D11Texture3D* m_gridAllTextureGPU; // Texture, containing the voxelizations of all meshes
