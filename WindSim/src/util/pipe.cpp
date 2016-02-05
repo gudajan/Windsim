@@ -76,17 +76,19 @@ void Pipe::close(bool isServer)
 	ZeroMemory(&m_write, sizeof(OVERLAPPED));
 }
 
-bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
+int Pipe::receive(std::vector<std::vector<BYTE>>& data)
 {
-	if (!m_pipe)
-		return false;
+	std::lock_guard<std::mutex> guard(m_pipeMutex);
 
-	bool readData = false;
+	if (!m_pipe)
+		return -1;
+
+	int readData = 0;
 
 	// Check if currently pending reads
 	if (!HasOverlappedIoCompleted(&m_read))
 	{
-		return false;
+		return 0;
 	}
 
 	// No pending reads -> Get last read result
@@ -98,7 +100,7 @@ bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
 		log("ERROR: GetOverlappedResult failed. Error : " + std::to_string(error));
 		if (error == ERROR_BROKEN_PIPE) // Pipe disconnected/crashed
 			close(false);
-		return false;
+		return -1;
 	}
 
 	// Last read operation finished and read a message (stored in m_readData)
@@ -106,7 +108,7 @@ bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
 	{
 		data.push_back(std::vector<BYTE>(bytesRead, 0));
 		std::copy(m_readData.begin(), std::next(m_readData.begin(), bytesRead), data[0].begin());
-		readData = true;
+		readData = 1;
 	}
 
 	// Start next async read operation
@@ -118,7 +120,7 @@ bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
 		{
 			data.push_back(std::vector<BYTE>(bytesRead, 0));
 			std::copy(m_readData.begin(), std::next(m_readData.begin(), bytesRead), data[data.size()-1].begin());
-			readData = true;
+			readData = 1;
 			continue;
 		}
 		DWORD error = GetLastError();
@@ -137,6 +139,8 @@ bool Pipe::receive(std::vector<std::vector<BYTE>>& data)
 
 bool Pipe::send(const std::vector<BYTE>& msg)
 {
+	std::lock_guard<std::mutex> guard(m_pipeMutex);
+
 	if (!m_pipe)
 		return false;
 

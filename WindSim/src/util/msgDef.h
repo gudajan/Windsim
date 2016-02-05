@@ -4,7 +4,7 @@
 #include <string>
 
 // Messages received from the simulation process
-enum class MsgFromSimProc { FinishedVoxelGridAccess, FinishedVelocityAccess, ClosedShm };
+enum class MsgFromSimProc { Initialized, FinishedVoxelGridAccess, FinishedVelocityAccess, ClosedShm };
 
 enum class MsgToSimProc { InitSim, UpdateDimensions, UpdateGrid, FillVelocity, CloseShm, Exit };
 
@@ -17,12 +17,6 @@ struct MsgToSim
 	// Needed to make type polymorphic
 	MsgToSim(MsgType t = Empty) : type(t){};
 	virtual ~MsgToSim(){};
-};
-
-// Containing a string
-struct StrMsg : MsgToSim
-{
-	std::string str;
 };
 
 // Containing dimensions
@@ -41,6 +35,12 @@ struct DimMsg : MsgToSim
 		float y;
 		float z;
 	} vs;
+};
+
+// Additionally containing a string
+struct StrMsg : DimMsg
+{
+	std::string str;
 };
 
 // Messages, posted to the renderer thread

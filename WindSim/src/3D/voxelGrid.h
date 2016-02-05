@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <thread>
+#include <mutex>
 
 class ObjectManager;
 struct ID3D11UnorderedAccessView;
@@ -110,7 +111,6 @@ private:
 	bool m_initSim; // Indicates that the simulation has to be initialized
 	bool m_updateDimensions; // Indicates that the simulation dimensions have to be updated
 	bool m_updateGrid; // Indicates that the simulation should be updated after next voxelization
-	bool m_copied; // Indicates if the voxelization was copied to the cpu since the update command
 
 	uint32_t m_cubeIndices;
 
@@ -132,6 +132,7 @@ private:
 
 	Simulator m_simulator;
 	std::thread m_simulatorThread;
+	std::unique_lock<std::mutex> m_lock;
 
 };
 #endif

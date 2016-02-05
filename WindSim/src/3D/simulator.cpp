@@ -8,6 +8,7 @@
 #include <DirectXMath.h>
 
 #include <algorithm>
+#include <future>
 
 using namespace DirectX;
 
@@ -24,14 +25,15 @@ Simulator::Simulator(const std::string& cmdline, Logger* logger)
 	m_resolution({ 0, 0, 0 }),
 	m_voxelSize({ 0.0f, 0.0f, 0.0f }),
 	m_running(std::atomic<bool>(false)),
-	m_ready(std::atomic<bool>(true)),
+	m_simInitialized(std::atomic<bool>(false)),
 	m_process(),
 	m_pipe(logger),
 	m_sharedGridHandle(NULL),
 	m_sharedGrid(nullptr),
 	m_sharedVelocityHandle(NULL),
 	m_sharedVelocity(nullptr),
-	m_cellGridMutex(),
+	m_voxelGridMutex(),
+	m_velocityMutex(),
 	m_cellGrid(),
 	m_logger(logger)
 {
@@ -41,153 +43,126 @@ Simulator::Simulator(const std::string& cmdline, Logger* logger)
 void Simulator::loop()
 {
 	bool run = true;
+
+	//
+	std::forward_list<std::future<void>> msgHandlers;
+
 	while (run)
 	{
-
 		// Check for messages from render thread
-		std::vector<std::shared_ptr<MsgToSim>> messages = getAllMessagesFromRender();
+		std::shared_ptr<MsgToSim> msg = getMessageFromRender();
 
-		// Filter unneccessary messages (e.g. and UpdateGrid message is unneccessary if afterwards an UpdateDimensions message was received)
-		filterMessages(messages);
-
-		// Dimension updates require the simulation process to close the shared memory first -> delay it until receiving the CloseShm message
-		static DimMsg delayedDimMsg;
-		static bool delayedDimUpdate = false;
-
-		for (auto msg : messages)
+		switch (msg->type)
 		{
-			switch (msg->type)
-			{
-			case(MsgToSim::StartProcess) :
-			{
-				start();
-				break;
-			}
-			case(MsgToSim::InitSim) :
-			{
-				if (isRunning())
-				{
-					// We are now accessing the shared (between render and simulation thread) vector containing the grid cells (4 voxel per cells) -> prevent render thread from writing to the grid cells
-					// Additionally we are accessing the shared memory with the external simulation process
-					// We become ready again when the external simulator process has finished accessing the shared memory, because only then we are allowed to write to the shared memory again
-					m_ready = false;
-					initSimulation(*std::dynamic_pointer_cast<DimMsg>(msg));
-				}
-				break;
-			}
-			case(MsgToSim::UpdateDimensions) :
-			{
-				if (isRunning())
-				{
-					m_ready = false;
-					std::vector<BYTE> data(sizeof(MsgToSimProc));
-					MsgToSimProc type = MsgToSimProc::CloseShm;
-					std::memcpy(data.data(), &type, sizeof(MsgToSimProc));
-					if (m_pipe.send(data))
-					{
-						log("INFO: Sent 'CloseShm'.");
-						delayedDimMsg = *std::dynamic_pointer_cast<DimMsg>(msg);
-						delayedDimUpdate = true;
-					}
-				}
-				break;
-			}
-			case(MsgToSim::UpdateGrid) :
-			{
-				if (isRunning())
-				{
-					m_ready = false;
-					copyGrid();
-					update();
-				}
-				break;
-			}
-			case(MsgToSim::FinishedVelocityAccess):
-			{
-				std::vector<BYTE> data(sizeof(MsgToSimProc));
-				MsgToSimProc type = MsgToSimProc::FillVelocity;
-				std::memcpy(data.data(), &type, sizeof(MsgToSimProc));
-				if (m_pipe.send(data))
-				{
-					//log("INFO: Sent 'FillVelocity'.");
-				}
-				break;
-			}
-			case(MsgToSim::SimulatorCmd) :
-			{
-				stop();
-				start();
-				if (isRunning())
-				{
-					m_ready = false;
-					DimMsg msg;
-					msg.type = DimMsg::InitSim;
-					msg.res = m_resolution;
-					msg.vs = m_voxelSize;
-					initSimulation(msg);
-				}
-				break;
-			}
-			case(MsgToSim::Exit) :
-				stop();
-				run = false;
-				break;
-			case(MsgToSim::Empty) :
-				break;
-			default:
-				log("WARNING: Simulation thread received invalid message!");
-				break;
-			}
-		}
-		// Check for messages from simulation process
-		std::vector<std::vector<BYTE>> data;
-		if (m_pipe.receive(data))
+		case(MsgToSim::StartProcess) :
 		{
-			for (auto msg : data)
+			start();
+			break;
+		}
+		case(MsgToSim::InitSim) :
+		case(MsgToSim::UpdateDimensions) :
+		{
+			if (isRunning())
 			{
-				MsgFromSimProc type;
-				std::memcpy(&type, msg.data(), sizeof(MsgFromSimProc));
-				switch (type)
+				msgHandlers.push_front(std::async(std::launch::async, &Simulator::initSimulation, this, *std::dynamic_pointer_cast<DimMsg>(msg)));
+			}
+			break;
+		}
+		case(MsgToSim::UpdateGrid) :
+		{
+			if (isRunning())
+			{
+				if (m_simInitialized.load())
 				{
-				case(MsgFromSimProc::FinishedVoxelGridAccess) :
-					log("INFO: Received 'FinishedVoxelGridAccess' message.");
-					m_ready = true;
-					break;
-				case(MsgFromSimProc::FinishedVelocityAccess) :
-					// log("INFO: Received 'FinishedVelocityAccess' message.");
-					postMessageToRender({ MsgToRenderer::UpdateVelocity });
-					break;
-				case(MsgFromSimProc::ClosedShm) :
-				{
-					log("INFO: Received 'ClosedShm' message.");
-					if (delayedDimUpdate)
-					{
-						initSimulation(delayedDimMsg);
-						delayedDimUpdate = false;
-					}
-					break;
-				}
-				default:
-				{
-					log("WARNING: Received invalid Message from external simulation process!");
-				}
+					// Intellisense shows return type of async as future<void(&)()>, which is wrong. Instead a future<void> is returned
+					msgHandlers.push_front(std::async(std::launch::async, &Simulator::updateGrid, this));
 				}
 			}
+			break;
 		}
+		case(MsgToSim::FinishedVelocityAccess) :
+		{
+			if (isRunning())
+			{
+				if (m_simInitialized.load())
+				{
+					msgHandlers.push_front(std::async(std::launch::async, &Simulator::fillVelocity, this));
+				}
+			}
+			break;
+		}
+		case(MsgToSim::SimulatorCmd) :
+		{
+			// At this point, the command line is already changed. We would not receive the message if it was irrelevant (i.e. same command line)
+			// Wait until all futures finished, so now async operation fails, when shared memory is removed
+			std::for_each(msgHandlers.begin(), msgHandlers.end(), [](std::future<void>& f){f.get(); });
+			msgHandlers.clear();
+			stop();
+			start();
+			if (isRunning())
+			{
+				auto simMsg = std::dynamic_pointer_cast<StrMsg>(msg);
+				DimMsg dimMsg;
+				dimMsg.type = DimMsg::InitSim;
+				dimMsg.res = simMsg->res;
+				dimMsg.vs = simMsg->vs;
+				msgHandlers.push_front(std::async(std::launch::async, &Simulator::initSimulation, this, dimMsg));
+			}
+			break;
+		}
+		case(MsgToSim::Exit) :
+			// Wait until all futures finished
+			std::for_each(msgHandlers.begin(), msgHandlers.end(), [](std::future<void>& f){f.get(); });
+			msgHandlers.clear();
+			stop();
+			run = false;
+			break;
+		case(MsgToSim::Empty) :
+			break;
+		default:
+			log("WARNING: Simulation thread received invalid message!");
+			break;
+		}
+
+		// Clear old async threads, which are finished
+		msgHandlers.remove_if([](std::future<void>& f){ if (f.wait_for(std::chrono::seconds(0)) == std::future_status::ready) { f.get(); return true; } return false; });
 	}
 }
 
 void Simulator::postMessageToSim(const MsgToSim& msg)
 {
 	std::lock_guard<std::mutex> guard(m_toSimMutex);
-	MsgToSim* m;
+
+	std::shared_ptr<MsgToSim> m;
 	if (msg.type == DimMsg::InitSim || msg.type == DimMsg::UpdateDimensions)
-		m = new DimMsg(dynamic_cast<const DimMsg&>(msg));
+		m = std::shared_ptr<MsgToSim>(new DimMsg(dynamic_cast<const DimMsg&>(msg)));
 	else if (msg.type == StrMsg::SimulatorCmd)
-		m = new StrMsg(dynamic_cast<const StrMsg&>(msg));
+		m = std::shared_ptr<MsgToSim>(new StrMsg(dynamic_cast<const StrMsg&>(msg)));
 	else
-		m = new MsgToSim(msg);
-	m_toSimMsgQueue.push_back(std::shared_ptr<MsgToSim>(m));
+		m = std::shared_ptr<MsgToSim>(new MsgToSim(msg));
+
+	// Merge message queue as far as possible
+	while (true)
+	{
+		if (m_toSimMsgQueue.empty())
+		{
+			// Still check if new message relevant
+			if (mergeSimMsg(std::shared_ptr<MsgToSim>(new MsgToSim(MsgToSim::Empty)), m))
+			{
+				if (m->type != MsgToSim::Empty)
+					m_toSimMsgQueue.push_back(m);
+			}
+			break;
+		}
+		std::shared_ptr<MsgToSim> oldMsg = m_toSimMsgQueue.back();
+		m_toSimMsgQueue.pop_back();
+		if (!mergeSimMsg(oldMsg, m))
+		{
+			m_toSimMsgQueue.push_back(oldMsg);
+			m_toSimMsgQueue.push_back(m);
+			break;
+		}
+	}
 }
 
 std::shared_ptr<MsgToRenderer> Simulator::getMessageFromSim()
@@ -201,11 +176,39 @@ std::shared_ptr<MsgToRenderer> Simulator::getMessageFromSim()
 	return msg;
 }
 
+std::vector<std::shared_ptr<MsgToRenderer>> Simulator::getAllMessagesFromSim()
+{
+	std::lock_guard<std::mutex> guard(m_toRenderMutex);
+	std::vector<std::shared_ptr<MsgToRenderer>> messages;
+	messages.resize(m_toRenderMsgQueue.size(), nullptr);
+	std::copy(m_toRenderMsgQueue.begin(), m_toRenderMsgQueue.end(), messages.begin());
+	m_toRenderMsgQueue.clear();
+	return messages;
+}
+
 void Simulator::postMessageToRender(const MsgToRenderer& msg)
 {
 	std::lock_guard<std::mutex> guard(m_toRenderMutex);
-	// Currently only empty messages
-	m_toRenderMsgQueue.push_back(std::shared_ptr<MsgToRenderer>(new MsgToRenderer(msg)));
+
+	std::shared_ptr<MsgToRenderer> m(new MsgToRenderer(msg));
+
+	// Merge message queue as far as possible
+	while (true)
+	{
+		if (m_toRenderMsgQueue.empty())
+		{
+			m_toRenderMsgQueue.push_back(m);
+			break;
+		}
+		std::shared_ptr<MsgToRenderer> oldMsg = m_toRenderMsgQueue.back();
+		m_toRenderMsgQueue.pop_back();
+		if (!mergeRenderMsg(oldMsg, m))
+		{
+			m_toRenderMsgQueue.push_back(oldMsg);
+			m_toRenderMsgQueue.push_back(m);
+			break;
+		}
+	}
 }
 
 std::shared_ptr<MsgToSim> Simulator::getMessageFromRender()
@@ -229,117 +232,136 @@ std::vector<std::shared_ptr<MsgToSim>> Simulator::getAllMessagesFromRender()
 	return messages;
 }
 
-
-// THIS IS PURE MAGIC
-// Some messages "contain" other messages, some messages make others unnecassary
-// Merge/Discard all unnecessary messages to avoid overhead by additional updates or reinitializations
-void Simulator::filterMessages(std::vector<std::shared_ptr<MsgToSim>>& messages)
+bool Simulator::waitForPipeMsg(MsgFromSimProc type)
 {
-	std::vector<std::shared_ptr<MsgToSim>> filtered;
-
-	// Temporary newest messages
-	std::shared_ptr<MsgToSim> spMsg = nullptr; // StartProcess
-	std::shared_ptr<MsgToSim> initMsg = nullptr; // InitSim
-	std::shared_ptr<MsgToSim> dimMsg = nullptr; // UpdateDimensions
-	std::shared_ptr<MsgToSim> cmdMsg = nullptr; // SimulatorCmd
-	std::shared_ptr<MsgToSim> updateMsg = nullptr; // UpdateGrid
-	std::shared_ptr<MsgToSim> velMsg = nullptr; // FinishedVelocityAccess
-
-	for (auto msg : messages)
+	bool received = false;
+	while (!received)
 	{
-		if (msg->type == MsgToSim::Exit)
-		{
-			// Early out
-			filtered.push_back(msg);
-			messages.swap(filtered); // Invalidates iterators
-			return;
-		}
+		std::vector<std::vector<BYTE>> data;
+		if (m_pipe.receive(data) < 0)
+			return false;
 
-		if (msg->type == MsgToSim::SimulatorCmd)
+		for (auto msg : data)
 		{
-			// Ignore SimulatorCmd if nothing is changed
-			if (setCommandLine(std::dynamic_pointer_cast<StrMsg>(msg)->str))
+			MsgFromSimProc t;
+			std::memcpy(&t, msg.data(), sizeof(MsgFromSimProc));
+			if (t == type)
 			{
-				cmdMsg = msg;
-				// Discard every prior message because simulation restarted anyway
-				spMsg = nullptr;
-				initMsg = nullptr;
-				dimMsg = nullptr;
-				updateMsg = nullptr;
-				velMsg = nullptr;
+				received = true;
 			}
-		}
-		else if (msg->type == MsgToSim::StartProcess && !cmdMsg) // Only neccessary if no SimulatorCmd message given
-			spMsg = msg;
-		else if (msg->type == MsgToSim::InitSim)
-		{
-			// Update dimensions
-			auto temp = std::dynamic_pointer_cast<DimMsg>(msg);
-			m_resolution = temp->res;
-			m_voxelSize = temp->vs;
-			if (!cmdMsg) // Only necessary if simulator is restarted prior to this message
+			else
 			{
-				// Discard prior UpdateDimensions or UpdateGrid messages
-				dimMsg = nullptr;
-				updateMsg = nullptr;
-				initMsg = msg;
+				log("WARNING: Lost message with type '" + std::to_string(static_cast<int>(t)) + "' from simulation process!");
 			}
-		}
-		else if (msg->type == MsgToSim::UpdateDimensions)
-		{
-			// Update dimensions
-			auto temp = std::dynamic_pointer_cast<DimMsg>(msg);
-			m_resolution = temp->res;
-			m_voxelSize = temp->vs;
-			if (!cmdMsg && !initMsg)
-			{
-				// Discard prior UpdateGrid messages
-				updateMsg = nullptr;
-				dimMsg = msg;
-			}
-			else if (initMsg) // If prior init message -> Update its dimensions
-			{
-				temp->type = MsgToSim::InitSim;
-				initMsg = temp;
-			}
-		}
-		else if (msg->type == MsgToSim::UpdateGrid)
-		{
-			// Basically only necessary if no other messages (except StartProcess)
-			if (!cmdMsg && !initMsg && !dimMsg)
-				updateMsg = msg;
-		}
-		else if (msg->type == MsgToSim::FinishedVelocityAccess)
-		{
-			if (!cmdMsg)
-				velMsg = msg;
 		}
 	}
-
-	// Messages are set to nullptr if not needed
-	if (cmdMsg)
-		filtered.push_back(cmdMsg);
-
-	if (spMsg)
-		filtered.push_back(spMsg);
-
-	if (initMsg)
-		filtered.push_back(initMsg);
-
-	if (dimMsg)
-		filtered.push_back(dimMsg);
-
-	if (updateMsg)
-		filtered.push_back(updateMsg);
-
-	if (velMsg)
-		filtered.push_back(velMsg);
-
-	messages.swap(filtered);
+	return true;
 }
+
+// Returns true if messages merged, merged message found in argument 'newer'
+// Returns false if messages not merged, arguments remain unchanged
+bool Simulator::mergeSimMsg(std::shared_ptr<MsgToSim>& older, std::shared_ptr<MsgToSim>& newer)
+{
+	// Merge rules:
+	// old    - new
+	// !Sim   - !Sim    -> return newer !Sim
+	// *      - Empty   -> return *
+	// Empty  - !Sim    -> return !Sim
+	// Exit   - *       -> return exit
+	// *      - Exit    -> return exit
+	// Sim    - Dim     -> update dimensions of Sim, return Sim
+	// Sim    - *       -> return Sim
+	// *      - Sim     -> Check if Sim is relevant, if so return Sim else *
+	// Start  - Dim     -> return both
+	// Start  - Update  -> return both
+	// start  - Fin     -> return both
+	// *      - start   -> return both
+	// Dim    - Update  -> return Dim
+	// Dim    - Fin     -> return both
+	// *      - Dim     -> return Dim
+	// Update - Fin     -> return both
+	// Fin    - Update  -> return both
+	// *      - *       -> return both
+
+	if (older->type == newer->type && older->type != MsgToSim::SimulatorCmd)
+		return true;
+	if (older->type == MsgToSim::Empty && newer->type != MsgToSim::SimulatorCmd)
+		return true;
+	if (newer->type == MsgToSim::Empty)
+	{
+		newer = older;
+		return true;
+	}
+	if (older->type == MsgToSim::Exit)
+	{
+		newer = older;
+		return true;
+	}
+	if (newer->type == MsgToSim::Exit)
+		return true;
+	if (older->type == MsgToSim::SimulatorCmd && (newer->type == MsgToSim::InitSim || newer->type == MsgToSim::UpdateDimensions))
+	{
+		auto tmpOld = std::dynamic_pointer_cast<StrMsg>(older);
+		auto tmpNew = std::dynamic_pointer_cast<DimMsg>(newer);
+
+		tmpOld->res = tmpNew->res;
+		tmpOld->vs = tmpNew->vs;
+
+		newer = older;
+		return true;
+	}
+	if (older->type == MsgToSim::SimulatorCmd)
+	{
+		newer = older;
+		return true;
+	}
+	if (newer->type == MsgToSim::SimulatorCmd)
+	{
+		auto tmpNew = std::dynamic_pointer_cast<StrMsg>(newer);
+		if (setCommandLine(tmpNew->str)) // If Sim msg relevant
+			return true;
+
+		newer = older;
+		return true;
+	}
+	if ((older->type == MsgToSim::InitSim || older->type == MsgToSim::UpdateDimensions) && newer->type == MsgToSim::UpdateGrid)
+	{
+		newer = older;
+		return true;
+	}
+	if (newer->type == MsgToSim::InitSim || newer->type == MsgToSim::UpdateDimensions)
+		return true;
+
+	return false; // return both
+}
+
+bool Simulator::mergeRenderMsg(std::shared_ptr<MsgToRenderer>& older, std::shared_ptr<MsgToRenderer>& newer)
+{
+	// Merge rules
+	// T - T -> return newer T
+	// * - Empty -> return *
+	// Empty - * -> return *
+	// * - * -> return both
+
+	if (older->type == newer->type)
+		return true;
+	if (older->type == MsgToRenderer::Empty)
+		return true;
+	if (newer->type == MsgToRenderer::Empty)
+	{
+		newer = older;
+		return true;
+	}
+
+	return false;
+}
+
+
 
 void Simulator::start()
 {
+	OutputDebugStringA("Start simulation process!\n");
+
 	std::wstring exe(m_executable.begin(), m_executable.end());
 	std::wstring args(m_cmdArguments.begin(), m_cmdArguments.end());
 
@@ -378,19 +400,50 @@ void Simulator::start()
 
 void Simulator::initSimulation(const DimMsg& msg)
 {
+	std::lock_guard<std::mutex> guard1(m_voxelGridMutex);
+	std::lock_guard<std::mutex> guard2(m_velocityMutex);
+
+	OutputDebugStringA("Init simulation process\n");
+
+	m_simInitialized = false;
+
+	// Send CloseShm message
+	std::vector<BYTE> data(sizeof(MsgToSimProc));
+	MsgToSimProc type = MsgToSimProc::CloseShm;
+	std::memcpy(data.data(), &type, sizeof(MsgToSimProc));
+	if (m_pipe.send(data))
+	{
+		log("INFO: Sent 'CloseShm'.");
+	}
+	else
+	{
+		OutputDebugStringA("Init simulation process, remove locks\n");
+		return;
+	}
+
+	if (!waitForPipeMsg(MsgFromSimProc::ClosedShm))
+	{
+		OutputDebugStringA("Init simulation process, remove locks\n");
+		log("ERROR: Did not receive the confirmation for closing the shared memory!");
+		return;
+	}
+
 	removeSharedMemory();
 	if (!createSharedMemory(msg.res.x * msg.res.y * msg.res.z, L"Local\\voxelgrid", L"Local\\velocity"))
 	{
+		OutputDebugStringA("Init simulation process, remove locks\n");
 		log("ERROR: Failed to create shared memory! Please try to reinitialize the simulation.");
-		m_ready = true;
 		return;
 	}
+
+	m_resolution = msg.res;
+	m_voxelSize = msg.vs;
 
 	copyGrid();
 
 	// Build message data
 	// Build each member alone to remove padding within the struct
-	std::vector<BYTE> data(sizeof(DimMsg::MsgType) + sizeof(DimMsg::Resolution) + sizeof(DimMsg::VoxelSize), 0);
+	data = std::vector<BYTE>(sizeof(DimMsg::MsgType) + sizeof(DimMsg::Resolution) + sizeof(DimMsg::VoxelSize), 0);
 	std::memcpy(data.data(), &msg.type, sizeof(DimMsg::MsgType));
 	std::memcpy(data.data() + sizeof(DimMsg::MsgType), &msg.res, sizeof(DimMsg::Resolution));
 	std::memcpy(data.data() + sizeof(DimMsg::MsgType) + sizeof(DimMsg::Resolution), &msg.vs, sizeof(DimMsg::VoxelSize));
@@ -398,12 +451,30 @@ void Simulator::initSimulation(const DimMsg& msg)
 	if (m_pipe.send(data))
 		log("INFO: Sent (re-)initialization data to simulator.");
 	else
+	{
 		log("ERROR: Failed to (re-)initialize the simulation! Failed to send data!");
+	}
+
+	if(!waitForPipeMsg(MsgFromSimProc::Initialized))
+	{
+		log("ERROR: Did not receive the confirmation for Initialization!");
+		OutputDebugStringA("Init simulation process, remove locks\n");
+		return;
+	}
+
+	m_simInitialized = true;
+
+	// Start the velocity exchange
+	if (msg.type == MsgToSim::InitSim)
+		postMessageToSim({ MsgToSim::FinishedVelocityAccess });
+
+	//Mutexes unlocked
+	OutputDebugStringA("Init simulation process, remove locks\n");
 }
 
 void Simulator::stop()
 {
-	removeSharedMemory();
+	OutputDebugStringA("Stop simulation process!\n");
 
 	// Execute only if process was created
 	if (m_process.hProcess != NULL)
@@ -432,27 +503,41 @@ void Simulator::stop()
 
 		m_running = false;
 	}
+
+	removeSharedMemory();
+
+	m_simInitialized = false;
 }
 
-void Simulator::update()
+void Simulator::updateGrid()
 {
+	std::lock_guard<std::mutex> guard(m_voxelGridMutex);
+
+	OutputDebugStringA("Update simulation grid!\n");
+
+	copyGrid();
+
 	std::vector<BYTE> data(sizeof(MsgToSim::MsgType));
 	MsgToSim::MsgType type = MsgToSim::UpdateGrid;
 	std::memcpy(data.data(), &type, sizeof(MsgToSim::MsgType));
 	if (m_pipe.send(data))
 		log("INFO: Sent 'UpdateGrid'.");
+	else
+		return;
+
+	// Wait until voxelgrid access finished
+	waitForPipeMsg(MsgFromSimProc::FinishedVoxelGridAccess);
+
 }
 
 void Simulator::copyGrid()
 {
+	OutputDebugStringA("Copy voxel grid to shared memory!\n");
+
 	if (!m_sharedGrid)
 	{
-		m_ready = true;
 		return;
 	}
-
-	// Lock mutex
-	std::lock_guard<std::mutex> guard(m_cellGridMutex);
 
 	// Copy data into grid in shared memory and decode 32 bit cells into voxels
 	uint32_t xRes = m_resolution.x / 4;
@@ -475,7 +560,26 @@ void Simulator::copyGrid()
 			}
 		}
 	}
-	//Mutex is released
+}
+
+void Simulator::fillVelocity()
+{
+	std::lock_guard<std::mutex> guard(m_velocityMutex);
+
+	std::vector<BYTE> data(sizeof(MsgToSimProc));
+	MsgToSimProc type = MsgToSimProc::FillVelocity;
+	std::memcpy(data.data(), &type, sizeof(MsgToSimProc));
+	m_pipe.send(data);
+	//log("DEBUG: Sent 'FillVelocity'");
+
+	waitForPipeMsg(MsgFromSimProc::FinishedVelocityAccess);
+
+	postMessageToRender({ MsgToRenderer::UpdateVelocity });
+}
+
+void Simulator::restart()
+{
+
 }
 
 bool Simulator::setCommandLine(const std::string& cmdline)
@@ -539,6 +643,8 @@ bool Simulator::createProcess(const std::wstring& exe, const std::wstring& args)
 
 bool Simulator::createSharedMemory(int size, const std::wstring& gridName, const std::wstring& velocityName)
 {
+	OutputDebugStringA(("Create shared memory with size " + std::to_string(size) + "!\n").c_str());
+
 	// Open grid from shared memory
 	m_sharedGridHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, NULL, size * sizeof(char), gridName.c_str());
 	if (m_sharedGridHandle == NULL)
@@ -570,38 +676,58 @@ bool Simulator::createSharedMemory(int size, const std::wstring& gridName, const
 		return false;
 	}
 
+	OutputDebugStringA("Create shared memory done!\n");
 	return true;
 }
 
 bool Simulator::removeSharedMemory()
 {
+	OutputDebugStringA("Remove shared memory!\n");
+
 	bool error = false;
-	for (auto& it : std::vector<void*>{ m_sharedGrid, m_sharedVelocity })
+	if (m_sharedGrid)
 	{
-		if (it)
+		BOOL success = UnmapViewOfFile(m_sharedGrid);
+		if (!success)
 		{
-			BOOL success = UnmapViewOfFile(it);
-			if (!success)
-			{
-				log("ERROR: UnmapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
-				error = true;
-			}
+			log("ERROR: UnmapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
+			error = true;
 		}
-		it = nullptr;
 	}
-	for (auto& it : std::vector<HANDLE>{ m_sharedGridHandle, m_sharedVelocityHandle })
+	m_sharedGrid = nullptr;
+
+	if (m_sharedVelocity)
 	{
-		if (it)
+		BOOL success = UnmapViewOfFile(m_sharedVelocity);
+		if (!success)
 		{
-			BOOL success = CloseHandle(it);
-			if (!success)
-			{
-				log("ERROR: CloseHandle failed with '" + std::to_string(GetLastError()) + "'!");
-				error = true;
-			}
+			log("ERROR: UnmapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
+			error = true;
 		}
-		it = NULL;
 	}
+	m_sharedVelocity = nullptr;
+
+	if (m_sharedGridHandle)
+	{
+		BOOL success = CloseHandle(m_sharedGridHandle);
+		if (!success)
+		{
+			log("ERROR: CloseHandle failed with '" + std::to_string(GetLastError()) + "'!");
+			error = true;
+		}
+	}
+	m_sharedGridHandle = NULL;
+
+	if (m_sharedVelocityHandle)
+	{
+		BOOL success = CloseHandle(m_sharedVelocityHandle);
+		if (!success)
+		{
+			log("ERROR: CloseHandle failed with '" + std::to_string(GetLastError()) + "'!");
+			error = true;
+		}
+	}
+	m_sharedVelocityHandle = NULL;
 
 	return !error;
 }

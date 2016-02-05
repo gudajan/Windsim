@@ -18,12 +18,11 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_manager(manager),
 	m_resolution(resolution),
 	m_voxelSize(voxelSize),
-	m_glyphQuantity(32,32),
+	m_glyphQuantity(32, 32),
 	m_reinit(false),
 	m_initSim(false),
 	m_updateDimensions(false),
 	m_updateGrid(false),
-	m_copied(false),
 	m_cubeIndices(0),
 	m_voxelize(true),
 	m_counter(-1),
@@ -40,7 +39,8 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_velocityTextureStaging(nullptr),
 	m_velocitySRV(nullptr),
 	m_simulator(simulator, logger),
-	m_simulatorThread(&Simulator::loop, &m_simulator)
+	m_simulatorThread(&Simulator::loop, &m_simulator),
+	m_lock(m_simulator.getVoxelGridMutex(), std::defer_lock)
 {
 	createGridData();
 	m_simulator.postMessageToSim({ MsgToSim::StartProcess }); // Start simulator process
@@ -199,7 +199,7 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 
 	// Resize the grid
 	{
-		std::lock_guard<std::mutex> guard(m_simulator.getCellGridMutex());
+		std::lock_guard<std::mutex> guard(m_simulator.getVoxelGridMutex());
 		m_simulator.getCellGrid().resize(m_resolution.x / 4 * m_resolution.y * m_resolution.z, 0);
 	}
 
@@ -231,27 +231,30 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		m_reinit = false;
 		m_counter = -1;
 	}
+	//OutputDebugStringA("FRAME\n");
 
 	// Check for messages from simulator
-	std::shared_ptr<MsgToRenderer> msg = nullptr;
-	bool updatedVelocity = false;
-	do
+	for( auto& msg : m_simulator.getAllMessagesFromSim())
 	{
-		msg = m_simulator.getMessageFromSim();
-		if (msg->type == MsgToRenderer::UpdateVelocity && !updatedVelocity) // Avoid updating velocities twice
+		if (msg->type == MsgToRenderer::UpdateVelocity && !m_initSim && !m_updateDimensions) // If dimensions are currently updated, skip velocity update
 		{
+			std::lock_guard<std::mutex> guard(m_simulator.getVelocityMutex());
+			QElapsedTimer elapsed;
+			elapsed.start();
+			OutputDebugStringA("Start copying velocity!\n");
 			updateVelocity(context);
+			OutputDebugStringA(("ELAPSED: velocity copy: " + std::to_string(elapsed.nsecsElapsed() / 1000000) + "msec\n").c_str());
 			m_simulator.postMessageToSim({ MsgToSim::FinishedVelocityAccess });
-			updatedVelocity = true;
 		}
-	} while (msg->type != MsgToRenderer::Empty);
+	}
 
 	renderGridBox(device, context, world, view, projection);
 
 	if (m_voxelize) // If voxelization issued
 	{
-		// Only copy to staging if last voxelization cycle finished or CPU copying in Simulator thread not yet finished
-		if (m_counter == -1 || !m_simulator.isReady())
+		// Only copy to staging if last copy to CPU is finished and it is necessary (i.e. simulation must be updated somehow)
+		// and the cellGrid is available
+		if (m_counter == -1 && (m_updateGrid || m_updateDimensions || m_initSim) && m_lock.try_lock())
 		{
 			voxelize(device, context, world, true);
 			m_counter = 0;
@@ -263,9 +266,11 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	}
 
 	// Make sure, the cpu only accesses the voxel grid if the GPU copying is done, to avoid pipeline stalling ( GPU copying needs 2 frames)
-	// Additionally only copy to cpu if former grid was written to shared memory
-	if (m_counter >= 2 && m_simulator.isReady())
+	// Additionally only copy to cpu if former grid was written to shared memory and upgrad is necessary or simulation should be reinitialized
+	if (m_counter >= 2)
 	{
+		OutputDebugStringA(("Rendering\n"));
+
 		uint32_t xRes = m_resolution.x / 4;
 
 		// Get CPU Access
@@ -285,24 +290,24 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			int rowPitch = xRes;
 			int depthPitch = xRes * m_resolution.y;
 
+			std::vector<uint32_t>& grid = m_simulator.getCellGrid();
+			// Extract the voxel grid from the padded texture block
+			for (int z = 0; z < m_resolution.z; ++z)
 			{
-				std::lock_guard<std::mutex> guard(m_simulator.getCellGridMutex());
-				std::vector<uint32_t>& grid = m_simulator.getCellGrid();
-				// Extract the voxel grid from the padded texture block
-				for (int z = 0; z < m_resolution.z; ++z)
+				for (int y = 0; y < m_resolution.y; ++y)
 				{
-					for (int y = 0; y < m_resolution.y; ++y)
+					for (int x = 0; x < xRes; ++x)
 					{
-						for (int x = 0; x < xRes; ++x)
-						{
-							grid[x + y * rowPitch + z * depthPitch] = cells[x + y * paddedRowPitch + z * paddedDepthPitch];
-						}
+						grid[x + y * rowPitch + z * depthPitch] = cells[x + y * paddedRowPitch + z * paddedDepthPitch];
 					}
 				}
 			}
 		}
 		// Remove CPU Access
 		context->Unmap(m_gridAllTextureStaging, 0);
+
+		// Unlock mutex which was locked on copying to staging
+		m_lock.unlock();
 
 		// Send delayed init/update message for simulation
 		if (m_initSim || m_updateDimensions)
@@ -315,11 +320,10 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			m_initSim = false;
 			m_updateDimensions = false;
 		}
-		else if (m_updateGrid && m_copied) // If objects were modified, and those modifications were already copied to the CPU
+		else if (m_updateGrid) // If objects were modified, and those modifications were already copied to the CPU
 		{
 			m_simulator.postMessageToSim({ MsgToSim::UpdateGrid });
 			m_updateGrid = false;
-			m_copied = false;
 		}
 
 		m_counter = -1; // Voxelization cycle finished
@@ -371,6 +375,8 @@ void VoxelGrid::setSimulator(const std::string& cmdline)
 	StrMsg msg;
 	msg.type = StrMsg::SimulatorCmd;
 	msg.str = cmdline;
+	msg.res = StrMsg::Resolution{m_resolution.x, m_resolution.y, m_resolution.z};
+	msg.vs = StrMsg::VoxelSize{m_voxelSize.x, m_voxelSize.y, m_voxelSize.z};
 	m_simulator.postMessageToSim(msg);
 }
 
@@ -629,9 +635,6 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	if (copyStaging)
 	{
 		context->CopyResource(m_gridAllTextureStaging, m_gridAllTextureGPU);
-		// If we want to update the grid for the simulation, indicate that the latest voxelization was copied to the cpu
-		if (m_updateGrid)
-			m_copied = true;
 	}
 
 	// Restore old render targets and viewport

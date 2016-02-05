@@ -356,13 +356,13 @@ void gsArrowGlyph(point uint input[1] : VertexID, inout LineStream<PSColIn> stre
 
 	float3 x = float3(0, -1, 0) * scale;
 	float3 y = float3(1, 0, 0) * scale;
-	psIn.col = float3(1, 0, 0);
+	psIn.col = float3(0.1, 0, 0);
 	if (length(velocity) != 0.0)
 	{
 		// The orientation of the glyph
 		x = normalize(velocity) * scale * length(velocity);
 		y = normalize(cross(x, normalize((g_vCamPos.xyz * g_vVoxelSize) - posOS))) * scale * length(velocity); // In voxel grid object space
-		psIn.col = float3(0, 1, 0);
+		psIn.col = float3(0, 0.2, 0.5);
 	}
 
 	//Arrow end
