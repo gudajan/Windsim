@@ -28,6 +28,7 @@ Simulator::Simulator(const std::string& cmdline, Logger* logger)
 	m_simInitialized(std::atomic<bool>(false)),
 	m_process(),
 	m_pipe(logger),
+	m_pipeCV(),
 	m_sharedGridHandle(NULL),
 	m_sharedGrid(nullptr),
 	m_sharedVelocityHandle(NULL),
@@ -37,6 +38,12 @@ Simulator::Simulator(const std::string& cmdline, Logger* logger)
 	m_cellGrid(),
 	m_logger(logger)
 {
+	// Initialize non-copyable mutexes and conditional variables without copying
+	m_pipeCV.emplace(MsgFromSimProc::Initialized, cv_tuple(std::make_unique<std::condition_variable>(), std::make_unique<std::mutex>(), false));
+	m_pipeCV.emplace(MsgFromSimProc::FinishedVoxelGridAccess, cv_tuple(std::make_unique<std::condition_variable>(), std::make_unique<std::mutex>(), false));
+	m_pipeCV.emplace(MsgFromSimProc::FinishedVelocityAccess, cv_tuple(std::make_unique<std::condition_variable>(), std::make_unique<std::mutex>(), false));
+	m_pipeCV.emplace(MsgFromSimProc::ClosedShm, cv_tuple(std::make_unique<std::condition_variable>(), std::make_unique<std::mutex>(), false));
+
 	setCommandLine(cmdline);
 }
 
@@ -126,6 +133,25 @@ void Simulator::loop()
 
 		// Clear old async threads, which are finished
 		msgHandlers.remove_if([](std::future<void>& f){ if (f.wait_for(std::chrono::seconds(0)) == std::future_status::ready) { f.get(); return true; } return false; });
+
+		// Check for messages from named pipe and signal conditional variable
+		std::vector<std::vector<BYTE>> data;
+		if (m_pipe.receive(data) > 0) // Message received
+		{
+			for (auto msg : data)
+			{
+				MsgFromSimProc t;
+				std::memcpy(&t, msg.data(), sizeof(MsgFromSimProc));
+
+				cv_tuple& cv = m_pipeCV[t];
+				{
+					std::lock_guard<std::mutex> lock(*std::get<1>(cv));
+					std::get<2>(cv) = true;// Set bool to signaled
+				}
+				std::get<0>(cv)->notify_one(); // Notify condition variable
+			}
+		}
+
 	}
 }
 
@@ -232,29 +258,17 @@ std::vector<std::shared_ptr<MsgToSim>> Simulator::getAllMessagesFromRender()
 	return messages;
 }
 
-bool Simulator::waitForPipeMsg(MsgFromSimProc type)
+bool Simulator::waitForPipeMsg(MsgFromSimProc type, int secToWait)
 {
-	bool received = false;
-	while (!received)
+	cv_tuple& cv = m_pipeCV[type];
+	std::unique_lock<std::mutex> lock(*std::get<1>(cv));
+	bool& signaled = std::get<2>(cv);
+	if (!std::get<0>(cv)->wait_for(lock, std::chrono::seconds(secToWait), [&signaled](){ return signaled; }))
 	{
-		std::vector<std::vector<BYTE>> data;
-		if (m_pipe.receive(data) < 0)
-			return false;
-
-		for (auto msg : data)
-		{
-			MsgFromSimProc t;
-			std::memcpy(&t, msg.data(), sizeof(MsgFromSimProc));
-			if (t == type)
-			{
-				received = true;
-			}
-			else
-			{
-				log("WARNING: Lost message with type '" + std::to_string(static_cast<int>(t)) + "' from simulation process!");
-			}
-		}
+		log("ERROR: Did not recieve expected message '" + std::to_string(static_cast<int>(type)) + "' from simulation processs!");
+		return false;
 	}
+	std::get<2>(cv) = false; // Unset the predicate
 	return true;
 }
 
@@ -421,7 +435,7 @@ void Simulator::initSimulation(const DimMsg& msg)
 		return;
 	}
 
-	if (!waitForPipeMsg(MsgFromSimProc::ClosedShm))
+	if (!waitForPipeMsg(MsgFromSimProc::ClosedShm, 5))
 	{
 		OutputDebugStringA("Init simulation process, remove locks\n");
 		log("ERROR: Did not receive the confirmation for closing the shared memory!");
@@ -455,7 +469,7 @@ void Simulator::initSimulation(const DimMsg& msg)
 		log("ERROR: Failed to (re-)initialize the simulation! Failed to send data!");
 	}
 
-	if(!waitForPipeMsg(MsgFromSimProc::Initialized))
+	if(!waitForPipeMsg(MsgFromSimProc::Initialized, 60))
 	{
 		log("ERROR: Did not receive the confirmation for Initialization!");
 		OutputDebugStringA("Init simulation process, remove locks\n");
@@ -526,7 +540,7 @@ void Simulator::updateGrid()
 		return;
 
 	// Wait until voxelgrid access finished
-	waitForPipeMsg(MsgFromSimProc::FinishedVoxelGridAccess);
+	waitForPipeMsg(MsgFromSimProc::FinishedVoxelGridAccess, 5);
 
 }
 
@@ -572,14 +586,9 @@ void Simulator::fillVelocity()
 	m_pipe.send(data);
 	//log("DEBUG: Sent 'FillVelocity'");
 
-	waitForPipeMsg(MsgFromSimProc::FinishedVelocityAccess);
+	waitForPipeMsg(MsgFromSimProc::FinishedVelocityAccess, 5);
 
 	postMessageToRender({ MsgToRenderer::UpdateVelocity });
-}
-
-void Simulator::restart()
-{
-
 }
 
 bool Simulator::setCommandLine(const std::string& cmdline)

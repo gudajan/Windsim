@@ -136,7 +136,7 @@ void ObjectManager::modify(const QJsonObject& data)
 	else
 	{
 		Modifications mod = data["modifications"].toInt();
-		for (auto m : { Position, Scaling, Rotation, Visibility, Resolution, VoxelSize, SimulatorExe, All })
+		for (auto m : { Position, Scaling, Rotation, Voxelization, Resolution, VoxelSize, SimulatorExe, All })
 		{
 			if (mod.testFlag(m))
 			{

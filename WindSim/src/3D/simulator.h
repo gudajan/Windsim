@@ -6,15 +6,20 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <deque>
 #include <forward_list>
 #include <atomic>
 #include <mutex>
+#include <condition_variable>
 #include <memory>
 
 #include <Windows.h>
 
 class Logger;
+
+typedef std::tuple<std::unique_ptr<std::condition_variable>, std::unique_ptr<std::mutex>, bool> cv_tuple;
+typedef std::unordered_map<MsgFromSimProc, cv_tuple> cv_map;
 
 class Simulator
 {
@@ -37,7 +42,7 @@ private:
 	void postMessageToRender(const MsgToRenderer& msg);
 	std::shared_ptr<MsgToSim> getMessageFromRender();
 	std::vector<std::shared_ptr<MsgToSim>> getAllMessagesFromRender();
-	bool waitForPipeMsg(MsgFromSimProc type);
+	bool waitForPipeMsg(MsgFromSimProc type, int secToWait);
 
 	bool mergeSimMsg(std::shared_ptr<MsgToSim>& older, std::shared_ptr<MsgToSim>& newer);
 	bool mergeRenderMsg(std::shared_ptr<MsgToRenderer>& older, std::shared_ptr<MsgToRenderer>& newer);
@@ -48,7 +53,6 @@ private:
 	void updateGrid(); // Send updateGrid signal to simulation process
 	void copyGrid();
 	void fillVelocity(); // Send fillVelocity signal to simulation process
-	void restart();
 
 	bool setCommandLine(const std::string& cmdline); // Returns if a simulator restart is necessary
 
@@ -76,6 +80,8 @@ private:
 
 	PROCESS_INFORMATION m_process;
 	Pipe m_pipe;
+
+	cv_map m_pipeCV; // Synchronize pipe messages with waiting async commands like UpdateGrid
 
 	HANDLE m_sharedGridHandle;
 	char* m_sharedGrid;

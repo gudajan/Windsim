@@ -252,7 +252,7 @@ void VoxelGridProperties::buttonClicked(QAbstractButton* button)
 	QDialogButtonBox::StandardButton sb = ui.buttonBox->standardButton(button);
 	if (sb == QDialogButtonBox::Apply || sb == QDialogButtonBox::Ok)
 	{
-		emit propertiesChanged(m_properties, Position | Name | Visibility | Resolution | VoxelSize | SimulatorExe);
+		emit propertiesChanged(m_properties, Position | Name | Voxelization | Visibility | Resolution | VoxelSize | SimulatorExe | GlyphSettings);
 	}
 }
 

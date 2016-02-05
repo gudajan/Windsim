@@ -24,7 +24,6 @@ private:
 	void log(const std::string& msg);
 
 	std::mutex m_pipeMutex;
-	//std::vector<std::vector<BYTE>> m_storedMessages;
 
 	HANDLE m_pipe;
 

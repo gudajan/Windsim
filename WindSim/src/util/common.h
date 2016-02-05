@@ -56,14 +56,16 @@ enum Modification
 	Position = 0x1,
 	Scaling = 0x2,
 	Rotation = 0x4,
-	Visibility = 0x8,
-	Shading = 0x10,
-	Name = 0x20,
-	Color = 0x40,
-	Resolution = 0x80,
-	VoxelSize = 0x100,
-	SimulatorExe = 0x200,
-	GlyphSettings = 0x400,
+	Visibility = 0x8, // disabled/renderVoxel
+	Voxelization = 0x10, // voxelize
+	Shading = 0x20,
+	Name = 0x40,
+	Color = 0x80,
+	Resolution = 0x100,
+	VoxelSize = 0x200,
+	SimulatorExe = 0x400,
+	GlyphSettings = 0x800,
+
 	All = UINT_MAX
 };
 

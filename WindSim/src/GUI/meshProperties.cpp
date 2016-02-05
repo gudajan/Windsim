@@ -127,7 +127,7 @@ void MeshProperties::disabledChanged(int state)
 void MeshProperties::voxelizeChanged(int state)
 {
 	m_properties["voxelize"] = state;
-	emit propertiesChanged(m_properties, Visibility);
+	emit propertiesChanged(m_properties, Voxelization);
 }
 
 void MeshProperties::positionChanged()
@@ -197,7 +197,7 @@ void MeshProperties::buttonClicked(QAbstractButton* button)
 	QDialogButtonBox::StandardButton sb = ui.buttonBox->standardButton(button);
 	if (sb == QDialogButtonBox::Apply || sb == QDialogButtonBox::Ok)
 	{
-		emit propertiesChanged(m_properties, Position|Scaling|Rotation|Visibility|Shading|Name);
+		emit propertiesChanged(m_properties, Position|Scaling|Rotation|Voxelization|Visibility|Shading|Name);
 	}
 }
 
