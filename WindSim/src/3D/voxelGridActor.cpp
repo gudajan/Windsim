@@ -15,11 +15,11 @@ VoxelGridActor* VoxelGridActor::clone()
 	return new VoxelGridActor(*this);
 }
 
-void VoxelGridActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
+void VoxelGridActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, double elapsedTime)
 {
 	if (m_render)
 	{
-		m_grid.render(device, context, m_world, view, projection);
+		m_grid.render(device, context, m_world, view, projection, elapsedTime);
 	}
 }
 

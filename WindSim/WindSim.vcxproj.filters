@@ -203,6 +203,12 @@
     <ClCompile Include="src\util\pipe.cpp">
       <Filter>util</Filter>
     </ClCompile>
+    <ClCompile Include="src\3D\dynamics.cpp">
+      <Filter>Source Files\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\volInt.h">
+      <Filter>Header Files\3D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\ui\windsim.ui">
@@ -351,6 +357,9 @@
     <ClInclude Include="src\util\pipe.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="src\3D\dynamics.h">
+      <Filter>Header Files\3D</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\3D\shaders\axes.fx">
@@ -369,6 +378,9 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\voxelGrid.fx">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\3D\shaders\dynamics.fx">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

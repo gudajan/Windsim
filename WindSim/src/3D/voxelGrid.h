@@ -48,7 +48,7 @@ public:
 	void release() override;
 
 	// Iterate mesh objects and render/voxelize into voxelGrid
-	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection) override;
+	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
 
 	DirectX::XMUINT3 getResolution() const { return m_resolution; };
 	DirectX::XMFLOAT3 getVoxelSize() const { return m_voxelSize; };
@@ -70,6 +70,7 @@ private:
 	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, bool copyStaging);
 	void renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void renderVelocity(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
+	void calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, double elapsedTime);
 
 	struct ShaderVariables
 	{
@@ -118,6 +119,7 @@ private:
 	int m_counter;
 	bool m_renderVoxel;
 	bool m_renderGlyphs;
+	bool m_calculateDynamics;
 
 	ID3D11Texture3D* m_gridTextureGPU; // Texture in GPU memory, filled in pixel shader
 	ID3D11Texture3D* m_gridAllTextureGPU; // Texture, containing the voxelizations of all meshes

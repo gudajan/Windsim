@@ -51,7 +51,6 @@ void Simulator::loop()
 {
 	bool run = true;
 
-	//
 	std::forward_list<std::future<void>> msgHandlers;
 
 	while (run)
@@ -405,9 +404,12 @@ void Simulator::start()
 	// Create windows child process
 	if (!createProcess(exe, args)) return;
 
-	// Create named pipe and wait/block for connection
-	if (!m_pipe.connect(L"\\\\.\\pipe\\simulatorPipe", true))
+	// Create named pipe and wait/block for connection (
+	if (!m_pipe.connect(L"\\\\.\\pipe\\simulatorPipe", true, 30))
+	{
+		log("WARNING: Did not receive connection request from simulation process within 30 seconds!");
 		return;
+	}
 
 	m_running = true;
 }
@@ -435,7 +437,7 @@ void Simulator::initSimulation(const DimMsg& msg)
 		return;
 	}
 
-	if (!waitForPipeMsg(MsgFromSimProc::ClosedShm, 5))
+	if (!waitForPipeMsg(MsgFromSimProc::ClosedShm, 1))
 	{
 		OutputDebugStringA("Init simulation process, remove locks\n");
 		log("ERROR: Did not receive the confirmation for closing the shared memory!");
@@ -540,7 +542,7 @@ void Simulator::updateGrid()
 		return;
 
 	// Wait until voxelgrid access finished
-	waitForPipeMsg(MsgFromSimProc::FinishedVoxelGridAccess, 5);
+	waitForPipeMsg(MsgFromSimProc::FinishedVoxelGridAccess, 2);
 
 }
 
@@ -586,7 +588,7 @@ void Simulator::fillVelocity()
 	m_pipe.send(data);
 	//log("DEBUG: Sent 'FillVelocity'");
 
-	waitForPipeMsg(MsgFromSimProc::FinishedVelocityAccess, 5);
+	waitForPipeMsg(MsgFromSimProc::FinishedVelocityAccess, 2);
 
 	postMessageToRender({ MsgToRenderer::UpdateVelocity });
 }

@@ -5,7 +5,7 @@
 
 const int Pipe::g_bufferSize = 512;
 
-bool Pipe::connect(const std::wstring& name, bool create)
+bool Pipe::connect(const std::wstring& name, bool create, DWORD secToWait)
 {
 	if (create)
 	{
@@ -17,7 +17,7 @@ bool Pipe::connect(const std::wstring& name, bool create)
 			return false;
 		}
 
-		if (!waitForConnect())
+		if (!waitForConnect(secToWait))
 			return false;
 	}
 	else
@@ -169,7 +169,7 @@ bool Pipe::send(const std::vector<BYTE>& msg)
 	return false;
 }
 
-bool Pipe::waitForConnect()
+bool Pipe::waitForConnect(DWORD secToWait)
 {
 	// Wait for connection of simulator
 	HANDLE event = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -200,7 +200,7 @@ bool Pipe::waitForConnect()
 		return false;
 	}
 
-	DWORD ret = WaitForSingleObject(event, INFINITE);
+	DWORD ret = WaitForSingleObject(event, secToWait * 1000);
 	if (ret != WAIT_OBJECT_0)
 	{
 		if (ret == WAIT_ABANDONED_0)

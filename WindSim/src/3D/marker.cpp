@@ -77,7 +77,7 @@ void Marker::releaseShader()
 }
 
 
-void Marker::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
+void Marker::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, double elapsedTime)
 {
 	if (s_effect == nullptr)
 	{

@@ -20,20 +20,23 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	// Voxelize
 	connect(ui.cbVoxelize, SIGNAL(stateChanged(int)), this, SLOT(voxelizeChanged(int)));
 
+	// Dynamics
+	connect(ui.cbDynamics, SIGNAL(stateChanged(int)), this, SLOT(dynamicsChanged(int)));
+
 	// Position
-	connect(ui.xP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
-	connect(ui.yP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
-	connect(ui.zP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
+	connect(ui.xP, SIGNAL(editingFinished()), this, SLOT(positionChanged()));
+	connect(ui.yP, SIGNAL(editingFinished()), this, SLOT(positionChanged()));
+	connect(ui.zP, SIGNAL(editingFinished()), this, SLOT(positionChanged()));
 
 	// Scaling
-	connect(ui.xS, SIGNAL(valueChanged(double)), this, SLOT(scalingChanged()));
-	connect(ui.yS, SIGNAL(valueChanged(double)), this, SLOT(scalingChanged()));
-	connect(ui.zS, SIGNAL(valueChanged(double)), this, SLOT(scalingChanged()));
+	connect(ui.xS, SIGNAL(editingFinished()), this, SLOT(scalingChanged()));
+	connect(ui.yS, SIGNAL(editingFinished()), this, SLOT(scalingChanged()));
+	connect(ui.zS, SIGNAL(editingFinished()), this, SLOT(scalingChanged()));
 
 	// Rotation
-	connect(ui.ax, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
-	connect(ui.ay, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
-	connect(ui.az, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
+	connect(ui.ax, SIGNAL(editingFinished()), this, SLOT(rotationChanged()));
+	connect(ui.ay, SIGNAL(editingFinished()), this, SLOT(rotationChanged()));
+	connect(ui.az, SIGNAL(editingFinished()), this, SLOT(rotationChanged()));
 	connect(ui.angle, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
 
 	// Shading
@@ -42,6 +45,9 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 
 	//Color
 	connect(ui.pbCol, SIGNAL(clicked()), this, SLOT(pickColor()));
+
+	// Dynamics settings
+	connect(ui.dspDensity, SIGNAL(editingFinished()), this, SLOT(densityChanged()));
 
 	setModal(false);
 }
@@ -70,6 +76,7 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 		// Visibility
 		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
 		ui.cbVoxelize->setChecked(properties["voxelize"].toInt() == Qt::Checked);
+		ui.cbDynamics->setChecked(properties["dynamics"].toInt() == Qt::Checked);
 
 		// Position
 		const QJsonObject& pos = properties.find("Position")->toObject();
@@ -104,6 +111,9 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 		const QJsonObject& col = properties.find("Color")->toObject();
 		setColorButton(col.find("r")->toInt(), col.find("g")->toInt(), col.find("b")->toInt());
 
+		// Dynamics settings
+		ui.dspDensity->setValue(properties["density"].toDouble());
+
 		m_properties = properties; // Copy properties
 	}
 	enableSignals();
@@ -129,6 +139,14 @@ void MeshProperties::voxelizeChanged(int state)
 	m_properties["voxelize"] = state;
 	emit propertiesChanged(m_properties, Voxelization);
 }
+
+
+void MeshProperties::dynamicsChanged(int state)
+{
+	m_properties["dynamics"] = state;
+	emit propertiesChanged(m_properties, DynamicsSettings);
+}
+
 
 void MeshProperties::positionChanged()
 {
@@ -191,13 +209,19 @@ void MeshProperties::pickColor()
 	emit propertiesChanged(m_properties, Color);
 }
 
+void MeshProperties::densityChanged()
+{
+	m_properties["density"] = ui.dspDensity->value();
+	emit propertiesChanged(m_properties, DynamicsSettings);
+}
+
 void MeshProperties::buttonClicked(QAbstractButton* button)
 {
 	// Apply or Ok button was clicked
 	QDialogButtonBox::StandardButton sb = ui.buttonBox->standardButton(button);
 	if (sb == QDialogButtonBox::Apply || sb == QDialogButtonBox::Ok)
 	{
-		emit propertiesChanged(m_properties, Position|Scaling|Rotation|Voxelization|Visibility|Shading|Name);
+		emit propertiesChanged(m_properties, Position|Scaling|Rotation|Voxelization|Visibility|Shading|Name|DynamicsSettings);
 	}
 }
 
@@ -208,6 +232,7 @@ void MeshProperties::blockSignals()
 	// Visibility
 	ui.cbDisabled->blockSignals(true);
 	ui.cbVoxelize->blockSignals(true);
+	ui.cbDynamics->blockSignals(true);
 
 	// Position
 	ui.xP->blockSignals(true);
@@ -228,6 +253,9 @@ void MeshProperties::blockSignals()
 	//Shading
 	ui.rbSmooth->blockSignals(true);
 	ui.rbFlat->blockSignals(true);
+
+	// Dynamics settings
+	ui.dspDensity->blockSignals(true);
 }
 
 void MeshProperties::enableSignals()
@@ -237,6 +265,7 @@ void MeshProperties::enableSignals()
 	// Visibility
 	ui.cbDisabled->blockSignals(false);
 	ui.cbVoxelize->blockSignals(false);
+	ui.cbDynamics->blockSignals(false);
 
 	// Position
 	ui.xP->blockSignals(false);
@@ -257,6 +286,9 @@ void MeshProperties::enableSignals()
 	//Shading
 	ui.rbSmooth->blockSignals(false);
 	ui.rbFlat->blockSignals(false);
+
+	// Dynamics settings
+	ui.dspDensity->blockSignals(false);
 }
 
 void MeshProperties::setColorButton(int r, int g, int b)

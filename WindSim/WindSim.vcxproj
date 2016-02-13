@@ -191,10 +191,12 @@
     <ClCompile Include="src\3D\axes.cpp" />
     <ClCompile Include="src\3D\axesActor.cpp" />
     <ClCompile Include="src\3D\camera.cpp" />
+    <ClCompile Include="src\3D\dynamics.cpp" />
     <ClCompile Include="src\3D\marker.cpp" />
     <ClCompile Include="src\3D\markerActor.cpp" />
     <ClCompile Include="src\3D\simulator.cpp" />
     <ClCompile Include="src\3D\transformMachine.cpp" />
+    <ClCompile Include="src\3D\volInt.h" />
     <ClCompile Include="src\3D\voxelGrid.cpp" />
     <ClCompile Include="src\3D\voxelGridActor.cpp" />
     <ClCompile Include="src\GUI\commands.cpp" />
@@ -326,6 +328,7 @@
     <ClInclude Include="src\3D\axes.h" />
     <ClInclude Include="src\3D\axesActor.h" />
     <ClInclude Include="src\3D\camera.h" />
+    <ClInclude Include="src\3D\dynamics.h" />
     <ClInclude Include="src\3D\marker.h" />
     <ClInclude Include="src\3D\markerActor.h" />
     <ClInclude Include="src\3D\simulator.h" />
@@ -509,6 +512,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Effect</ShaderType>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\common.fx" />
+    <FxCompile Include="src\3D\shaders\dynamics.fx" />
     <FxCompile Include="src\3D\shaders\marker.fx" />
     <FxCompile Include="src\3D\shaders\mesh.fx">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Effect</ShaderType>

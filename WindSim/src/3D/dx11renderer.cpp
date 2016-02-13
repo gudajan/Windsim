@@ -4,6 +4,7 @@
 #include "axes.h"
 #include "marker.h"
 #include "voxelGrid.h"
+#include "dynamics.h"
 #include "settings.h"
 
 #include <iostream>
@@ -482,6 +483,13 @@ bool DX11Renderer::reloadShaders()
 		reloaded = false;
 	}
 
+	if (FAILED(Dynamics::createShaderFromFile(L"src\\3D\\shaders\\dynamics.fx", m_device, true)))
+	{
+		m_logger.logit("WARNING: Failed to reload shader file 'src\\3D\\shaders\\dynamics.fx'! Stopped rendering.");
+		m_state = State::ShaderError;
+		reloaded = false;
+	}
+
 	if (reloaded)
 	{
 		m_logger.logit("INFO: Shaders successfully reloaded.");
@@ -518,6 +526,10 @@ bool DX11Renderer::createShaders()
 	if (FAILED(VoxelGrid::createShaderFromFile(fxoPath.toStdWString(), m_device)))
 		return false;
 
+	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("dynamics.fxo");
+	if (FAILED(Dynamics::createShaderFromFile(fxoPath.toStdWString(), m_device)))
+		return false;
+
 	return true;
 }
 
@@ -544,6 +556,7 @@ void DX11Renderer::destroy()
 	Axes::releaseShader();
 	Marker::releaseShader();
 	VoxelGrid::releaseShader();
+	Dynamics::releaseShader();
 
 	// Release all objects
 	m_manager.release(true);
@@ -581,7 +594,7 @@ void DX11Renderer::render(double elapsedTime)
 	m_context->ClearRenderTargetView(m_renderTargetView, Colors::WhiteSmoke);
 	m_context->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH , 1.0f, 0);
 
-	m_manager.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix());
+	m_manager.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix(), elapsedTime);
 
 	m_swapChain->Present(0, 0);
 }

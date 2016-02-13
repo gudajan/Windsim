@@ -1,10 +1,13 @@
 #include "mesh3D.h"
 #include "objLoader.h"
 #include "common.h"
+#include "volInt.h"
 
 #include "d3dx11effect.h"
 #include <d3dcompiler.h>
 #include <d3d11.h>
+
+#include <qelapsedtimer.h>
 
 using namespace DirectX;
 
@@ -75,7 +78,7 @@ void Mesh3D::releaseShader()
 }
 
 
-void Mesh3D::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
+void Mesh3D::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, double elapsedTime)
 {
 	if (s_effect == nullptr)
 	{
@@ -107,6 +110,22 @@ void Mesh3D::setShaderVariables(bool flatShading, PackedVector::XMCOLOR col)
 	s_shaderVariables.color->SetFloatVector(PackedVector::XMLoadColor(&col).m128_f32); // XMLoadColor normalizes color [0-255] -> [0.0-1.0]
 }
 
+void Mesh3D::calcMassProps(const float density, const XMFLOAT3& scale, XMFLOAT3X3& inertiaTensor, XMFLOAT3& centerOfMass) const
+{
+	std::vector<float> inertia;
+	std::vector<float> com; // center of mass
+	std::vector<float> scaling{ scale.x, scale.y, scale.z };
+
+	QElapsedTimer timer;
+	timer.start();
+	VolInt::calcMassProps(m_indexData, m_vertexData, scaling, density, inertia, com, nullptr, nullptr);
+	OutputDebugStringA(("Elapsed Volume Integration: " + std::to_string(timer.nsecsElapsed() * 0.000001) + "msec\n").c_str());
+
+	inertiaTensor = XMFLOAT3X3(inertia.data());
+	centerOfMass = { com[0], com[1], com[2] };
+
+}
+
 Mesh3D::ShaderVariables::ShaderVariables()
 	: worldView(nullptr),
 	worldViewIT(nullptr),
@@ -131,6 +150,7 @@ bool Mesh3D::readObj(const std::string& path)
 
 	return true;
 }
+
 
 ID3DX11Effect* Mesh3D::s_effect = nullptr;
 Mesh3D::ShaderVariables Mesh3D::s_shaderVariables;

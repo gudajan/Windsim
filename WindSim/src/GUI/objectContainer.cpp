@@ -234,6 +234,11 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["Color"] = QJsonObject{ { "r", conf.mesh.dc.r }, { "g", conf.mesh.dc.g }, { "b", conf.mesh.dc.b } };
 		if (!object.contains("voxelize"))
 			object["voxelize"] = Qt::Checked;
+		if (!object.contains("dynamics"))
+			object["dynamics"] = Qt::Checked;
+		if (!object.contains("density"))
+			object["density"] = 1.0;
+
 	}
 	if (type == ObjectType::VoxelGrid)
 	{

@@ -17,14 +17,17 @@ class Mesh3D : public Object3D
 public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
+	static ID3D11InputLayout* getInputLayout() { return s_inputLayout; };
 
 	Mesh3D(const std::string& path, Logger* logger);
 	Mesh3D(Mesh3D&& other);
 	~Mesh3D();
 
-	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection) override;
+	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
 
 	void setShaderVariables(bool flatShading, DirectX::PackedVector::XMCOLOR col);
+
+	void calcMassProps(const float density, const DirectX::XMFLOAT3& scale, DirectX::XMFLOAT3X3& inertiaTensor, DirectX::XMFLOAT3& centerOfMass) const;
 
 private:
 	bool readObj(const std::string& path);

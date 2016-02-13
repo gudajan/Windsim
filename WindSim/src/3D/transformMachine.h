@@ -58,7 +58,6 @@ private:
 
 	static void toEuler(DirectX::XMFLOAT4 q, float& al, float& be, float& ga);
 
-
 	State::ModificationState m_state;
 	std::shared_ptr<MarkerActor> m_marker;
 	std::unordered_map<int, std::shared_ptr<Actor>> m_oldActors; // The selected actors at the start of the transformation

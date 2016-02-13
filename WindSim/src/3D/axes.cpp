@@ -67,7 +67,7 @@ void Axes::releaseShader()
 	SAFE_RELEASE(s_effect);
 }
 
-void Axes::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
+void Axes::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime)
 {
 	if (s_effect == nullptr)
 	{

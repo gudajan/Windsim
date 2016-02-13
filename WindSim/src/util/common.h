@@ -65,6 +65,7 @@ enum Modification
 	VoxelSize = 0x200,
 	SimulatorExe = 0x400,
 	GlyphSettings = 0x800,
+	DynamicsSettings = 0x1000,
 
 	All = UINT_MAX
 };

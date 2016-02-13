@@ -28,6 +28,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_counter(-1),
 	m_renderVoxel(true),
 	m_renderGlyphs(true),
+	m_calculateDynamics(true),
 	m_gridTextureGPU(nullptr),
 	m_gridAllTextureGPU(nullptr),
 	m_gridAllTextureStaging(nullptr),
@@ -222,7 +223,7 @@ void VoxelGrid::release()
 	SAFE_RELEASE(m_velocitySRV);
 }
 
-void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
+void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, double elapsedTime)
 {
 	if (m_reinit)
 	{
@@ -241,12 +242,16 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			std::lock_guard<std::mutex> guard(m_simulator.getVelocityMutex());
 			QElapsedTimer elapsed;
 			elapsed.start();
-			OutputDebugStringA("Start copying velocity!\n");
+			//OutputDebugStringA("Start copying velocity!\n");
 			updateVelocity(context);
-			OutputDebugStringA(("ELAPSED: velocity copy: " + std::to_string(elapsed.nsecsElapsed() / 1000000) + "msec\n").c_str());
+			//OutputDebugStringA(("ELAPSED: velocity copy: " + std::to_string(elapsed.nsecsElapsed() / 1000000) + "msec\n").c_str());
 			m_simulator.postMessageToSim({ MsgToSim::FinishedVelocityAccess });
 		}
 	}
+
+	// Calculates dynamics motion of meshes, depending on the current velocity field
+	if (m_calculateDynamics)
+		calculateDynamics(device, context, world, elapsedTime);
 
 	renderGridBox(device, context, world, view, projection);
 
@@ -269,7 +274,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	// Additionally only copy to cpu if former grid was written to shared memory and upgrad is necessary or simulation should be reinitialized
 	if (m_counter >= 2)
 	{
-		OutputDebugStringA(("Rendering\n"));
+		//OutputDebugStringA(("Rendering\n"));
 
 		uint32_t xRes = m_resolution.x / 4;
 
@@ -282,7 +287,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			// This means a 10x10x10 texture may be mapped as a 16x16x16 block
 			// The real pitches from one row/depth slice to another are given by the D3D11_MAPPED_SUBRESOURCE
 
-			uint32_t* cells = reinterpret_cast<uint32_t*>(msr.pData);
+			uint32_t* cells = static_cast<uint32_t*>(msr.pData);
 
 			// Temps
 			int paddedRowPitch = msr.RowPitch / sizeof(uint32_t); // convert byte size to block resolution
@@ -549,7 +554,7 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	// Grid Object Space to Voxel Space
 	XMMATRIX gridToVoxel = XMMatrixScalingFromVector(XMVectorReciprocal(XMLoadFloat3(&m_voxelSize))); // Scale with 1 / voxelSize so position is index into grid
 	// Perform rotation and mirroring to enforce voxelization along x-instead of z-axis
-	XMMATRIX voxelizeX = XMMatrixRotationNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), degToRad(90)) * XMMatrixScaling(1.0f, 1.0f, -1.0f);;
+	XMMATRIX voxelizeX = XMMatrixRotationNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), degToRad(90)) * XMMatrixScaling(1.0f, 1.0f, -1.0f);
 
 	// Create orthogonal projection aligned with voxel grid looking along x-axis
 	XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0, m_resolution.z, 0, m_resolution.y, 0, m_resolution.x);
@@ -596,7 +601,6 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 			context->IASetVertexBuffers(0, 1, &vb, strides, offsets);
 			context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
 			context->DrawIndexed(ma->getMesh().getNumIndices(), 0, 0);
-
 
 			s_shaderVariables.gridUAV->SetUnorderedAccessView(nullptr);
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
@@ -727,6 +731,22 @@ void VoxelGrid::renderVelocity(ID3D11Device* device, ID3D11DeviceContext* contex
 	s_shaderVariables.velocityField->SetResource(nullptr);
 
 	s_effect->GetTechniqueByIndex(0)->GetPassByName("VelocityGlyph")->Apply(0, context);
+}
+
+void VoxelGrid::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, double elapsedTime)
+{
+	XMFLOAT4X4 worldToVoxelTex;
+	// inverse(voxel grid texture space -> voxel grid object space -> world space)
+	XMStoreFloat4x4(&worldToVoxelTex, XMMatrixInverse(nullptr, XMMatrixScalingFromVector(XMLoadUInt3(&m_resolution) * XMLoadFloat3(&m_voxelSize)) * XMLoadFloat4x4(&world)));
+
+	for (auto& act : m_manager->getActors())
+	{
+		if (act.second->getType() == ObjectType::Mesh)
+		{
+			std::shared_ptr<MeshActor> ma = std::dynamic_pointer_cast<MeshActor>(act.second);
+			ma->calculateDynamics(device, context, worldToVoxelTex, m_resolution, m_velocitySRV, elapsedTime);
+		}
+	}
 }
 
 VoxelGrid::ShaderVariables::ShaderVariables()

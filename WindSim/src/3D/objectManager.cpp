@@ -181,6 +181,10 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setFlatShading(flatShading);
 		act->setColor(col);
 		act->setVoxelize(data["voxelize"].toInt() == Qt::Checked);
+		act->setDynamics(data["dynamics"].toInt() == Qt::Checked);
+		act->setDensity(data["density"].toDouble());
+
+		act->updateInertiaTensor();
 
 		if (render != oldRender && !render)
 		{
@@ -219,15 +223,15 @@ void ObjectManager::modify(const QJsonObject& data)
 		updateSimulation();
 }
 
-void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
+void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime)
 {
 	for (const auto& actor : m_actors)
 	{
-		actor.second->render(device, context, view, projection);
+		actor.second->render(device, context, view, projection, elapsedTime);
 	}
 	for (const auto& actor : m_accessoryActors)
 	{
-		actor.second->render(device, context, view, projection);
+		actor.second->render(device, context, view, projection, elapsedTime);
 	}
 }
 

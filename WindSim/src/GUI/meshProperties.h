@@ -23,11 +23,13 @@ private slots:
 	void nameChanged(const QString & text);
 	void disabledChanged(int state);
 	void voxelizeChanged(int state);
+	void dynamicsChanged(int state);
 	void positionChanged();
 	void scalingChanged();
 	void rotationChanged();
 	void shadingToggled(bool b);
 	void pickColor();
+	void densityChanged();
 
 	void buttonClicked(QAbstractButton* button);
 
