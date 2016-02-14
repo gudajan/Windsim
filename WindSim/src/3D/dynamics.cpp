@@ -100,6 +100,8 @@ Dynamics::Dynamics(Mesh3D& mesh)
 	, m_torqueUAV(nullptr)
 	, m_mesh(mesh)
 	, m_inertiaTensor()
+	, m_centerOfMass(0.0f, 0.0f, 0.0f)
+	, m_rotationAxis(0.0f, 0.0f, 0.0f)
 	, m_angVel({ 0.0f, 0.0f, 0.0f })
 	, m_rot()
 {
@@ -139,7 +141,13 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 		torque = { 0.0f, 0.0f, 0.0f };
 	}
 
-	float frictionFactor = 0.5; // after one second, x% of the original velocity remains if acceleration is zero
+	// Negative acceleration because of friction
+	// Fr = cr * Fn; In our case: Fn = m * g; Fv = m * a; Fv = Fr; -> cr * FN = m * a -> cr * m * g = m * a -> a = cr * g;
+	//float g = 9.81; // gravity
+	//float cr = 0.0225; // Rolling resistance cooefficient for rolling bearing
+	//float acc = cr * g;
+
+	float frictionFactor = 0.95; // after one second, x% of the original velocity remains if acceleration is zero
 
 	// Transform torque to Body Inertial frame
 	XMVECTOR trq = XMVectorSet(torque[0], torque[1], torque[2], 0);
@@ -147,7 +155,12 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	XMVECTOR scale;
 	XMVECTOR trans;
 	XMMatrixDecompose(&scale, &rot, &trans, XMLoadFloat4x4(&objectToWorld));
-	trq = XMVector3Rotate(trq, rot);
+	trq = XMVector3Rotate(trq, XMQuaternionNormalize(rot));
+
+	// Calculate torque arround local rotation axis
+	XMVECTOR localRotationAxis = XMLoadFloat3(&m_rotationAxis);
+	if (!XMVector3Equal(localRotationAxis, XMVectorZero()))
+		trq = XMVector3Dot(trq, localRotationAxis) * localRotationAxis;
 
 	// Calculate new dynamic rotation from angular velocity, rotation in previous frame and elapsed time
 	XMVECTOR oldAngVel = XMLoadFloat3(&m_angVel);
@@ -162,6 +175,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	// Calculate new angular velocity from angular velocity in previous frame and current angular acceleration
 	XMVECTOR angAcc = XMVector3Transform(trq, XMMatrixInverse(nullptr, XMLoadFloat3x3(&m_inertiaTensor)));
 	XMVECTOR newAngVel = oldAngVel * std::pow(frictionFactor, elapsedTime) + angAcc * elapsedTime;
+	//XMVECTOR newAngVel = oldAngVel + (angAcc - (acc * XMVector3Normalize(oldAngVel))) * elapsedTime;
 	XMStoreFloat3(&m_angVel, newAngVel);
 
 	// #############################

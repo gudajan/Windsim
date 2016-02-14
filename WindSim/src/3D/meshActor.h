@@ -21,6 +21,7 @@ public:
 	void setColor(DirectX::PackedVector::XMCOLOR col) { m_color = col; };
 	void setHovered(bool hovered) { m_hovered = hovered; };
 	void setSelected(bool selected) { m_selected = selected; };
+	void setModified(bool modified) { m_modified = modified; };
 
 	void create(ID3D11Device* device);
 	void release();
@@ -36,8 +37,8 @@ public:
 	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
 	void setDynamics(bool dynamics) { m_calcDynamics = dynamics; m_dynamics.reset(); };
 	void setDensity(float density) { m_density = density; };
-
-	void MeshActor::updateInertiaTensor();
+	void setLocalRotationAxis(const DirectX::XMFLOAT3& axis) { m_dynamics.setRotationAxis(axis); };
+	void updateInertiaTensor();
 
 private:
 	Marker m_marker;
@@ -55,6 +56,7 @@ private:
 
 	bool m_hovered; // The mouse is hovering above the mesh
 	bool m_selected; // The mesh is the currently selected object
+	bool m_modified; // The mesh is currently modified (scaled, translated or rotated)
 };
 
 

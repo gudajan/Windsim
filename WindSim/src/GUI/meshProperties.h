@@ -30,6 +30,7 @@ private slots:
 	void shadingToggled(bool b);
 	void pickColor();
 	void densityChanged();
+	void localRotAxisChanged();
 
 	void buttonClicked(QAbstractButton* button);
 

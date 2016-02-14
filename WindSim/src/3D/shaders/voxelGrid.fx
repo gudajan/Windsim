@@ -354,9 +354,9 @@ void gsArrowGlyph(point uint input[1] : VertexID, inout LineStream<PSColIn> stre
 
 	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, posTS, 0).xyz;
 
-	float3 x = float3(0, -1, 0) * scale;
-	float3 y = float3(1, 0, 0) * scale;
-	psIn.col = float3(0.1, 0, 0);
+	float3 x = float3(0, -1, 0) * 0.01f;
+	float3 y = float3(1, 0, 0) * 0.01f;
+	psIn.col = float3(1, 0, 0);
 	if (length(velocity) != 0.0)
 	{
 		// The orientation of the glyph

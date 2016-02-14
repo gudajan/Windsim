@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>382</width>
-    <height>438</height>
+    <height>498</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -67,12 +67,30 @@
    <item>
     <widget class="QFrame" name="fCheck">
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::Box</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
+     <property name="lineWidth">
+      <number>0</number>
+     </property>
+     <property name="midLineWidth">
+      <number>1</number>
+     </property>
      <layout class="QHBoxLayout" name="horizontalLayout_5">
+      <property name="leftMargin">
+       <number>9</number>
+      </property>
+      <property name="topMargin">
+       <number>9</number>
+      </property>
+      <property name="rightMargin">
+       <number>9</number>
+      </property>
+      <property name="bottomMargin">
+       <number>9</number>
+      </property>
       <item>
        <widget class="QCheckBox" name="cbDisabled">
         <property name="layoutDirection">
@@ -380,10 +398,10 @@
             <string>Rotation angle alpha arround the x-axis (roll)</string>
            </property>
            <property name="minimum">
-            <double>-360.000000000000000</double>
+            <double>-100.000000000000000</double>
            </property>
            <property name="maximum">
-            <double>360.000000000000000</double>
+            <double>100.000000000000000</double>
            </property>
            <property name="singleStep">
             <double>1.000000000000000</double>
@@ -418,10 +436,10 @@
             <string>Rotation angle beta arround the y-axis (pitch)</string>
            </property>
            <property name="minimum">
-            <double>-360.000000000000000</double>
+            <double>-100.000000000000000</double>
            </property>
            <property name="maximum">
-            <double>360.000000000000000</double>
+            <double>100.000000000000000</double>
            </property>
            <property name="singleStep">
             <double>1.000000000000000</double>
@@ -456,10 +474,10 @@
             <string>Rotation angle gamma arround the z-axis (yaw)</string>
            </property>
            <property name="minimum">
-            <double>-360.000000000000000</double>
+            <double>-100.000000000000000</double>
            </property>
            <property name="maximum">
-            <double>360.000000000000000</double>
+            <double>100.000000000000000</double>
            </property>
            <property name="singleStep">
             <double>1.000000000000000</double>
@@ -574,31 +592,211 @@
      <property name="title">
       <string>Dynamics Settings</string>
      </property>
-     <layout class="QFormLayout" name="formLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="lDensity">
-        <property name="text">
-         <string>Density [kg/m³]: </string>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QFrame" name="frame">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="lDensity">
+           <property name="text">
+            <string>Density [kg/m³]: </string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="dspDensity">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="suffix">
+            <string/>
+           </property>
+           <property name="decimals">
+            <number>2</number>
+           </property>
+           <property name="minimum">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>999999999999.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="value">
+            <double>1.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QDoubleSpinBox" name="dspDensity">
-        <property name="suffix">
-         <string/>
+      <item>
+       <widget class="QGroupBox" name="gbDynAxis">
+        <property name="toolTip">
+         <string>If enabeld, perform dynamic rotation only arround specified axis. Otherwise rotate arround center of mass.</string>
         </property>
-        <property name="decimals">
-         <number>2</number>
+        <property name="title">
+         <string>Local rotation axis</string>
         </property>
-        <property name="minimum">
-         <double>0.010000000000000</double>
+        <property name="flat">
+         <bool>false</bool>
         </property>
-        <property name="maximum">
-         <double>999999999999.000000000000000</double>
+        <property name="checkable">
+         <bool>true</bool>
         </property>
-        <property name="singleStep">
-         <double>0.100000000000000</double>
+        <property name="checked">
+         <bool>false</bool>
         </property>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="leftMargin">
+          <number>9</number>
+         </property>
+         <property name="topMargin">
+          <number>9</number>
+         </property>
+         <property name="rightMargin">
+          <number>9</number>
+         </property>
+         <property name="bottomMargin">
+          <number>9</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="lDynAxisX">
+           <property name="text">
+            <string>x:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>ax</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="dynAxisX">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Rotation angle alpha arround the x-axis (roll)</string>
+           </property>
+           <property name="minimum">
+            <double>-100.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>100.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>0.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lDynAxisY">
+           <property name="text">
+            <string>y:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>ay</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="dynAxisY">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Rotation angle beta arround the y-axis (pitch)</string>
+           </property>
+           <property name="minimum">
+            <double>-100.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>100.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>0.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lDynAxisZ">
+           <property name="text">
+            <string>z:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>az</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="dynAxisZ">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Rotation angle gamma arround the z-axis (yaw)</string>
+           </property>
+           <property name="minimum">
+            <double>-100.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>100.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>0.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
@@ -610,7 +808,7 @@
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>

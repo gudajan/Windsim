@@ -131,11 +131,12 @@ void ObjectManager::modify(const QJsonObject& data)
 
 	// Check if, according to the modifications, which are made, a update of the simulation is necessary
 	bool updateSim = false;
+	Modifications mod = All;
 	if (!data.contains("modifications"))
 		updateSim = true;
 	else
 	{
-		Modifications mod = data["modifications"].toInt();
+		mod = Modifications(data["modifications"].toInt());
 		for (auto m : { Position, Scaling, Rotation, Voxelization, Resolution, VoxelSize, SimulatorExe, All })
 		{
 			if (mod.testFlag(m))
@@ -173,6 +174,13 @@ void ObjectManager::modify(const QJsonObject& data)
 		QJsonObject jCol = data["Color"].toObject();
 		PackedVector::XMCOLOR col(jCol["r"].toInt() / 255.0f, jCol["g"].toInt() / 255.0f, jCol["b"].toInt() / 255.0f, 1.0f);
 
+		QJsonObject jAxis = data["localRotAxis"].toObject();
+		XMFLOAT3 localRotationAxis;
+		if (jAxis["enabled"].toBool())
+			localRotationAxis = XMFLOAT3(jAxis["x"].toDouble(), jAxis["y"].toDouble(), jAxis["z"].toDouble());
+		else
+			localRotationAxis = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
 		std::shared_ptr<MeshActor> act = std::dynamic_pointer_cast<MeshActor>(it->second);
 		act->setPos(pos);
 		act->setScale(scale);
@@ -183,8 +191,10 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setVoxelize(data["voxelize"].toInt() == Qt::Checked);
 		act->setDynamics(data["dynamics"].toInt() == Qt::Checked);
 		act->setDensity(data["density"].toDouble());
+		act->setLocalRotationAxis(localRotationAxis);
 
-		act->updateInertiaTensor();
+		if (mod.testFlag(DynamicsSettings))
+			act->updateInertiaTensor();
 
 		if (render != oldRender && !render)
 		{

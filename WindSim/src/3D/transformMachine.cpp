@@ -7,6 +7,7 @@
 #include "actor.h"
 #include "marker.h"
 #include "markerActor.h"
+#include "meshActor.h"
 
 #include <QLineF>
 #include <QLine>
@@ -212,7 +213,12 @@ void TransformMachine::start(QPoint currentMousePos)
 	for (auto id : m_manager->getSelection())
 	{
 		// Copy the data of the actor (so it will not be overwritten by our temporary transformations
-		Actor* a = m_manager->getActor(id)->clone();
+		// Notify for modifications if necessary
+		std::shared_ptr<Actor> oldAct = m_manager->getActor(id);
+		if (oldAct->getType() == ObjectType::Mesh)
+			std::dynamic_pointer_cast<MeshActor>(oldAct)->setModified(true);
+
+		Actor* a = oldAct->clone();
 		m_oldActors.emplace(id, std::shared_ptr<Actor>(a));
 	}
 
@@ -267,6 +273,8 @@ void TransformMachine::abort()
 		act->setScale(a.second->getScale());
 		act->setRot(a.second->getRot());
 		act->computeWorld();
+		if (act->getType() == ObjectType::Mesh)
+			std::dynamic_pointer_cast<MeshActor>(act)->setModified(false);
 	}
 
 	// Stop rendering the transformation marker
@@ -290,6 +298,9 @@ void TransformMachine::finish()
 		QJsonObject scale = { { "x", s.x }, { "y", s.y }, { "z", s.z } };
 		QJsonObject rot = { { "ax", XMVectorGetX(axis) }, { "ay", XMVectorGetY(axis) }, { "az", XMVectorGetZ(axis) }, { "angle", radToDeg(angle) } };
 		m_transformation.push_back({ { "id", id }, { "Position", pos }, { "Scaling", scale }, { "Rotation", rot } });
+
+		if (act->getType() == ObjectType::Mesh)
+			std::dynamic_pointer_cast<MeshActor>(act)->setModified(false);
 	}
 
 	// Stop rendering the transformation marker

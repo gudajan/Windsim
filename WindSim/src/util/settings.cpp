@@ -22,6 +22,12 @@ Settings conf = {
 		0.5, // translationStep
 		0.5, // scalingStep
 		10 // RotationStep
+	},
+
+	// Dynamics
+	{
+		false,
+		false
 	}
 };
 
@@ -63,6 +69,9 @@ void loadIni(const std::string& path)
 	conf.gen.translationStep = std::stof(getIniVal(iniMap, "General", "translationStep", std::to_string(conf.gen.translationStep)));
 	conf.gen.scalingStep = std::stof(getIniVal(iniMap, "General", "scalingStep", std::to_string(conf.gen.scalingStep)));
 	conf.gen.rotationStep = std::stof(getIniVal(iniMap, "General", "rotationStep", std::to_string(conf.gen.rotationStep)));
+
+	conf.dyn.useDynWorldForCalc = std::stoi(getIniVal(iniMap, "Dynamics", "useDynWorldForCalc", std::to_string(conf.dyn.useDynWorldForCalc)));
+	conf.dyn.showDynDuringMod = std::stoi(getIniVal(iniMap, "Dynamics", "showDynDuringMod", std::to_string(conf.dyn.showDynDuringMod)));
 }
 
 const std::string& getIniVal(libini::ini_model& map, const std::string& category, const std::string& value, const std::string& default)

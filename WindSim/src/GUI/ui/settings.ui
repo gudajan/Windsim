@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>200</width>
-    <height>97</height>
+    <width>307</width>
+    <height>176</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -50,6 +50,29 @@
        <widget class="QRadioButton" name="rbModelView">
         <property name="text">
          <string>Model View</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QGroupBox" name="gbDynamics">
+     <property name="title">
+      <string>Dynamics</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="cbUseDynWorld">
+        <property name="text">
+         <string>Use dynamic world transformation</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="cbShowDynTrans">
+        <property name="text">
+         <string>Show dynamic transformation during modifications</string>
         </property>
        </widget>
       </item>

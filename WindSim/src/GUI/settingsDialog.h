@@ -18,6 +18,8 @@ public slots:
 
 private slots:
 	void cameraTypeToggled(bool b);
+	void useDynWorldToggled(bool b);
+	void showDynTransToggled(bool b);
 
 signals:
 	void settingsChanged(); // Emitted if settings are changed in the dialog at any time

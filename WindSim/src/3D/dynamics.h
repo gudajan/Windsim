@@ -37,6 +37,7 @@ public:
 
 	void setInertia(const DirectX::XMFLOAT3X3& inertia) { m_inertiaTensor = inertia; };
 	void setCenterOfMass(const DirectX::XMFLOAT3& centerOfMass) { m_centerOfMass = centerOfMass; };
+	void setRotationAxis(const DirectX::XMFLOAT3& axis) { DirectX::XMStoreFloat3(&m_rotationAxis, DirectX::XMVector3Normalize(DirectX::XMLoadFloat3(&axis))); };
 	const DirectX::XMFLOAT4& getRotation() const { return m_rot; };
 	const DirectX::XMFLOAT3& getCenterOfMass() const { return m_centerOfMass; };
 
@@ -64,8 +65,11 @@ private:
 	ID3D11UnorderedAccessView* m_torqueUAV;
 
 	Mesh3D& m_mesh;
+
 	DirectX::XMFLOAT3X3 m_inertiaTensor;
 	DirectX::XMFLOAT3 m_centerOfMass;
+	DirectX::XMFLOAT3 m_rotationAxis;
+
 	DirectX::XMFLOAT3 m_angVel;
 	DirectX::XMFLOAT4 m_rot; // Additional rotation arround the center of mass through Dynamics simulation
 

@@ -48,6 +48,10 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 
 	// Dynamics settings
 	connect(ui.dspDensity, SIGNAL(editingFinished()), this, SLOT(densityChanged()));
+	connect(ui.gbDynAxis , SIGNAL(toggled(bool)), this, SLOT(localRotAxisChanged()));
+	connect(ui.dynAxisX, SIGNAL(valueChanged(double)), this, SLOT(localRotAxisChanged()));
+	connect(ui.dynAxisY, SIGNAL(valueChanged(double)), this, SLOT(localRotAxisChanged()));
+	connect(ui.dynAxisZ, SIGNAL(valueChanged(double)), this, SLOT(localRotAxisChanged()));
 
 	setModal(false);
 }
@@ -92,10 +96,6 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 
 		// Rotation
 		const QJsonObject& rot = properties.find("Rotation")->toObject();
-		double debug1 = rot.find("ax")->toDouble();
-		double debug2 = rot.find("ay")->toDouble();
-		double debug3 = rot.find("az")->toDouble();
-		double debug4 = rot.find("angle")->toDouble();
 		ui.ax->setValue(rot.find("ax")->toDouble());
 		ui.ay->setValue(rot.find("ay")->toDouble());
 		ui.az->setValue(rot.find("az")->toDouble());
@@ -111,8 +111,13 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 		const QJsonObject& col = properties.find("Color")->toObject();
 		setColorButton(col.find("r")->toInt(), col.find("g")->toInt(), col.find("b")->toInt());
 
-		// Dynamics settings
+		// Dynamics
 		ui.dspDensity->setValue(properties["density"].toDouble());
+		const QJsonObject& dynamics = properties.find("localRotAxis")->toObject();
+		ui.dynAxisX->setValue(dynamics.find("x")->toDouble());
+		ui.dynAxisY->setValue(dynamics.find("y")->toDouble());
+		ui.dynAxisZ->setValue(dynamics.find("z")->toDouble());
+		ui.gbDynAxis->setChecked(dynamics.find("enabled")->toBool());
 
 		m_properties = properties; // Copy properties
 	}
@@ -214,6 +219,18 @@ void MeshProperties::densityChanged()
 	m_properties["density"] = ui.dspDensity->value();
 	emit propertiesChanged(m_properties, DynamicsSettings);
 }
+void MeshProperties::localRotAxisChanged()
+{
+	QJsonObject json
+	{
+		{ "enabled", ui.gbDynAxis->isChecked() },
+		{ "x", ui.dynAxisX->value() },
+		{ "y", ui.dynAxisY->value() },
+		{ "z", ui.dynAxisZ->value() }
+	};
+	m_properties["localRotAxis"] = json;
+	emit propertiesChanged(m_properties, DynamicsSettings);
+}
 
 void MeshProperties::buttonClicked(QAbstractButton* button)
 {
@@ -256,6 +273,11 @@ void MeshProperties::blockSignals()
 
 	// Dynamics settings
 	ui.dspDensity->blockSignals(true);
+	ui.gbDynAxis->blockSignals(true);
+	ui.dynAxisX->blockSignals(true);
+	ui.dynAxisY->blockSignals(true);
+	ui.dynAxisZ->blockSignals(true);
+
 }
 
 void MeshProperties::enableSignals()
@@ -289,6 +311,10 @@ void MeshProperties::enableSignals()
 
 	// Dynamics settings
 	ui.dspDensity->blockSignals(false);
+	ui.gbDynAxis->blockSignals(false);
+	ui.dynAxisX->blockSignals(false);
+	ui.dynAxisY->blockSignals(false);
+	ui.dynAxisZ->blockSignals(false);
 }
 
 void MeshProperties::setColorButton(int r, int g, int b)

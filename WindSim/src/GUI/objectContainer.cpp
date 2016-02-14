@@ -238,6 +238,8 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["dynamics"] = Qt::Checked;
 		if (!object.contains("density"))
 			object["density"] = 1.0;
+		if (!object.contains("localRotAxis"))
+			object["localRotAxis"] = QJsonObject{ { "enabled", false }, { "x", 0.0f }, { "y", 0.0f }, { "z", 0.0f } };
 
 	}
 	if (type == ObjectType::VoxelGrid)

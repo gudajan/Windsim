@@ -56,6 +56,8 @@ float4 psTorque(PSIn psIn) : SV_Target
 
 	// calc torque
 	float3 F = velocity;
+
+	// Rotation arround point (3DOF):
 	float3 r = psIn.posWS - g_vPosition;
 
 	float3 torque = cross(r, F);

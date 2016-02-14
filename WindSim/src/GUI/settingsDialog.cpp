@@ -12,6 +12,8 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 	// Camera type radiobuttons
 	connect(ui.rbFirstPerson, SIGNAL(toggled(bool)), this, SLOT(cameraTypeToggled(bool)));
 	connect(ui.rbModelView, SIGNAL(toggled(bool)), this, SLOT(cameraTypeToggled(bool)));
+	connect(ui.cbUseDynWorld, SIGNAL(toggled(bool)), this, SLOT(useDynWorldToggled(bool)));
+	connect(ui.cbShowDynTrans, SIGNAL(toggled(bool)), this, SLOT(showDynTransToggled(bool)));
 
 	setModal(false);
 }
@@ -33,6 +35,9 @@ void SettingsDialog::updateSettings()
 		ui.rbModelView->setChecked(true);
 	else
 		ui.rbFirstPerson->setChecked(true);
+
+	ui.cbUseDynWorld->setChecked(conf.dyn.useDynWorldForCalc);
+	ui.cbShowDynTrans->setChecked(conf.dyn.showDynDuringMod);
 }
 
 void SettingsDialog::cameraTypeToggled(bool b)
@@ -40,6 +45,20 @@ void SettingsDialog::cameraTypeToggled(bool b)
 	if (!b) return;
 
 	conf.cam.type = ui.rbModelView->isChecked() ? ModelView : FirstPerson;
+
+	emit settingsChanged();
+}
+
+void SettingsDialog::useDynWorldToggled(bool b)
+{
+	conf.dyn.useDynWorldForCalc = b;
+
+	emit settingsChanged();
+}
+
+void SettingsDialog::showDynTransToggled(bool b)
+{
+	conf.dyn.showDynDuringMod = b;
 
 	emit settingsChanged();
 }

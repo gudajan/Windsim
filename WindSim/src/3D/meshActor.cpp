@@ -17,7 +17,8 @@ MeshActor::MeshActor(Mesh3D& mesh, int id)
 	m_voxelize(true),
 	m_calcDynamics(true),
 	m_hovered(false),
-	m_selected(false)
+	m_selected(false),
+	m_modified(false)
 {
 	XMFLOAT3 center;
 	XMFLOAT3 extends;
@@ -79,7 +80,11 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			dynWorld *= XMMatrixTranslationFromVector(XMLoadFloat3(&m_pos)); // Transform world translation
 
 			XMStoreFloat4x4(&m_dynWorld, dynWorld);
-			m_mesh.render(device, context, m_dynWorld, view, projection, elapsedTime);
+
+			if (m_modified && !conf.dyn.showDynDuringMod)
+				m_mesh.render(device, context, m_world, view, projection, elapsedTime);
+			else
+				m_mesh.render(device, context, m_dynWorld, view, projection, elapsedTime);
 		}
 		else
 		{
@@ -97,7 +102,12 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, ID3D11ShaderResourceView* velocityField, double elapsedTime)
 {
 	if (m_calcDynamics)
-		m_dynamics.calculate(device, context, m_dynWorld, worldToVoxelTex, texResolution, velocityField, elapsedTime);
+		// Current state: pass original world matrix instead of dynamic one, so the calculated torque is more appropriate/consitent
+		// TODO: Update the voxel grid (and therefore the velcity field) dependently on the dynamic rotation so we get appropriate torque values if passing the dynamic world matrix here
+		if (conf.dyn.useDynWorldForCalc)
+			m_dynamics.calculate(device, context, m_dynWorld, worldToVoxelTex, texResolution, velocityField, elapsedTime);
+		else
+			m_dynamics.calculate(device, context, m_world, worldToVoxelTex, texResolution, velocityField, elapsedTime);
 }
 
 bool MeshActor::intersect(XMFLOAT3 origin, XMFLOAT3 direction, float& distance) const

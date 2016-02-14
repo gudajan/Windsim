@@ -64,6 +64,12 @@ struct Settings
 		float scalingStep;
 		float rotationStep;
 	} gen;
+
+	struct Dynamics
+	{
+		bool useDynWorldForCalc; // Use dynamic world matrix for torque calculation
+		bool showDynDuringMod; // Show dynamic transformation during object modification (e.g. translation)
+	} dyn;
 };
 
 
