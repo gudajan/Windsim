@@ -30,10 +30,12 @@ HRESULT Dynamics::createShaderFromFile(const std::wstring& shaderPath, ID3D11Dev
 		V_RETURN(D3DX11CreateEffectFromFile(shaderPath.c_str(), 0, device, &s_effect));
 	}
 
+	s_shaderVariables.viewProj = s_effect->GetVariableByName("g_mViewProj")->AsMatrix();
 	s_shaderVariables.texToProj = s_effect->GetVariableByName("g_mTexToProj")->AsMatrix();
 	s_shaderVariables.objectToWorld = s_effect->GetVariableByName("g_mObjectToWorld")->AsMatrix();
 	s_shaderVariables.worldToVoxelTex = s_effect->GetVariableByName("g_mWorldToVoxelTex")->AsMatrix();
 	s_shaderVariables.position = s_effect->GetVariableByName("g_vPosition")->AsVector();
+	s_shaderVariables.angVel = s_effect->GetVariableByName("g_vAngVel")->AsVector();
 
 	s_shaderVariables.torqueUAV = s_effect->GetVariableByName("g_torqueUAV")->AsUnorderedAccessView();
 	s_shaderVariables.velocitySRV = s_effect->GetVariableByName("g_velocitySRV")->AsShaderResource();
@@ -72,9 +74,6 @@ HRESULT Dynamics::create(ID3D11Device* device)
 	bd.StructureByteStride = 0;
 	V_RETURN(device->CreateBuffer(&bd, &srd, &m_torqueTexStaging));
 
-	//bd.ByteWidth = sizeof(int32_t);
-	//V_RETURN(device->CreateBuffer(&bd, nullptr, &m_torqueCounterStaging));
-
 	D3D11_UNORDERED_ACCESS_VIEW_DESC uavd;
 	uavd.Format = DXGI_FORMAT_UNKNOWN;
 	uavd.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
@@ -90,13 +89,11 @@ void Dynamics::release()
 {
 	SAFE_RELEASE(m_torqueTex);
 	SAFE_RELEASE(m_torqueTexStaging);
-	SAFE_RELEASE(m_torqueCounterStaging);
 	SAFE_RELEASE(m_torqueUAV);
 }
 Dynamics::Dynamics(Mesh3D& mesh)
 	: m_torqueTex(nullptr)
 	, m_torqueTexStaging(nullptr)
-	, m_torqueCounterStaging(nullptr)
 	, m_torqueUAV(nullptr)
 	, m_mesh(mesh)
 	, m_inertiaTensor()
@@ -118,11 +115,6 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	std::vector<float> torque(3, 0.0f);
 
 	D3D11_MAPPED_SUBRESOURCE msr;
-	//context->Map(m_torqueCounterStaging, 0, D3D11_MAP_READ, 0, &msr);
-	//if (msr.pData)
-	//	count = static_cast<uint32_t*>(msr.pData)[0];
-	//context->Unmap(m_torqueCounterStaging, 0);
-
 	context->Map(m_torqueTexStaging, 0, D3D11_MAP_READ, 0, &msr);
 	if (msr.pData)
 	{
@@ -155,6 +147,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	XMVECTOR scale;
 	XMVECTOR trans;
 	XMMatrixDecompose(&scale, &rot, &trans, XMLoadFloat4x4(&objectToWorld));
+	XMStoreFloat3(&m_debugTrq, trq);
 	trq = XMVector3Rotate(trq, XMQuaternionNormalize(rot));
 
 	// Calculate torque arround local rotation axis
@@ -211,13 +204,10 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	//context->OMSetRenderTargetsAndUnorderedAccessViews(D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr, 1, 1, &m_torqueUAV, counts);
 	s_shaderVariables.torqueUAV->SetUnorderedAccessView(m_torqueUAV);
 
-
 	// Prepare binding of the rest of fixed shader variables via effects framework
 	s_shaderVariables.objectToWorld->SetMatrix(reinterpret_cast<const float*>(objectToWorld.m));
 	s_shaderVariables.worldToVoxelTex->SetMatrix(reinterpret_cast<const float*>(worldToVoxelTex.m));
-	XMFLOAT3 geometricCenter;
-	m_mesh.getBoundingBox(geometricCenter, XMFLOAT3());
-	s_shaderVariables.position->SetFloatVector(XMVector3Transform(XMLoadFloat3(&geometricCenter), XMLoadFloat4x4(&objectToWorld)).m128_f32);
+	s_shaderVariables.position->SetFloatVector((XMVector3Rotate(XMLoadFloat3(&m_centerOfMass), rot) + trans).m128_f32); // Center of mass already scaled
 	s_shaderVariables.velocitySRV->SetResource(velocityField);
 	// Create orthogonal projection aligned with voxel grid texture space ([0,1]^3)
 	XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0, 1, 0, 1, 0, 1);
@@ -280,8 +270,30 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	// Copy torque to CPU accessable memory (available in next frame)
 	// #############################
 	context->CopyResource(m_torqueTexStaging, m_torqueTex);
-	//context->CopyStructureCount(m_torqueCounterStaging, 0, m_torqueUAV);
 }
+
+void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4& objRot, const XMFLOAT3& objTrans, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
+{
+	XMVECTOR rot = XMLoadFloat4(&objRot);
+	XMVECTOR trans = XMLoadFloat3(&objTrans);
+	// Transform angular velocity to world space
+	//s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(XMVector3Rotate(XMLoadFloat3(&m_angVel), rot).m128_f32));
+	s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(&m_debugTrq));
+	s_shaderVariables.viewProj->SetMatrix(reinterpret_cast<float*>((XMLoadFloat4x4(&view) * XMLoadFloat4x4(&projection)).r));
+	// Transform center of mass to world space
+	s_shaderVariables.position->SetFloatVector((XMVector3Rotate(XMLoadFloat3(&m_centerOfMass), rot) + trans).m128_f32);
+
+	s_effect->GetTechniqueByName("Torque")->GetPassByName("AngularVelocity")->Apply(0, context);
+
+	context->IASetInputLayout(nullptr);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+
+	UINT stride = 0;
+	UINT offset = 0;
+	context->IASetVertexBuffers(0, 0, nullptr, &stride, &offset);
+	context->Draw(1, 0);
+}
+
 
 void Dynamics::reset()
 {
@@ -290,10 +302,12 @@ void Dynamics::reset()
 }
 
 Dynamics::ShaderVariables::ShaderVariables()
-	: texToProj(nullptr),
+	: viewProj(nullptr),
+	texToProj(nullptr),
 	objectToWorld(nullptr),
 	worldToVoxelTex(nullptr),
 	position(nullptr),
+	angVel(nullptr),
 	velocitySRV(nullptr),
 	torqueUAV(nullptr)
 {

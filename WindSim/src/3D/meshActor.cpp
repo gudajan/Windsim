@@ -85,6 +85,7 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 				m_mesh.render(device, context, m_world, view, projection, elapsedTime);
 			else
 				m_mesh.render(device, context, m_dynWorld, view, projection, elapsedTime);
+
 		}
 		else
 		{
@@ -97,6 +98,9 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			m_marker.render(device, context, m_world, view, projection, elapsedTime);
 		}
 	}
+
+	if (m_calcDynamics)
+		m_dynamics.render(device, context, m_rot, m_pos, view, projection);
 }
 
 void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, ID3D11ShaderResourceView* velocityField, double elapsedTime)

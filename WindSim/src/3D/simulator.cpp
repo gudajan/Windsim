@@ -94,6 +94,10 @@ void Simulator::loop()
 				{
 					msgHandlers.push_front(std::async(std::launch::async, &Simulator::fillVelocity, this));
 				}
+				else
+				{
+					postMessageToSim({ MsgToSim::FinishedVelocityAccess }); // Do not loose message if currently updating voxel grid resolution
+				}
 			}
 			break;
 		}
@@ -437,7 +441,7 @@ void Simulator::initSimulation(const DimMsg& msg)
 		return;
 	}
 
-	if (!waitForPipeMsg(MsgFromSimProc::ClosedShm, 1))
+	if (!waitForPipeMsg(MsgFromSimProc::ClosedShm, 5))
 	{
 		OutputDebugStringA("Init simulation process, remove locks\n");
 		log("ERROR: Did not receive the confirmation for closing the shared memory!");
@@ -520,6 +524,7 @@ void Simulator::stop()
 		m_running = false;
 	}
 
+	m_pipe.close(true);
 	removeSharedMemory();
 
 	m_simInitialized = false;
@@ -542,7 +547,7 @@ void Simulator::updateGrid()
 		return;
 
 	// Wait until voxelgrid access finished
-	waitForPipeMsg(MsgFromSimProc::FinishedVoxelGridAccess, 2);
+	waitForPipeMsg(MsgFromSimProc::FinishedVoxelGridAccess, 5);
 
 }
 
@@ -586,9 +591,8 @@ void Simulator::fillVelocity()
 	MsgToSimProc type = MsgToSimProc::FillVelocity;
 	std::memcpy(data.data(), &type, sizeof(MsgToSimProc));
 	m_pipe.send(data);
-	//log("DEBUG: Sent 'FillVelocity'");
 
-	waitForPipeMsg(MsgFromSimProc::FinishedVelocityAccess, 2);
+	waitForPipeMsg(MsgFromSimProc::FinishedVelocityAccess, 5);
 
 	postMessageToRender({ MsgToRenderer::UpdateVelocity });
 }

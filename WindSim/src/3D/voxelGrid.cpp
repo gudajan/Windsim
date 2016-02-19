@@ -10,6 +10,7 @@
 #include <qelapsedtimer.h>
 
 #include <mutex>
+#include <future>
 
 using namespace DirectX;
 
@@ -244,7 +245,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			elapsed.start();
 			//OutputDebugStringA("Start copying velocity!\n");
 			updateVelocity(context);
-			//OutputDebugStringA(("ELAPSED: velocity copy: " + std::to_string(elapsed.nsecsElapsed() / 1000000) + "msec\n").c_str());
+			OutputDebugStringA(("ELAPSED: velocity copy: " + std::to_string(elapsed.nsecsElapsed() / 1000000) + "msec\n").c_str());
 			m_simulator.postMessageToSim({ MsgToSim::FinishedVelocityAccess });
 		}
 	}
@@ -450,19 +451,17 @@ void VoxelGrid::updateVelocity(ID3D11DeviceContext* context)
 	context->Map(m_velocityTextureStaging, 0, D3D11_MAP_WRITE, 0, &msr);
 	if (msr.pData)
 	{
-		//if (msr.RowPitch == m_resolution.x * sizeof(float) * 3 && msr.DepthPitch == m_resolution.x * m_resolution.y * sizeof(float) * 3)
-		//	std::memcpy(msr.pData, m_simulator.getVelocity(), m_resolution.x * m_resolution.y * m_resolution.z * sizeof(float) * 3);
-		//else
+		int paddedRowPitch = msr.RowPitch / sizeof(float);
+		int paddedDepthPitch = msr.DepthPitch / sizeof(float);
+		int rowPitch = m_resolution.x * 3; // three floats in original buffer
+		int depthPitch = rowPitch * m_resolution.y;
+
+		float* data = static_cast<float*>(msr.pData);
+		float* velocity = m_simulator.getVelocity();
+
+		auto fillVel = [data, velocity, paddedRowPitch, paddedDepthPitch, rowPitch, depthPitch, this](int zStart, int zWork)
 		{
-			int paddedRowPitch = msr.RowPitch / sizeof(float);
-			int paddedDepthPitch = msr.DepthPitch / sizeof(float);
-			int rowPitch = m_resolution.x * 3; // three floats in original buffer
-			int depthPitch = rowPitch * m_resolution.y;
-
-			float* data = static_cast<float*>(msr.pData);
-			float* velocity = m_simulator.getVelocity();
-
-			for (int z = 0; z < m_resolution.z; ++z)
+			for (int z = zStart; z < zStart+zWork; ++z)
 			{
 				for (int y = 0; y < m_resolution.y; ++y)
 				{
@@ -476,14 +475,16 @@ void VoxelGrid::updateVelocity(ID3D11DeviceContext* context)
 					}
 				}
 			}
-			//for (int z = 0; z < m_resolution.z; ++z)
-			//{
-			//	for (int y = 0; y < m_resolution.y; ++y)
-			//	{
-			//		std::memcpy(data + y * paddedRowPitch + z * paddedDepthPitch, velocity + y * rowPitch + z * depthPitch, rowPitch * sizeof(float)); // Copy whole row
-			//	}
-			//}
-		}
+		};
+
+		int sizeZ = m_resolution.z / 8;
+		std::vector<std::future<void>> handles;
+		handles.reserve(8);
+		for (int i = 0; i < 8; ++i)
+			handles.push_back(std::async(std::launch::async, fillVel, i * sizeZ, sizeZ));
+
+		for (int i = 0; i < 8; ++i)
+			handles[i].get();
 	}
 	context->Unmap(m_velocityTextureStaging, 0);
 

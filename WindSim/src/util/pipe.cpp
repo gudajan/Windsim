@@ -63,6 +63,13 @@ bool Pipe::connect(const std::wstring& name, bool create, DWORD secToWait)
 
 void Pipe::close(bool isServer)
 {
+	if (!m_pipe)
+	{
+		ZeroMemory(&m_read, sizeof(OVERLAPPED));
+		ZeroMemory(&m_write, sizeof(OVERLAPPED));
+		return;
+	}
+
 	if (isServer)
 	{
 		BOOL success = DisconnectNamedPipe(m_pipe);

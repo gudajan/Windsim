@@ -31,6 +31,7 @@ public:
 	Dynamics(Mesh3D& mesh);
 
 	void calculate(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& objectToWorld, const DirectX::XMFLOAT4X4& worldToVoxelTex, const DirectX::XMUINT3& texResolution, ID3D11ShaderResourceView* velocityField, double elapsedTime);
+	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4& objRot, const DirectX::XMFLOAT3& objTrans, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 
 	HRESULT create(ID3D11Device* device);
 	void release();
@@ -48,10 +49,12 @@ private:
 	{
 		ShaderVariables();
 
+		ID3DX11EffectMatrixVariable* viewProj;
 		ID3DX11EffectMatrixVariable* texToProj;
 		ID3DX11EffectMatrixVariable* objectToWorld;
 		ID3DX11EffectMatrixVariable* worldToVoxelTex;
 		ID3DX11EffectVectorVariable* position;
+		ID3DX11EffectVectorVariable* angVel;
 
 		ID3DX11EffectUnorderedAccessViewVariable* torqueUAV;
 		ID3DX11EffectShaderResourceVariable* velocitySRV;
@@ -61,8 +64,8 @@ private:
 
 	ID3D11Buffer* m_torqueTex; // Saves the overall torque
 	ID3D11Buffer* m_torqueTexStaging;
-	ID3D11Buffer* m_torqueCounterStaging;
 	ID3D11UnorderedAccessView* m_torqueUAV;
+
 
 	Mesh3D& m_mesh;
 
@@ -71,6 +74,7 @@ private:
 	DirectX::XMFLOAT3 m_rotationAxis;
 
 	DirectX::XMFLOAT3 m_angVel;
+	DirectX::XMFLOAT3 m_debugTrq;
 	DirectX::XMFLOAT4 m_rot; // Additional rotation arround the center of mass through Dynamics simulation
 
 };
