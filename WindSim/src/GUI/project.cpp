@@ -82,6 +82,7 @@ bool Project::saveAs(ObjectContainer& container, const QString& path)
 	{
 		QJsonObject json = container.getData(id);
 		json.remove("id");
+		json.remove("modifications");
 		objects.append(json);
 	}
 	QJsonDocument doc(QJsonObject{ { "objects", objects } });

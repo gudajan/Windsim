@@ -541,9 +541,11 @@ void Simulator::updateGrid()
 	std::vector<BYTE> data(sizeof(MsgToSim::MsgType));
 	MsgToSim::MsgType type = MsgToSim::UpdateGrid;
 	std::memcpy(data.data(), &type, sizeof(MsgToSim::MsgType));
-	if (m_pipe.send(data))
-		log("INFO: Sent 'UpdateGrid'.");
-	else
+	//if (m_pipe.send(data))
+	//	log("INFO: Sent 'UpdateGrid'.");
+	//else
+	//	return;
+	if (!m_pipe.send(data))
 		return;
 
 	// Wait until voxelgrid access finished

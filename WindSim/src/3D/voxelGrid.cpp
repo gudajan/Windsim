@@ -23,7 +23,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_reinit(false),
 	m_initSim(false),
 	m_updateDimensions(false),
-	m_updateGrid(false),
+	m_updateGrid(true),
 	m_cubeIndices(0),
 	m_voxelize(true),
 	m_counter(-1),
@@ -201,8 +201,9 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 
 	// Resize the grid
 	{
-		std::lock_guard<std::mutex> guard(m_simulator.getVoxelGridMutex());
+		m_lock.lock();
 		m_simulator.getCellGrid().resize(m_resolution.x / 4 * m_resolution.y * m_resolution.z, 0);
+		m_lock.unlock();
 	}
 
 
@@ -234,6 +235,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		m_counter = -1;
 	}
 	//OutputDebugStringA("FRAME\n");
+	static int counter = -1;
 
 	// Check for messages from simulator
 	for( auto& msg : m_simulator.getAllMessagesFromSim())
@@ -245,14 +247,21 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			elapsed.start();
 			//OutputDebugStringA("Start copying velocity!\n");
 			updateVelocity(context);
+			if (counter > 2 || counter == -1)
+				counter = 0;
 			OutputDebugStringA(("ELAPSED: velocity copy: " + std::to_string(elapsed.nsecsElapsed() / 1000000) + "msec\n").c_str());
 			m_simulator.postMessageToSim({ MsgToSim::FinishedVelocityAccess });
 		}
 	}
 
 	// Calculates dynamics motion of meshes, depending on the current velocity field
-	if (m_calculateDynamics)
+	if (m_calculateDynamics && counter >= 2)
+	{
 		calculateDynamics(device, context, world, elapsedTime);
+		counter = -1;
+	}
+	if (counter > -1)
+		counter++;
 
 	renderGridBox(device, context, world, view, projection);
 
@@ -329,7 +338,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		else if (m_updateGrid) // If objects were modified, and those modifications were already copied to the CPU
 		{
 			m_simulator.postMessageToSim({ MsgToSim::UpdateGrid });
-			m_updateGrid = false;
+			//m_updateGrid = false;
 		}
 
 		m_counter = -1; // Voxelization cycle finished
@@ -592,7 +601,7 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 			context->ClearUnorderedAccessViewUint(m_gridUAV, iniVals);
 
 			// Mesh Object Space -> World Space:
-			XMMATRIX objToWorld = XMLoadFloat4x4(&ma->getWorld());
+			XMMATRIX objToWorld = XMLoadFloat4x4(&ma->getDynWorld());
 			s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(objToWorld.r));
 			s_shaderVariables.gridUAV->SetUnorderedAccessView(m_gridUAV);
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
@@ -745,7 +754,7 @@ void VoxelGrid::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* con
 		if (act.second->getType() == ObjectType::Mesh)
 		{
 			std::shared_ptr<MeshActor> ma = std::dynamic_pointer_cast<MeshActor>(act.second);
-			ma->calculateDynamics(device, context, worldToVoxelTex, m_resolution, m_velocitySRV, elapsedTime);
+			ma->calculateDynamics(device, context, worldToVoxelTex, m_resolution, m_voxelSize, m_velocitySRV, elapsedTime);
 		}
 	}
 }

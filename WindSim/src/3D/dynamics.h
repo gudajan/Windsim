@@ -30,8 +30,8 @@ public:
 
 	Dynamics(Mesh3D& mesh);
 
-	void calculate(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& objectToWorld, const DirectX::XMFLOAT4X4& worldToVoxelTex, const DirectX::XMUINT3& texResolution, ID3D11ShaderResourceView* velocityField, double elapsedTime);
-	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4& objRot, const DirectX::XMFLOAT3& objTrans, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
+	void calculate(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& objectToWorld, const DirectX::XMFLOAT4X4& worldToVoxelTex, const DirectX::XMUINT3& texResolution, const DirectX::XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime);
+	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4& objRot, const DirectX::XMFLOAT3& objTrans, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, float elapsedTime);
 
 	HRESULT create(ID3D11Device* device);
 	void release();
@@ -55,6 +55,8 @@ private:
 		ID3DX11EffectMatrixVariable* worldToVoxelTex;
 		ID3DX11EffectVectorVariable* position;
 		ID3DX11EffectVectorVariable* angVel;
+		ID3DX11EffectVectorVariable* voxelSize;
+		ID3DX11EffectScalarVariable* renderDirection;
 
 		ID3DX11EffectUnorderedAccessViewVariable* torqueUAV;
 		ID3DX11EffectShaderResourceVariable* velocitySRV;
@@ -75,6 +77,7 @@ private:
 
 	DirectX::XMFLOAT3 m_angVel;
 	DirectX::XMFLOAT3 m_debugTrq;
+	DirectX::XMFLOAT3 m_angAcc;
 	DirectX::XMFLOAT4 m_rot; // Additional rotation arround the center of mass through Dynamics simulation
 
 };

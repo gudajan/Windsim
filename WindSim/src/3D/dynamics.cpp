@@ -2,9 +2,9 @@
 #include "mesh3D.h"
 #include "common.h"
 
-
 #include <d3d11.h>
 #include <d3dcompiler.h>
+#include <DirectXMath.h>
 #include "d3dx11effect.h"
 
 using namespace DirectX;
@@ -36,6 +36,8 @@ HRESULT Dynamics::createShaderFromFile(const std::wstring& shaderPath, ID3D11Dev
 	s_shaderVariables.worldToVoxelTex = s_effect->GetVariableByName("g_mWorldToVoxelTex")->AsMatrix();
 	s_shaderVariables.position = s_effect->GetVariableByName("g_vPosition")->AsVector();
 	s_shaderVariables.angVel = s_effect->GetVariableByName("g_vAngVel")->AsVector();
+	s_shaderVariables.voxelSize = s_effect->GetVariableByName("g_vVoxelSize")->AsVector();
+	s_shaderVariables.renderDirection = s_effect->GetVariableByName("g_renderDirection")->AsScalar();
 
 	s_shaderVariables.torqueUAV = s_effect->GetVariableByName("g_torqueUAV")->AsUnorderedAccessView();
 	s_shaderVariables.velocitySRV = s_effect->GetVariableByName("g_velocitySRV")->AsShaderResource();
@@ -100,12 +102,13 @@ Dynamics::Dynamics(Mesh3D& mesh)
 	, m_centerOfMass(0.0f, 0.0f, 0.0f)
 	, m_rotationAxis(0.0f, 0.0f, 0.0f)
 	, m_angVel({ 0.0f, 0.0f, 0.0f })
+	, m_angAcc({0.0f, 0.0f, 0.0f})
 	, m_rot()
 {
 	XMStoreFloat4(&m_rot, XMQuaternionIdentity());
 }
 
-void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& objectToWorld, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, ID3D11ShaderResourceView* velocityField, double elapsedTime)
+void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& objectToWorld, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime)
 {
 
 	// #############################
@@ -122,7 +125,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 		count = data[3];
 		for (int i = 0; i < 3; ++i)
 		{
-			torque[i] = data[i] * 0.000001f / count; // Convert int to float with floating point precision of 6 decimals
+			torque[i] = data[i] * 0.000001f; // Convert int to float with floating point precision of 6 decimals
 		}
 
 	}
@@ -132,14 +135,6 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	{
 		torque = { 0.0f, 0.0f, 0.0f };
 	}
-
-	// Negative acceleration because of friction
-	// Fr = cr * Fn; In our case: Fn = m * g; Fv = m * a; Fv = Fr; -> cr * FN = m * a -> cr * m * g = m * a -> a = cr * g;
-	//float g = 9.81; // gravity
-	//float cr = 0.0225; // Rolling resistance cooefficient for rolling bearing
-	//float acc = cr * g;
-
-	float frictionFactor = 0.95; // after one second, x% of the original velocity remains if acceleration is zero
 
 	// Transform torque to Body Inertial frame
 	XMVECTOR trq = XMVectorSet(torque[0], torque[1], torque[2], 0);
@@ -155,30 +150,20 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	if (!XMVector3Equal(localRotationAxis, XMVectorZero()))
 		trq = XMVector3Dot(trq, localRotationAxis) * localRotationAxis;
 
-	// Calculate new dynamic rotation from angular velocity, rotation in previous frame and elapsed time
-	XMVECTOR oldAngVel = XMLoadFloat3(&m_angVel);
-	XMVECTOR dynRot = XMLoadFloat4(&m_rot);
-	XMVECTOR angMotion = XMVectorSet(m_angVel.x, m_angVel.y, m_angVel.z, 0) * elapsedTime;
-	if (!XMVector3Equal(angMotion, XMVectorZero()))
-	{
-		XMVECTOR newRot = XMQuaternionRotationAxis(angMotion, XMVectorGetX(XMVector3Length(angMotion))); // Angular motion describes axis and its magnitude the angle
-		XMStoreFloat4(&m_rot, XMQuaternionNormalize(XMQuaternionMultiply(newRot, dynRot))); // Perform rotation and store; Order is important ("first" rotation on the right, "second" on the left)
-	}
+	// Calculate and store new angular acceleration
+	XMStoreFloat3(&m_angAcc, XMVector3Transform(trq, XMMatrixInverse(nullptr, XMLoadFloat3x3(&m_inertiaTensor)))); // t = I * a -> a =  I^-1 * t
 
-	// Calculate new angular velocity from angular velocity in previous frame and current angular acceleration
-	XMVECTOR angAcc = XMVector3Transform(trq, XMMatrixInverse(nullptr, XMLoadFloat3x3(&m_inertiaTensor)));
-	XMVECTOR newAngVel = oldAngVel * std::pow(frictionFactor, elapsedTime) + angAcc * elapsedTime;
-	//XMVECTOR newAngVel = oldAngVel + (angAcc - (acc * XMVector3Normalize(oldAngVel))) * elapsedTime;
-	XMStoreFloat3(&m_angVel, newAngVel);
+
+
 
 	// #############################
 	// Calculate new torque on GPU
 	// #############################
-	//// Save old renderTarget
-	//ID3D11RenderTargetView* tempRTV = nullptr;
-	//ID3D11DepthStencilView* tempDSV = nullptr;
-	//context->OMGetRenderTargets(1, &tempRTV, &tempDSV);
-	//context->OMSetRenderTargets(0, nullptr, nullptr);
+	// Save old renderTarget
+	ID3D11RenderTargetView* tempRTV = nullptr;
+	ID3D11DepthStencilView* tempDSV = nullptr;
+	context->OMGetRenderTargets(1, &tempRTV, &tempDSV);
+	context->OMSetRenderTargets(0, nullptr, nullptr);
 
 	// Save old viewport
 	D3D11_VIEWPORT tempVP[1];
@@ -200,14 +185,13 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	context->ClearUnorderedAccessViewUint(m_torqueUAV, initVals);
 	// Initialize counter of UAV with zero and bind UAV
 	// Effects framework hides this function
-	//UINT counts[] = { 0 };
-	//context->OMSetRenderTargetsAndUnorderedAccessViews(D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr, 1, 1, &m_torqueUAV, counts);
 	s_shaderVariables.torqueUAV->SetUnorderedAccessView(m_torqueUAV);
 
 	// Prepare binding of the rest of fixed shader variables via effects framework
 	s_shaderVariables.objectToWorld->SetMatrix(reinterpret_cast<const float*>(objectToWorld.m));
 	s_shaderVariables.worldToVoxelTex->SetMatrix(reinterpret_cast<const float*>(worldToVoxelTex.m));
 	s_shaderVariables.position->SetFloatVector((XMVector3Rotate(XMLoadFloat3(&m_centerOfMass), rot) + trans).m128_f32); // Center of mass already scaled
+	s_shaderVariables.voxelSize->SetFloatVector(reinterpret_cast<const float*>(&voxelSize));
 	s_shaderVariables.velocitySRV->SetResource(velocityField);
 	// Create orthogonal projection aligned with voxel grid texture space ([0,1]^3)
 	XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0, 1, 0, 1, 0, 1);
@@ -228,6 +212,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	// Effectively switches x and z axis
 	XMMATRIX view = XMMatrixRotationNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), degToRad(90)) * XMMatrixScaling(1.0f, 1.0f, -1.0f);
 	s_shaderVariables.texToProj->SetMatrix(reinterpret_cast<float*>((view * proj).r));
+	s_shaderVariables.renderDirection->SetInt(0); // 0 -> X direction
 	s_effect->GetTechniqueByName("Torque")->GetPassByName("Accumulate")->Apply(0, context);
 	context->DrawIndexed(m_mesh.getNumIndices(), 0, 0);
 
@@ -240,7 +225,8 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	// Effectively switches y and z axis
 	view = XMMatrixRotationNormal(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), degToRad(-90)) * XMMatrixScaling(1.0f, 1.0f, -1.0f);
 	s_shaderVariables.texToProj->SetMatrix(reinterpret_cast<const float*>((view * proj).r));
-	s_effect->GetTechniqueByIndex(0)->GetPassByIndex(0)->Apply(0, context);
+	s_shaderVariables.renderDirection->SetInt(1); // 1 -> Y direction
+	s_effect->GetTechniqueByName("Torque")->GetPassByName("Accumulate")->Apply(0, context);
 	context->DrawIndexed(m_mesh.getNumIndices(), 0, 0);
 
 	// Along Z
@@ -250,6 +236,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	context->RSSetViewports(1, &vp);
 	// No view transformation necessary
 	s_shaderVariables.texToProj->SetMatrix(reinterpret_cast<const float*>(proj.r));
+	s_shaderVariables.renderDirection->SetInt(2); // 2 -> Z direction
 	s_effect->GetTechniqueByName("Torque")->GetPassByName("Accumulate")->Apply(0, context);
 	context->DrawIndexed(m_mesh.getNumIndices(), 0, 0);
 
@@ -259,11 +246,11 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	s_effect->GetTechniqueByName("Torque")->GetPassByName("Accumulate")->Apply(0, context);
 
 	// Restore old render targets and viewport
-	//context->OMSetRenderTargets(1, &tempRTV, tempDSV);
+	context->OMSetRenderTargets(1, &tempRTV, tempDSV);
 	context->RSSetViewports(1, tempVP);
 
-	//SAFE_RELEASE(tempRTV);
-	//SAFE_RELEASE(tempDSV);
+	SAFE_RELEASE(tempRTV);
+	SAFE_RELEASE(tempDSV);
 
 
 	// #############################
@@ -272,13 +259,38 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	context->CopyResource(m_torqueTexStaging, m_torqueTex);
 }
 
-void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4& objRot, const XMFLOAT3& objTrans, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
+void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4& objRot, const XMFLOAT3& objTrans, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, float elapsedTime)
 {
+	// Calculate new dynamic rotation from current angular velocity and rotation in previous frame and elapsed time
+	XMVECTOR dynRot = XMLoadFloat4(&m_rot);
+	XMVECTOR angMotion = XMVectorSet(m_angVel.x, m_angVel.y, m_angVel.z, 0) * elapsedTime;
+	if (!XMVector3Equal(angMotion, XMVectorZero()))
+	{
+		XMVECTOR newRot = XMQuaternionRotationAxis(angMotion, XMVectorGetX(XMVector3Length(angMotion))); // Angular motion describes axis and its magnitude the angle
+		XMStoreFloat4(&m_rot, XMQuaternionNormalize(XMQuaternionMultiply(newRot, dynRot))); // Perform rotation and store; Order is important ("first" rotation on the right, "second" on the left)
+	}
+
+	// Update current dynamic acceleration by applying current angular acceleration to the current angular velocity
+
+	// Negative acceleration because of friction
+	// Fr = cr * Fn; In our case: Fn = m * g; Fv = m * a; Fv = Fr; -> cr * FN = m * a -> cr * m * g = m * a -> a = cr * g;
+	//float g = 9.81; // gravity
+	//float cr = 0.0225; // Rolling resistance cooefficient for rolling bearing
+	//float acc = cr * g;
+
+	float frictionFactor = 0.95; // after one second, x% of the original velocity remains if acceleration would be zero
+
+	XMVECTOR oldAngVel = XMLoadFloat3(&m_angVel);
+	XMVECTOR newAngVel = oldAngVel * std::pow(frictionFactor, elapsedTime) + XMLoadFloat3(&m_angAcc) * elapsedTime;
+	//XMVECTOR newAngVel = oldAngVel + (angAcc - (acc * XMVector3Normalize(oldAngVel))) * elapsedTime;
+	XMStoreFloat3(&m_angVel, newAngVel);
+
+
 	XMVECTOR rot = XMLoadFloat4(&objRot);
 	XMVECTOR trans = XMLoadFloat3(&objTrans);
 	// Transform angular velocity to world space
-	//s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(XMVector3Rotate(XMLoadFloat3(&m_angVel), rot).m128_f32));
-	s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(&m_debugTrq));
+	s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(XMVector3Rotate(XMLoadFloat3(&m_angVel), rot).m128_f32));
+	//s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(&m_debugTrq));
 	s_shaderVariables.viewProj->SetMatrix(reinterpret_cast<float*>((XMLoadFloat4x4(&view) * XMLoadFloat4x4(&projection)).r));
 	// Transform center of mass to world space
 	s_shaderVariables.position->SetFloatVector((XMVector3Rotate(XMLoadFloat3(&m_centerOfMass), rot) + trans).m128_f32);
@@ -299,6 +311,7 @@ void Dynamics::reset()
 {
 	XMStoreFloat4(&m_rot, XMQuaternionIdentity());
 	XMStoreFloat3(&m_angVel, XMVectorZero());
+	XMStoreFloat3(&m_angAcc, XMVectorZero());
 }
 
 Dynamics::ShaderVariables::ShaderVariables()
@@ -308,6 +321,8 @@ Dynamics::ShaderVariables::ShaderVariables()
 	worldToVoxelTex(nullptr),
 	position(nullptr),
 	angVel(nullptr),
+	voxelSize(nullptr),
+	renderDirection(nullptr),
 	velocitySRV(nullptr),
 	torqueUAV(nullptr)
 {

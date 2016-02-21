@@ -26,7 +26,7 @@ Settings conf = {
 
 	// Dynamics
 	{
-		false,
+		true,
 		false
 	}
 };

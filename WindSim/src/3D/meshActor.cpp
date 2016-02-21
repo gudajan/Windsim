@@ -100,18 +100,18 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	}
 
 	if (m_calcDynamics)
-		m_dynamics.render(device, context, m_rot, m_pos, view, projection);
+		m_dynamics.render(device, context, m_rot, m_pos, view, projection,elapsedTime);
 }
 
-void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, ID3D11ShaderResourceView* velocityField, double elapsedTime)
+void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime)
 {
 	if (m_calcDynamics)
 		// Current state: pass original world matrix instead of dynamic one, so the calculated torque is more appropriate/consitent
 		// TODO: Update the voxel grid (and therefore the velcity field) dependently on the dynamic rotation so we get appropriate torque values if passing the dynamic world matrix here
 		if (conf.dyn.useDynWorldForCalc)
-			m_dynamics.calculate(device, context, m_dynWorld, worldToVoxelTex, texResolution, velocityField, elapsedTime);
+			m_dynamics.calculate(device, context, m_dynWorld, worldToVoxelTex, texResolution, voxelSize, velocityField, elapsedTime);
 		else
-			m_dynamics.calculate(device, context, m_world, worldToVoxelTex, texResolution, velocityField, elapsedTime);
+			m_dynamics.calculate(device, context, m_world, worldToVoxelTex, texResolution, voxelSize, velocityField, elapsedTime);
 }
 
 bool MeshActor::intersect(XMFLOAT3 origin, XMFLOAT3 direction, float& distance) const
@@ -160,4 +160,5 @@ void MeshActor::updateInertiaTensor()
 	m_mesh.calcMassProps(m_density, m_scale, inertia, com);
 	m_dynamics.setInertia(inertia);
 	m_dynamics.setCenterOfMass(com);
+	m_dynamics.reset();
 }

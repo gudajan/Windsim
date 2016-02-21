@@ -9,7 +9,8 @@ cbuffer cb
 
 	float3 g_vPosition; // Rotation center in World Space (center of mass)
 	float3 g_vAngVel; // Global angular velocity
-
+	float3 g_vVoxelSize;
+	int g_renderDirection;
 }
 
 
@@ -69,7 +70,7 @@ void gsArrow(point uint input[1] : VertexID, inout TriangleStream<PSLineIn> stre
 {
 	PSLineIn psIn;
 
-	float scale = 10.0f;
+	float scale = 1.0f;
 	float arrowHeadSize = 0.3f;
 	float width = 0.1f;
 
@@ -113,9 +114,22 @@ float4 psTorque(PSTexIn psIn) : SV_Target
 {
 	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, psIn.posTS, 0).xyz;
 
-	// calc torque
-	float3 F = velocity;
+	// Calc pressure from flow velocity
+	float airDensity = 1.2256; // kg/m^3
+	float3 p = 0.5 * airDensity * velocity * velocity; // Dynamic pressure
 
+	// Perpendicular fragment surface area, dependent on the voxel sizes
+	float a[3] = { g_vVoxelSize.z * g_vVoxelSize.y, g_vVoxelSize.x * g_vVoxelSize.z, g_vVoxelSize.x * g_vVoxelSize.y };
+	// Calc force on current fragment; p = F/a => F = p * a
+	//   As each fragment is rendered once for each main coordinate axis, use weights for each pass.
+	//   If we would accumulate the calculated areas of each pass, the overall object area sums up correctly
+	//   Additionally, if the fragment has a "better"(smaller wrt its normal) angle to the camera , the calculated force has implicitly more influence to
+	//   the total force, which is good because it is more accurate in this case (the position of the fragment is more precisely)
+	//   The fragment normal is calculated via screenspace derivates of the texture space coordinates to get a normal in projection space
+	//   The weight is then given by the dot product of the view direction (0,0,1 in projection space) and the normal
+	float3 F = p * a[g_renderDirection] * dot(float3(0.0f, 0.0f, 1.0f), normalize(cross(ddx(psIn.posTS), ddy(psIn.posTS))));
+
+	// Calc torque
 	// Rotation arround point (3DOF):
 	float3 r = psIn.posWS - g_vPosition;
 

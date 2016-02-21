@@ -229,8 +229,8 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setSimulator(data["simulator"].toString().toStdString());
 		act->setGlyphSettings(renderGlyphs, orientation, position, quantity);
 	}
-	if (updateSim)
-		updateSimulation();
+	//if (updateSim)
+	//	updateSimulation();
 }
 
 void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime)
