@@ -194,7 +194,7 @@ void DX11Renderer::execute()
 {
 	OutputDebugStringA(("WORKER THREAD: " + std::to_string(reinterpret_cast<int>(thread()->currentThreadId())) + "\n").c_str());
 	m_elapsedTimer.start();
-	m_renderTimer.start(8); // Rendering happens with 125 FPS at max
+	m_renderTimer.start(25); // Rendering happens with 125 FPS at max
 	m_voxelizationTimer.start(25); // Voxelization happens 40 times per second at maximum
 }
 

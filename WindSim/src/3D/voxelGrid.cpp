@@ -339,6 +339,14 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		{
 			m_simulator.postMessageToSim({ MsgToSim::UpdateGrid });
 			//m_updateGrid = false;
+
+			// When voxel grid of simulation is updated, reset the dynamic rotation, used for the dynamics calculation to the current rotation of the mesh
+			// This is needed to sample the velocity from appropriate positions (which correspond to the simulation) during the dynamics calculation
+			for (auto it : m_manager->getActors())
+			{
+				if (it.second->getType() == ObjectType::Mesh)
+					std::dynamic_pointer_cast<MeshActor>(it.second)->updateCalcRotation();
+			}
 		}
 
 		m_counter = -1; // Voxelization cycle finished

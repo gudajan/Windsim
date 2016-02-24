@@ -27,7 +27,8 @@ Settings conf = {
 	// Dynamics
 	{
 		true,
-		false
+		false,
+		0.85
 	}
 };
 
@@ -72,6 +73,7 @@ void loadIni(const std::string& path)
 
 	conf.dyn.useDynWorldForCalc = std::stoi(getIniVal(iniMap, "Dynamics", "useDynWorldForCalc", std::to_string(conf.dyn.useDynWorldForCalc)));
 	conf.dyn.showDynDuringMod = std::stoi(getIniVal(iniMap, "Dynamics", "showDynDuringMod", std::to_string(conf.dyn.showDynDuringMod)));
+	conf.dyn.frictionCoefficient = std::stof(getIniVal(iniMap, "Dynamics", "frictionCoefficient", std::to_string(conf.dyn.frictionCoefficient)));
 }
 
 const std::string& getIniVal(libini::ini_model& map, const std::string& category, const std::string& value, const std::string& default)

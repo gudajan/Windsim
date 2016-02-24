@@ -420,8 +420,9 @@ void Simulator::start()
 
 void Simulator::initSimulation(const DimMsg& msg)
 {
-	std::lock_guard<std::mutex> guard1(m_voxelGridMutex);
-	std::lock_guard<std::mutex> guard2(m_velocityMutex);
+	std::unique_lock<std::mutex> guard1(m_voxelGridMutex, std::defer_lock);
+	std::unique_lock<std::mutex> guard2(m_velocityMutex, std::defer_lock);
+	std::lock(guard1, guard2);
 
 	OutputDebugStringA("Init simulation process\n");
 
@@ -532,7 +533,7 @@ void Simulator::stop()
 
 void Simulator::updateGrid()
 {
-	std::lock_guard<std::mutex> guard(m_voxelGridMutex);
+	std::unique_lock<std::mutex> guard(m_voxelGridMutex);
 
 	OutputDebugStringA("Update simulation grid!\n");
 
@@ -550,7 +551,6 @@ void Simulator::updateGrid()
 
 	// Wait until voxelgrid access finished
 	waitForPipeMsg(MsgFromSimProc::FinishedVoxelGridAccess, 5);
-
 }
 
 void Simulator::copyGrid()
@@ -587,7 +587,7 @@ void Simulator::copyGrid()
 
 void Simulator::fillVelocity()
 {
-	std::lock_guard<std::mutex> guard(m_velocityMutex);
+	std::unique_lock<std::mutex> guard(m_velocityMutex);
 
 	std::vector<BYTE> data(sizeof(MsgToSimProc));
 	MsgToSimProc type = MsgToSimProc::FillVelocity;

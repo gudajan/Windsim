@@ -1,6 +1,7 @@
 #include "dynamics.h"
 #include "mesh3D.h"
 #include "common.h"
+#include "settings.h"
 
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -103,13 +104,18 @@ Dynamics::Dynamics(Mesh3D& mesh)
 	, m_rotationAxis(0.0f, 0.0f, 0.0f)
 	, m_angVel({ 0.0f, 0.0f, 0.0f })
 	, m_angAcc({0.0f, 0.0f, 0.0f})
-	, m_rot()
+	, m_renderRot()
+	, m_calcRot()
 {
-	XMStoreFloat4(&m_rot, XMQuaternionIdentity());
+	XMStoreFloat4(&m_renderRot, XMQuaternionIdentity());
+	XMStoreFloat4(&m_calcRot, XMQuaternionIdentity());
 }
 
 void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& objectToWorld, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime)
 {
+	//m_counter++;
+	//if (m_counter < 2)
+	//	return;
 
 	// #############################
 	// Copy calculated torque from last frame to CPU
@@ -152,8 +158,6 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	// Calculate and store new angular acceleration
 	XMStoreFloat3(&m_angAcc, XMVector3Transform(trq, XMMatrixInverse(nullptr, XMLoadFloat3x3(&m_inertiaTensor)))); // t = I * a -> a =  I^-1 * t
-
-
 
 
 	// #############################
@@ -262,12 +266,12 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4& objRot, const XMFLOAT3& objTrans, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, float elapsedTime)
 {
 	// Calculate new dynamic rotation from current angular velocity and rotation in previous frame and elapsed time
-	XMVECTOR dynRot = XMLoadFloat4(&m_rot);
+	XMVECTOR dynRot = XMLoadFloat4(&m_renderRot);
 	XMVECTOR angMotion = XMVectorSet(m_angVel.x, m_angVel.y, m_angVel.z, 0) * elapsedTime;
 	if (!XMVector3Equal(angMotion, XMVectorZero()))
 	{
 		XMVECTOR newRot = XMQuaternionRotationAxis(angMotion, XMVectorGetX(XMVector3Length(angMotion))); // Angular motion describes axis and its magnitude the angle
-		XMStoreFloat4(&m_rot, XMQuaternionNormalize(XMQuaternionMultiply(newRot, dynRot))); // Perform rotation and store; Order is important ("first" rotation on the right, "second" on the left)
+		XMStoreFloat4(&m_renderRot, XMQuaternionNormalize(XMQuaternionMultiply(newRot, dynRot))); // Perform rotation and store; Order is important ("first" rotation on the right, "second" on the left)
 	}
 
 	// Update current dynamic acceleration by applying current angular acceleration to the current angular velocity
@@ -278,7 +282,7 @@ void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const 
 	//float cr = 0.0225; // Rolling resistance cooefficient for rolling bearing
 	//float acc = cr * g;
 
-	float frictionFactor = 0.95; // after one second, x% of the original velocity remains if acceleration would be zero
+	float frictionFactor = conf.dyn.frictionCoefficient; // after one second, x% of the original velocity remains if acceleration would be zero
 
 	XMVECTOR oldAngVel = XMLoadFloat3(&m_angVel);
 	XMVECTOR newAngVel = oldAngVel * std::pow(frictionFactor, elapsedTime) + XMLoadFloat3(&m_angAcc) * elapsedTime;
@@ -289,7 +293,7 @@ void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const 
 	XMVECTOR rot = XMLoadFloat4(&objRot);
 	XMVECTOR trans = XMLoadFloat3(&objTrans);
 	// Transform angular velocity to world space
-	s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(XMVector3Rotate(XMLoadFloat3(&m_angVel), rot).m128_f32));
+	s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(XMVector3Rotate(XMLoadFloat3(&m_angAcc), rot).m128_f32));
 	//s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(&m_debugTrq));
 	s_shaderVariables.viewProj->SetMatrix(reinterpret_cast<float*>((XMLoadFloat4x4(&view) * XMLoadFloat4x4(&projection)).r));
 	// Transform center of mass to world space
@@ -309,7 +313,8 @@ void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const 
 
 void Dynamics::reset()
 {
-	XMStoreFloat4(&m_rot, XMQuaternionIdentity());
+	XMStoreFloat4(&m_renderRot, XMQuaternionIdentity());
+	XMStoreFloat4(&m_calcRot, XMQuaternionIdentity());
 	XMStoreFloat3(&m_angVel, XMVectorZero());
 	XMStoreFloat3(&m_angAcc, XMVectorZero());
 }

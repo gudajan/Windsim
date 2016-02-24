@@ -39,8 +39,10 @@ public:
 	void setInertia(const DirectX::XMFLOAT3X3& inertia) { m_inertiaTensor = inertia; };
 	void setCenterOfMass(const DirectX::XMFLOAT3& centerOfMass) { m_centerOfMass = centerOfMass; };
 	void setRotationAxis(const DirectX::XMFLOAT3& axis) { DirectX::XMStoreFloat3(&m_rotationAxis, DirectX::XMVector3Normalize(DirectX::XMLoadFloat3(&axis))); };
-	const DirectX::XMFLOAT4& getRotation() const { return m_rot; };
+	const DirectX::XMFLOAT4& getRenderRotation() const { return m_renderRot; };
+	const DirectX::XMFLOAT4& getCalcRotation() const { return m_calcRot; };
 	const DirectX::XMFLOAT3& getCenterOfMass() const { return m_centerOfMass; };
+	void updateCalcRotation() { m_calcRot = m_renderRot; m_counter = 0; };
 
 	void reset();
 
@@ -78,7 +80,10 @@ private:
 	DirectX::XMFLOAT3 m_angVel;
 	DirectX::XMFLOAT3 m_debugTrq;
 	DirectX::XMFLOAT3 m_angAcc;
-	DirectX::XMFLOAT4 m_rot; // Additional rotation arround the center of mass through Dynamics simulation
+	DirectX::XMFLOAT4 m_renderRot; // Additional rotation arround the center of mass through Dynamics simulation, recalculated every frame
+	DirectX::XMFLOAT4 m_calcRot; // Additional rotation arround center of mass through Dynamics simulation, recalculated every dynamics calculation
+
+	int m_counter;
 
 };
 

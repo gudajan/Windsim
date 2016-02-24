@@ -35,6 +35,12 @@ struct PSLineIn
 	float4 pos : SV_Position;
 };
 
+struct PSOut
+{
+	float4 col : SV_Target;
+	float depth : SV_Depth;
+};
+
 RWStructuredBuffer<int> g_torqueUAV;
 Texture3D<float4> g_velocitySRV;
 
@@ -110,7 +116,7 @@ void gsArrow(point uint input[1] : VertexID, inout TriangleStream<PSLineIn> stre
 // PIXEL SHADER
 // =============================================================================
 
-float4 psTorque(PSTexIn psIn) : SV_Target
+void psTorque(PSTexIn psIn)
 {
 	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, psIn.posTS, 0).xyz;
 
@@ -144,12 +150,15 @@ float4 psTorque(PSTexIn psIn) : SV_Target
 
 	InterlockedAdd(g_torqueUAV[3], 1);
 
-	return float4(normalize(torque.xyz), 1);
+	//return float4(normalize(torque.xyz), 1);
 }
 
-float4 psLine(PSLineIn frag) : SV_Target
+PSOut psLine(PSLineIn frag)
 {
-	return float4(0.7f, 0.2f, 0.2f, 1.0f);
+	PSOut psOut;
+	psOut.col = float4(0.7f, 0.2f, 0.2f, 1.0f);
+	psOut.depth = 0.0f;
+	return psOut;
 }
 
 technique11 Torque
@@ -169,7 +178,7 @@ technique11 Torque
 		SetGeometryShader(CompileShader(gs_5_0, gsArrow()));
 		SetPixelShader(CompileShader(ps_5_0, psLine()));
 		SetRasterizerState(CullNone);
-		SetDepthStencilState(DepthDisable, 0);
+		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
 }
