@@ -42,6 +42,7 @@ public:
 	const DirectX::XMFLOAT4& getRenderRotation() const { return m_renderRot; };
 	const DirectX::XMFLOAT4& getCalcRotation() const { return m_calcRot; };
 	const DirectX::XMFLOAT3& getCenterOfMass() const { return m_centerOfMass; };
+	const DirectX::XMFLOAT3& getAngularVelocity() const { return m_angVel; };
 	void updateCalcRotation() { m_calcRot = m_renderRot; m_counter = 0; };
 
 	void reset();

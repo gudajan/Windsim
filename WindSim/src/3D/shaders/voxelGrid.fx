@@ -30,6 +30,8 @@ Texture3D<uint> g_gridAllSRV;
 
 Texture3D<float4> g_velocitySRV;
 
+RWTexture3D<float4> g_gridVelAllUAV;
+
 
 
 cbuffer cb
@@ -47,6 +49,8 @@ cbuffer cb
 	float4 g_vCamPos; // Camera position (in currently necessary space)
 	uint3 g_vResolution; // Resolution of voxel grid
 	float3 g_vVoxelSize; // VoxelSize in grid object space
+	float3 g_vAngularVelocity;
+	float3 g_vCenterOfMass;
 
 	int g_sGlyphOrientation;
 	uint2 g_vGlyphQuantity;
@@ -159,9 +163,26 @@ void csCombine(uint3 threadID : SV_DispatchThreadID)
 	if (any(threadID < uint3(0, 0, 0)) || any(threadID > uint3(g_vResolution.x / 4, g_vResolution.yz))) // Index out of bounds
 		return;
 
+	uint cell = g_gridSRV[threadID];
 	// At this point the voxel only have values CELL_TYPE_FLUID or CELL_TYPE_SOLID_NO_SLIP (0 and 4 respectively)
 	// -> it is save to just OR the values
-	g_gridAllUAV[threadID] |= g_gridSRV[threadID]; // OR with new value
+	g_gridAllUAV[threadID] |= cell; // OR with new value
+
+	// Calculate linear velocity for each solid voxel and store in velocity field
+	for (int v = 0; v < 4; ++v)
+	{
+		uint cellType = getVoxelValue(cell, v);
+		float4 velocity = float4(0.0f, 0.0f, 0.0f, 0.0f);
+		if (cellType == CELL_TYPE_SOLID_NO_SLIP)
+		{
+			// Texture index * voxelSize is position in grid object space
+			// Center of mass and angular velocity are given in grid object space
+			float3 r = threadID * g_vVoxelSize - g_vCenterOfMass;
+			velocity = float4(cross(r, g_vAngularVelocity), 0.0f);
+		}
+
+		g_gridVelAllUAV[uint3(threadID.x * 4 + v, threadID.yz)] = velocity;
+	}
 }
 
 // Von Neumann Neighbourhood
@@ -190,7 +211,6 @@ void csCellType(uint3 threadID : SV_DispatchThreadID)
 		{
 			neighbourCells[i] = g_gridAllUAV[ni];
 		}
-
 	}
 
 	// Iterate all 4 voxels in current cell
@@ -311,7 +331,8 @@ void gsArrowGlyph(point uint input[1] : VertexID, inout LineStream<PSColIn> stre
 	float slicePosition = g_sGlyphPosition;
 	uint2 glyphNumber = g_vGlyphQuantity;
 	int orientation = g_sGlyphOrientation;
-	float scale = 0.15 * length(g_vVoxelSize) / length(glyphNumber); // Scaling depends on size of voxel and number of glyphs + magic value
+	//float scale = 0.15 * length(g_vVoxelSize) / length(glyphNumber); // Scaling depends on size of voxel and number of glyphs + magic value
+	float scale = 0.012 / length(glyphNumber);
 	float arrowHeadSize = 0.5f;
 
 	// Glyph plane orientation

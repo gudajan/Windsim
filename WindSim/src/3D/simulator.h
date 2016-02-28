@@ -33,6 +33,7 @@ public:
 	std::vector<std::shared_ptr<MsgToRenderer>> getAllMessagesFromSim();
 	std::vector<uint32_t>& getCellGrid() { return m_cellGrid; };
 	std::mutex& getVoxelGridMutex() { return m_voxelGridMutex; };
+	float* getGridVel() { return m_sharedGridVel; };
 	float* getVelocity() { return m_sharedVelocity; };
 	std::mutex& getVelocityMutex() { return m_velocityMutex; };
 
@@ -57,7 +58,7 @@ private:
 	bool setCommandLine(const std::string& cmdline); // Returns if a simulator restart is necessary
 
 	bool createProcess(const std::wstring& exe, const std::wstring& args);
-	bool createSharedMemory(int size, const std::wstring& gridName, const std::wstring& velocityName);
+	bool createSharedMemory(int size, const std::wstring& gridName, const std::wstring& gridVelName, const std::wstring& velocityName);
 	bool removeSharedMemory();
 
 	void log(const std::string& msg);
@@ -77,6 +78,7 @@ private:
 
 	std::atomic_bool m_running;
 	std::atomic_bool m_simInitialized;
+	std::atomic_bool m_exit;
 
 	PROCESS_INFORMATION m_process;
 	Pipe m_pipe;
@@ -85,6 +87,8 @@ private:
 
 	HANDLE m_sharedGridHandle;
 	char* m_sharedGrid;
+	HANDLE m_sharedGridVelHandle;
+	float* m_sharedGridVel;
 	HANDLE m_sharedVelocityHandle;
 	float* m_sharedVelocity;
 

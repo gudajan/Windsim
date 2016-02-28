@@ -26,11 +26,14 @@ Simulator::Simulator(const std::string& cmdline, Logger* logger)
 	m_voxelSize({ 0.0f, 0.0f, 0.0f }),
 	m_running(std::atomic<bool>(false)),
 	m_simInitialized(std::atomic<bool>(false)),
+	m_exit(std::atomic<bool>(false)),
 	m_process(),
 	m_pipe(logger),
 	m_pipeCV(),
 	m_sharedGridHandle(NULL),
 	m_sharedGrid(nullptr),
+	m_sharedGridVelHandle(NULL),
+	m_sharedGridVel(nullptr),
 	m_sharedVelocityHandle(NULL),
 	m_sharedVelocity(nullptr),
 	m_voxelGridMutex(),
@@ -122,6 +125,7 @@ void Simulator::loop()
 		}
 		case(MsgToSim::Exit) :
 			// Wait until all futures finished
+			m_exit = true;
 			std::for_each(msgHandlers.begin(), msgHandlers.end(), [](std::future<void>& f){f.get(); });
 			msgHandlers.clear();
 			stop();
@@ -266,7 +270,7 @@ bool Simulator::waitForPipeMsg(MsgFromSimProc type, int secToWait)
 	cv_tuple& cv = m_pipeCV[type];
 	std::unique_lock<std::mutex> lock(*std::get<1>(cv));
 	bool& signaled = std::get<2>(cv);
-	if (!std::get<0>(cv)->wait_for(lock, std::chrono::seconds(secToWait), [&signaled](){ return signaled; }))
+	if (!std::get<0>(cv)->wait_for(lock, std::chrono::seconds(secToWait), [&signaled, this](){ return signaled || m_exit.load(); }))
 	{
 		log("ERROR: Did not recieve expected message '" + std::to_string(static_cast<int>(type)) + "' from simulation processs!");
 		return false;
@@ -450,7 +454,7 @@ void Simulator::initSimulation(const DimMsg& msg)
 	}
 
 	removeSharedMemory();
-	if (!createSharedMemory(msg.res.x * msg.res.y * msg.res.z, L"Local\\voxelgrid", L"Local\\velocity"))
+	if (!createSharedMemory(msg.res.x * msg.res.y * msg.res.z, L"Local\\voxelgrid", L"Local\\gridvelocity", L"Local\\simvelocity"))
 	{
 		OutputDebugStringA("Init simulation process, remove locks\n");
 		log("ERROR: Failed to create shared memory! Please try to reinitialize the simulation.");
@@ -658,7 +662,7 @@ bool Simulator::createProcess(const std::wstring& exe, const std::wstring& args)
 	return true;
 }
 
-bool Simulator::createSharedMemory(int size, const std::wstring& gridName, const std::wstring& velocityName)
+bool Simulator::createSharedMemory(int size, const std::wstring& gridName, const std::wstring& gridVelName, const std::wstring& velocityName)
 {
 	OutputDebugStringA(("Create shared memory with size " + std::to_string(size) + "!\n").c_str());
 
@@ -677,6 +681,22 @@ bool Simulator::createSharedMemory(int size, const std::wstring& gridName, const
 		CloseHandle(m_sharedGridHandle);
 		return false;
 	}
+
+	m_sharedGridVelHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, NULL, size * sizeof(float) * 4, gridVelName.c_str());
+	if (m_sharedGridVelHandle == NULL)
+	{
+		log("ERROR: CreateFileMapping faild to open shared memory with '" + std::to_string(GetLastError()) + "'!");
+		return false;
+	}
+
+	m_sharedGridVel = static_cast<float*>(MapViewOfFile(m_sharedGridVelHandle, FILE_MAP_WRITE, 0, 0, size * sizeof(float) * 4));
+	if (m_sharedGridVel == nullptr)
+	{
+		log("ERROR: MapViewOfFile failed to create view of shared memory with '" + std::to_string(GetLastError()) + "'!");
+		CloseHandle(m_sharedGridVelHandle);
+		return false;
+	}
+
 
 	m_sharedVelocityHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, NULL, size * sizeof(float) * 3, velocityName.c_str());
 	if (m_sharedVelocityHandle == NULL)
@@ -713,6 +733,17 @@ bool Simulator::removeSharedMemory()
 	}
 	m_sharedGrid = nullptr;
 
+	if (m_sharedGridVel)
+	{
+		BOOL success = UnmapViewOfFile(m_sharedGridVel);
+		if (!success)
+		{
+			log("ERROR: UnmapViewOfFile failed with '" + std::to_string(GetLastError()) + "'!");
+			error = true;
+		}
+	}
+	m_sharedGridVel = nullptr;
+
 	if (m_sharedVelocity)
 	{
 		BOOL success = UnmapViewOfFile(m_sharedVelocity);
@@ -734,6 +765,17 @@ bool Simulator::removeSharedMemory()
 		}
 	}
 	m_sharedGridHandle = NULL;
+
+	if (m_sharedGridVelHandle)
+	{
+		BOOL success = CloseHandle(m_sharedGridVelHandle);
+		if (!success)
+		{
+			log("ERROR: CloseHandle failed with '" + std::to_string(GetLastError()) + "'!");
+			error = true;
+		}
+	}
+	m_sharedGridVelHandle = NULL;
 
 	if (m_sharedVelocityHandle)
 	{

@@ -6,7 +6,9 @@
 class Logger : public QObject
 {
 	Q_OBJECT
-signals:
+public:
 	void logit(const QString& msg);
+signals:
+	void log(const QString& msg);
 };
 #endif

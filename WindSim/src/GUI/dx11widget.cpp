@@ -41,7 +41,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	connect(this, &DX11Widget::reloadIniTriggered, m_renderer, &DX11Renderer::reloadIni);
 
 	// Arbitrary Events Renerer -> Widget
-	connect(m_renderer->getLogger(), &Logger::logit, this, &DX11Widget::logit);
+	connect(m_renderer->getLogger(), &Logger::log, this, &DX11Widget::logit);
 
 	setAttribute(Qt::WA_PaintOnScreen, true);
 	setAttribute(Qt::WA_NativeWindow, true);

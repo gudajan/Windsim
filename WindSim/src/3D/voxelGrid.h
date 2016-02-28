@@ -65,6 +65,7 @@ public:
 private:
 	void createGridData(); // Create cube for line rendering
 	void updateVelocity(ID3D11DeviceContext* context);
+	void copyGrid(ID3D11DeviceContext* context);
 
 	void renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, bool copyStaging);
@@ -86,11 +87,17 @@ private:
 		ID3DX11EffectVectorVariable* camPos;
 		ID3DX11EffectVectorVariable* resolution;
 		ID3DX11EffectVectorVariable* voxelSize;
+		ID3DX11EffectVectorVariable* angularVelocity;
+		ID3DX11EffectVectorVariable* centerOfMass;
+
 		ID3DX11EffectUnorderedAccessViewVariable* gridUAV;
 		ID3DX11EffectShaderResourceVariable* gridSRV;
 		ID3DX11EffectUnorderedAccessViewVariable* gridAllUAV;
 		ID3DX11EffectShaderResourceVariable* gridAllSRV;
+
 		ID3DX11EffectShaderResourceVariable* velocityField;
+
+		ID3DX11EffectUnorderedAccessViewVariable* gridVelAllUAV;
 
 		ID3DX11EffectScalarVariable* glyphOrientation;
 		ID3DX11EffectVectorVariable* glyphQuantity;
@@ -128,6 +135,11 @@ private:
 	ID3D11ShaderResourceView* m_gridSRV; // SRV for one voxelization, used in compute shader
 	ID3D11UnorderedAccessView* m_gridAllUAV; // UAV for all Voxelizations
 	ID3D11ShaderResourceView* m_gridAllSRV; // SRV for volume rendering
+
+	ID3D11Texture3D* m_gridVelTextureGPU;
+	ID3D11Texture3D* m_gridVelTextureStaging;
+	ID3D11UnorderedAccessView* m_gridVelAllUAV;
+
 	ID3D11Texture3D* m_velocityTexture;
 	ID3D11Texture3D* m_velocityTextureStaging;
 	ID3D11ShaderResourceView* m_velocitySRV;

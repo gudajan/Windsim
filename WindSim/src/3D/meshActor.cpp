@@ -117,6 +117,20 @@ void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* con
 			m_dynamics.calculate(device, context, m_world, worldToVoxelTex, texResolution, voxelSize, velocityField, elapsedTime);
 }
 
+const XMFLOAT3 MeshActor::getAngularVelocity() const
+{
+	XMFLOAT3 angVel;
+	XMStoreFloat3(&angVel, XMVector3Rotate(XMLoadFloat3(&m_dynamics.getAngularVelocity()), XMLoadFloat4(&m_rot)));
+	return angVel;
+}
+
+const XMFLOAT3 MeshActor::getCenterOfMass() const
+{
+	XMFLOAT3 com;
+	XMStoreFloat3(&com, XMVector3Rotate(XMLoadFloat3(&m_dynamics.getCenterOfMass()), XMLoadFloat4(&m_rot)));
+	return com;
+}
+
 bool MeshActor::intersect(XMFLOAT3 origin, XMFLOAT3 direction, float& distance) const
 {
 	// Transform ray from world to object space
