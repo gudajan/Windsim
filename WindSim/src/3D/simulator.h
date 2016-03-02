@@ -38,6 +38,7 @@ public:
 	std::mutex& getVelocityMutex() { return m_velocityMutex; };
 
 	bool isRunning() const { return m_running.load(); };
+	void setInitialized(bool initialized) { m_simInitialized = initialized; };
 
 private:
 	void postMessageToRender(const MsgToRenderer& msg);

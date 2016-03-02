@@ -89,7 +89,7 @@ void Simulator::loop()
 			}
 			break;
 		}
-		case(MsgToSim::FinishedVelocityAccess) :
+		case(MsgToSim::FillVelocity) :
 		{
 			if (isRunning())
 			{
@@ -97,17 +97,13 @@ void Simulator::loop()
 				{
 					msgHandlers.push_front(std::async(std::launch::async, &Simulator::fillVelocity, this));
 				}
-				else
-				{
-					postMessageToSim({ MsgToSim::FinishedVelocityAccess }); // Do not loose message if currently updating voxel grid resolution
-				}
 			}
 			break;
 		}
 		case(MsgToSim::SimulatorCmd) :
 		{
 			// At this point, the command line is already changed. We would not receive the message if it was irrelevant (i.e. same command line)
-			// Wait until all futures finished, so now async operation fails, when shared memory is removed
+			// Wait until all futures finished, so no async operation fails, when shared memory is removed
 			std::for_each(msgHandlers.begin(), msgHandlers.end(), [](std::future<void>& f){f.get(); });
 			msgHandlers.clear();
 			stop();
@@ -489,9 +485,9 @@ void Simulator::initSimulation(const DimMsg& msg)
 
 	m_simInitialized = true;
 
-	// Start the velocity exchange
-	if (msg.type == MsgToSim::InitSim)
-		postMessageToSim({ MsgToSim::FinishedVelocityAccess });
+	//// Start the velocity exchange
+	//if (msg.type == MsgToSim::InitSim)
+	//	postMessageToSim({ MsgToSim::FinishedVelocityAccess });
 
 	//Mutexes unlocked
 	OutputDebugStringA("Init simulation process, remove locks\n");
@@ -530,6 +526,12 @@ void Simulator::stop()
 	}
 
 	m_pipe.close(true);
+
+	// Wait until all operations on shared memory are finished before removing it
+	std::unique_lock<std::mutex> guard1(m_voxelGridMutex, std::defer_lock);
+	std::unique_lock<std::mutex> guard2(m_velocityMutex, std::defer_lock);
+	std::lock(guard1, guard2);
+
 	removeSharedMemory();
 
 	m_simInitialized = false;
@@ -538,6 +540,10 @@ void Simulator::stop()
 void Simulator::updateGrid()
 {
 	std::unique_lock<std::mutex> guard(m_voxelGridMutex);
+
+	// During the wait, a reinitialization was issued
+	if (!m_simInitialized.load())
+		return;
 
 	OutputDebugStringA("Update simulation grid!\n");
 

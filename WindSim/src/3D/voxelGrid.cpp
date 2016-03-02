@@ -223,6 +223,7 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	// Resize the grid
 	{
 		m_lock.lock();
+		m_simulator.setInitialized(false);
 		m_simulator.getCellGrid().resize(m_resolution.x / 4 * m_resolution.y * m_resolution.z, 0);
 		m_lock.unlock();
 	}
@@ -253,6 +254,10 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 {
 	if (m_reinit)
 	{
+		// If currently a voxelization is performed, abort it to be able to reinitialize the grid
+		if (m_lock.owns_lock())
+			m_lock.unlock();
+
 		createGridData();
 		create(device, false);
 		m_reinit = false;
@@ -274,8 +279,14 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			if (counter > 2 || counter == -1)
 				counter = 0;
 			OutputDebugStringA(("ELAPSED: velocity copy: " + std::to_string(elapsed.nsecsElapsed() / 1000000) + "msec\n").c_str());
-			m_simulator.postMessageToSim({ MsgToSim::FinishedVelocityAccess });
 		}
+	}
+
+	// If velocity grid available (currently not filled or copied)
+	if (m_simulator.getVelocityMutex().try_lock())
+	{
+		m_simulator.getVelocityMutex().unlock();
+		m_simulator.postMessageToSim({ MsgToSim::FillVelocity });
 	}
 
 	// Calculates dynamics motion of meshes, depending on the current velocity field
@@ -460,7 +471,8 @@ void VoxelGrid::updateVelocity(ID3D11DeviceContext* context)
 	// Map staging texture, write velocity field to it, unmap, copy resource to gpu
 	D3D11_MAPPED_SUBRESOURCE msr;
 	context->Map(m_velocityTextureStaging, 0, D3D11_MAP_WRITE, 0, &msr);
-	if (msr.pData)
+	float* velocity = m_simulator.getVelocity();
+	if (msr.pData && velocity)
 	{
 		int paddedRowPitch = msr.RowPitch / sizeof(float);
 		int paddedDepthPitch = msr.DepthPitch / sizeof(float);
@@ -468,7 +480,6 @@ void VoxelGrid::updateVelocity(ID3D11DeviceContext* context)
 		int depthPitch = rowPitch * m_resolution.y;
 
 		float* data = static_cast<float*>(msr.pData);
-		float* velocity = m_simulator.getVelocity();
 
 		auto fillVel = [data, velocity, paddedRowPitch, paddedDepthPitch, rowPitch, depthPitch, this](int zStart, int zWork)
 		{
