@@ -73,6 +73,7 @@ void Simulator::loop()
 		{
 			if (isRunning())
 			{
+				m_simInitialized = false;
 				msgHandlers.push_front(std::async(std::launch::async, &Simulator::initSimulation, this, *std::dynamic_pointer_cast<DimMsg>(msg)));
 			}
 			break;
@@ -102,6 +103,7 @@ void Simulator::loop()
 		}
 		case(MsgToSim::SimulatorCmd) :
 		{
+			m_simInitialized = false;
 			// At this point, the command line is already changed. We would not receive the message if it was irrelevant (i.e. same command line)
 			// Wait until all futures finished, so no async operation fails, when shared memory is removed
 			std::for_each(msgHandlers.begin(), msgHandlers.end(), [](std::future<void>& f){f.get(); });
@@ -426,8 +428,6 @@ void Simulator::initSimulation(const DimMsg& msg)
 
 	OutputDebugStringA("Init simulation process\n");
 
-	m_simInitialized = false;
-
 	// Send CloseShm message
 	std::vector<BYTE> data(sizeof(MsgToSimProc));
 	MsgToSimProc type = MsgToSimProc::CloseShm;
@@ -534,7 +534,7 @@ void Simulator::stop()
 
 	removeSharedMemory();
 
-	m_simInitialized = false;
+
 }
 
 void Simulator::updateGrid()

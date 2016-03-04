@@ -12,7 +12,7 @@ enum class MsgToSimProc { InitSim, UpdateDimensions, UpdateGrid, FillVelocity, C
 // Messages, posted to the simulator thread and process
 struct MsgToSim
 {
-	enum MsgType { InitSim, UpdateDimensions, UpdateGrid, FinishedVelocityAccess, Exit, SimulatorCmd, StartProcess, Empty } type;
+	enum MsgType { InitSim, UpdateDimensions, UpdateGrid, FillVelocity, Exit, SimulatorCmd, StartProcess, Empty } type;
 
 	// Needed to make type polymorphic
 	MsgToSim(MsgType t = Empty) : type(t){};

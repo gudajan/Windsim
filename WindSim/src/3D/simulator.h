@@ -31,6 +31,7 @@ public:
 	void postMessageToSim(const MsgToSim& msg); // Posting message to simulator
 	std::shared_ptr<MsgToRenderer> getMessageFromSim(); // Get message from simulator
 	std::vector<std::shared_ptr<MsgToRenderer>> getAllMessagesFromSim();
+	void postMessageToRender(const MsgToRenderer& msg);
 	std::vector<uint32_t>& getCellGrid() { return m_cellGrid; };
 	std::mutex& getVoxelGridMutex() { return m_voxelGridMutex; };
 	float* getGridVel() { return m_sharedGridVel; };
@@ -41,7 +42,7 @@ public:
 	void setInitialized(bool initialized) { m_simInitialized = initialized; };
 
 private:
-	void postMessageToRender(const MsgToRenderer& msg);
+	
 	std::shared_ptr<MsgToSim> getMessageFromRender();
 	std::vector<std::shared_ptr<MsgToSim>> getAllMessagesFromRender();
 	bool waitForPipeMsg(MsgFromSimProc type, int secToWait);

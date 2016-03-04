@@ -54,6 +54,8 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 VoxelGrid::~VoxelGrid()
 {
 	m_simulator.postMessageToSim({ MsgToSim::Exit });
+	if (m_lock.owns_lock())
+		m_lock.unlock();
 	m_simulatorThread.join(); // Wait until thread finished (and simulator process exited/terminated)
 }
 
@@ -269,17 +271,25 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	// Check for messages from simulator
 	for( auto& msg : m_simulator.getAllMessagesFromSim())
 	{
-		if (msg->type == MsgToRenderer::UpdateVelocity && !m_initSim && !m_updateDimensions) // If dimensions are currently updated, skip velocity update
+		std::unique_lock <std::mutex> lock(m_simulator.getVelocityMutex(), std::defer_lock);
+		if (lock.try_lock())
 		{
-			std::lock_guard<std::mutex> guard(m_simulator.getVelocityMutex());
-			QElapsedTimer elapsed;
-			elapsed.start();
-			//OutputDebugStringA("Start copying velocity!\n");
-			updateVelocity(context);
-			if (counter > 2 || counter == -1)
-				counter = 0;
-			OutputDebugStringA(("ELAPSED: velocity copy: " + std::to_string(elapsed.nsecsElapsed() / 1000000) + "msec\n").c_str());
+			if (msg->type == MsgToRenderer::UpdateVelocity && !m_initSim && !m_updateDimensions) // If dimensions are currently updated, skip velocity update
+			{
+				QElapsedTimer elapsed;
+				elapsed.start();
+				//OutputDebugStringA("Start copying velocity!\n");
+				updateVelocity(context);
+				if (counter > 2 || counter == -1)
+					counter = 0;
+				OutputDebugStringA(("ELAPSED: velocity copy: " + std::to_string(elapsed.nsecsElapsed() / 1000000) + "msec\n").c_str());
+
+			}
+			lock.unlock();
 		}
+		else
+			m_simulator.postMessageToRender(*msg);
+
 	}
 
 	// If velocity grid available (currently not filled or copied)
@@ -553,37 +563,37 @@ void VoxelGrid::copyGrid(ID3D11DeviceContext* context)
 	context->Unmap(m_gridAllTextureStaging, 0);
 
 
-	//// Copy grid velocity
-	//context->Map(m_gridVelTextureStaging, 0, D3D11_MAP_READ, 0, &msr); // data contains pointer to texture data
-	//float* gridVel = m_simulator.getGridVel();
-	//if (msr.pData && gridVel)
-	//{
-	//	float* pVelocity = static_cast<float*>(msr.pData);
-	//	float* gridVel = m_simulator.getGridVel();
-	//	// Temps
-	//	int paddedRowPitch = msr.RowPitch / sizeof(float); // convert byte size to block resolution
-	//	int paddedDepthPitch = msr.DepthPitch / sizeof(float);
-	//	int rowPitch = m_resolution.x * 4; // 4 floats per velocity vector
-	//	int depthPitch = rowPitch * m_resolution.y;
+	// Copy grid velocity
+	context->Map(m_gridVelTextureStaging, 0, D3D11_MAP_READ, 0, &msr); // data contains pointer to texture data
+	float* gridVel = m_simulator.getGridVel();
+	if (msr.pData && gridVel)
+	{
+		float* pVelocity = static_cast<float*>(msr.pData);
+		float* gridVel = m_simulator.getGridVel();
+		// Temps
+		int paddedRowPitch = msr.RowPitch / sizeof(float); // convert byte size to block resolution
+		int paddedDepthPitch = msr.DepthPitch / sizeof(float);
+		int rowPitch = m_resolution.x * 4; // 4 floats per velocity vector
+		int depthPitch = rowPitch * m_resolution.y;
 
 
-	//	if (paddedRowPitch == rowPitch && paddedDepthPitch == depthPitch)
-	//		std::memcpy(gridVel, pVelocity, depthPitch * m_resolution.z);
-	//	else if (paddedRowPitch == rowPitch)
-	//	{
-	//		for (int z = 0; z < m_resolution.z; ++z)
-	//			std::memcpy(gridVel + z * depthPitch, pVelocity + z * paddedDepthPitch, depthPitch);
-	//	}
-	//	else
-	//	{
-	//		for (int z = 0; z < m_resolution.z; ++z)
-	//		{
-	//			for (int y = 0; y < m_resolution.y; ++y)
-	//				std::memcpy(gridVel + y * rowPitch + z * depthPitch, pVelocity + y * paddedRowPitch + z * paddedDepthPitch, rowPitch);
-	//		}
-	//	}
-	//}
-	//context->Unmap(m_gridVelTextureStaging, 0);
+		if (paddedRowPitch == rowPitch && paddedDepthPitch == depthPitch)
+			std::memcpy(gridVel, pVelocity, depthPitch * m_resolution.z);
+		else if (paddedRowPitch == rowPitch)
+		{
+			for (int z = 0; z < m_resolution.z; ++z)
+				std::memcpy(gridVel + z * depthPitch, pVelocity + z * paddedDepthPitch, depthPitch);
+		}
+		else
+		{
+			for (int z = 0; z < m_resolution.z; ++z)
+			{
+				for (int y = 0; y < m_resolution.y; ++y)
+					std::memcpy(gridVel + y * rowPitch + z * depthPitch, pVelocity + y * paddedRowPitch + z * paddedDepthPitch, rowPitch);
+			}
+		}
+	}
+	context->Unmap(m_gridVelTextureStaging, 0);
 }
 
 void VoxelGrid::renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection)
