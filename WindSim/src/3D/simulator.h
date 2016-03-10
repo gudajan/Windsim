@@ -1,103 +1,87 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-#include "msgDef.h"
-#include "pipe.h"
+#include <QObject>
+#include <QTimer>
+#include <QElapsedTimer>
+#include <QMutex>
+#include <QWaitCondition>
 
-#include <string>
 #include <vector>
-#include <unordered_map>
-#include <deque>
-#include <forward_list>
-#include <atomic>
-#include <mutex>
-#include <condition_variable>
-#include <memory>
 
-#include <Windows.h>
+#include <WindTunnelLib/IWindTunnel.h>
 
 class Logger;
 
-typedef std::tuple<std::unique_ptr<std::condition_variable>, std::unique_ptr<std::mutex>, bool> cv_tuple;
-typedef std::unordered_map<MsgFromSimProc, cv_tuple> cv_map;
-
-class Simulator
+class Simulator : public QObject
 {
+	Q_OBJECT
 public:
-	Simulator(const std::string& cmdline = "", Logger* logger = nullptr);
+	Simulator(Logger* logger = nullptr, QObject* parent = nullptr);
 
-	void loop(); // Simulator thread loop
+	void continueSim(); // Continue simulation after simulation results are processed by rendering thread
 
-	void postMessageToSim(const MsgToSim& msg); // Posting message to simulator
-	std::shared_ptr<MsgToRenderer> getMessageFromSim(); // Get message from simulator
-	std::vector<std::shared_ptr<MsgToRenderer>> getAllMessagesFromSim();
-	void postMessageToRender(const MsgToRenderer& msg);
-	std::vector<uint32_t>& getCellGrid() { return m_cellGrid; };
-	std::mutex& getVoxelGridMutex() { return m_voxelGridMutex; };
-	float* getGridVel() { return m_sharedGridVel; };
-	float* getVelocity() { return m_sharedVelocity; };
-	std::mutex& getVelocityMutex() { return m_velocityMutex; };
+	// Get vectors for writing
+	std::vector<wtl::CellType>& getCellTypes() { return m_cellTypes; };
+	std::vector<float>& getSolidVelocity() { return m_solidVelocity; };
 
-	bool isRunning() const { return m_running.load(); };
-	void setInitialized(bool initialized) { m_simInitialized = initialized; };
+	// Get vectors for reading
+	const std::vector<float>& getVelocity() const { return m_velocityXYZW; };
+	const std::vector<float>& getDensity() const { return m_density; };
+	const std::vector<float>& getDensitySum() const { return m_densitySum; };
+	const std::vector<char>& getLines() const { return m_lines; };
+	const int getReseedCounter() const { return m_reseedCounter; };
+
+signals:
+	void stepDone(); // One simulation thread done, local output vectors filled
+	void simUpdated();
+
+public slots:
+	void start(); // Start thread loop
+	void stop(); // Stop thread loop
+
+	void createWindTunnel(int clDevice, int clPlatform, const QString& settingsFile); // Construct new windtunnel, (re-)initializes OpenCL
+	void updateGrid(); // Update CellTypes and solid velocity from local vectors
+	void setGridDimensions(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Update grid dimensions (empties cellTypes until next updateGrid)
+
+private slots:
+	void step(); // Thread loop
 
 private:
-	
-	std::shared_ptr<MsgToSim> getMessageFromRender();
-	std::vector<std::shared_ptr<MsgToSim>> getAllMessagesFromRender();
-	bool waitForPipeMsg(MsgFromSimProc type, int secToWait);
+	void log(const QString& msg);
 
-	bool mergeSimMsg(std::shared_ptr<MsgToSim>& older, std::shared_ptr<MsgToSim>& newer);
-	bool mergeRenderMsg(std::shared_ptr<MsgToRenderer>& older, std::shared_ptr<MsgToRenderer>& newer);
+	wtl::WindTunnel m_windTunnel;
 
-	void start(); // Create Process
-	void initSimulation(const DimMsg& msg); // Init simulation, including voxel grid dimensions
-	void stop(); // Exit/Terminate Process
-	void updateGrid(); // Send updateGrid signal to simulation process
-	void copyGrid();
-	void fillVelocity(); // Send fillVelocity signal to simulation process
+	// WindTunnel input
+	std::vector<wtl::CellType> m_cellTypes;
+	std::vector<float> m_solidVelocity;
 
-	bool setCommandLine(const std::string& cmdline); // Returns if a simulator restart is necessary
+	// WindTunnel output
+	std::vector<float> m_velocityXYZW; // DirectX needs RGBA Texture for sampling, Velocity from opencl are only 3D vectors
+	std::vector<float> m_velocity;
+	std::vector<float> m_density;
+	std::vector<float> m_densitySum;
+	std::vector<char> m_lines;
+	int m_reseedCounter;
 
-	bool createProcess(const std::wstring& exe, const std::wstring& args);
-	bool createSharedMemory(int size, const std::wstring& gridName, const std::wstring& gridVelName, const std::wstring& velocityName);
-	bool removeSharedMemory();
+	// Grid variables
+	DirectX::XMUINT3 m_resolution;
+	DirectX::XMFLOAT3 m_voxelSize;
 
-	void log(const std::string& msg);
+	// Simulation settings
+	bool m_sim;
+	bool m_simSmoke;
+	bool m_simLines;
 
-	std::mutex m_toSimMutex;
-	std::deque<std::shared_ptr<MsgToSim>> m_toSimMsgQueue;
-	std::mutex m_toRenderMutex;
-	std::deque<std::shared_ptr<MsgToRenderer>> m_toRenderMsgQueue;
-
-	std::mutex m_voxelGridMutex; // Indicates that the voxel grid is somehow busy (be it the temporary cell grid or the grid in shared memory
-	std::mutex m_velocityMutex;
-
-	std::string m_executable;
-	std::string m_cmdArguments;
-	DimMsg::Resolution m_resolution;
-	DimMsg::VoxelSize m_voxelSize;
-
-	std::atomic_bool m_running;
-	std::atomic_bool m_simInitialized;
-	std::atomic_bool m_exit;
-
-	PROCESS_INFORMATION m_process;
-	Pipe m_pipe;
-
-	cv_map m_pipeCV; // Synchronize pipe messages with waiting async commands like UpdateGrid
-
-	HANDLE m_sharedGridHandle;
-	char* m_sharedGrid;
-	HANDLE m_sharedGridVelHandle;
-	float* m_sharedGridVel;
-	HANDLE m_sharedVelocityHandle;
-	float* m_sharedVelocity;
-
-	std::vector<uint32_t> m_cellGrid;
+	// Thread synchronization
+	QElapsedTimer m_elapsedTimer;
+	QTimer m_simTimer;
+	QMutex m_simMutex;
+	QWaitCondition m_waitCond;
+	bool m_doWait; // Indicates if thread must wait on condition
+	bool m_isWaiting; // Indicates if thread is currently waiting on condition and must be woke up
 
 	Logger* m_logger;
-
 };
 
 #endif

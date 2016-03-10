@@ -9,12 +9,12 @@
 struct ID3D11Buffer;
 struct ID3D11Device;
 struct ID3D11DeviceContext;
-class Logger;
+class DX11Renderer;
 
 class Object3D
 {
 public:
-	Object3D(Logger* logger);
+	Object3D(DX11Renderer* renderer);
 	Object3D(Object3D&& other);
 	virtual ~Object3D();
 
@@ -34,7 +34,6 @@ public:
 	virtual ID3D11Buffer* getVertexBuffer() { return m_vertexBuffer; };
 	virtual ID3D11Buffer* getIndexBuffer() { return m_indexBuffer; };
 	virtual uint32_t getNumIndices() const { return m_numIndices; };
-	virtual Logger* getLogger() { return m_logger; };
 
 protected:
 	virtual void log(const std::string& msg);
@@ -46,7 +45,8 @@ protected:
 	std::vector<float> m_vertexData;
 	std::vector<uint32_t> m_indexData;
 
-	Logger* m_logger;
+	DX11Renderer* m_renderer;
+
 };
 
 #endif

@@ -16,12 +16,10 @@
 // Clear: Clear selection
 enum class Selection {Replace, Switch, Clear};
 
-class Logger;
-
 class ObjectManager
 {
 public:
-	ObjectManager(Logger* logger = nullptr);
+	ObjectManager(DX11Renderer* renderer);
 
 	// Add one object, which is rendered
 	void add(ID3D11Device* device, const QJsonObject& data);
@@ -70,7 +68,7 @@ private:
 	std::unordered_map<std::string, std::shared_ptr<Object3D>> m_accessoryObjects;
 	std::unordered_map<std::string, std::shared_ptr<Actor>> m_accessoryActors;
 
-	Logger* m_logger;
+	DX11Renderer* m_renderer;
 };
 
 #endif

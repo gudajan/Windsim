@@ -11,8 +11,8 @@
 
 using namespace DirectX;
 
-Mesh3D::Mesh3D(const std::string& path, Logger* logger)
-	: Object3D(logger)
+Mesh3D::Mesh3D(const std::string& path, DX11Renderer* renderer)
+	: Object3D(renderer)
 {
 	if (!readObj(path))
 	{

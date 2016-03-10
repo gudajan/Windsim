@@ -8,6 +8,7 @@
 #include "marker.h"
 #include "markerActor.h"
 #include "meshActor.h"
+#include "dx11renderer.h"
 
 #include <QLineF>
 #include <QLine>
@@ -20,7 +21,7 @@
 using namespace State;
 using namespace DirectX;
 
-TransformMachine::TransformMachine(ObjectManager* manager, Camera* camera, Logger* logger)
+TransformMachine::TransformMachine(ObjectManager* manager, Camera* camera, DX11Renderer* renderer)
 	: m_state(Start),
 	m_marker(nullptr),
 	m_oldActors(),
@@ -33,15 +34,14 @@ TransformMachine::TransformMachine(ObjectManager* manager, Camera* camera, Logge
 	m_oldYZInt(0.0, 0.0, 0.0),
 	m_transformation(),
 	m_manager(manager),
-	m_camera(camera),
-	m_logger(logger)
+	m_renderer(renderer)
 {
 }
 
 void TransformMachine::initDX11(ID3D11Device* device)
 {
 	// Create transformation marker
-	Marker* m = new Marker(m_logger);
+	Marker* m = new Marker(m_renderer);
 	m_marker = std::shared_ptr<MarkerActor>(new MarkerActor(*m, 0)); // ID is not necessary
 
 	m_marker->setRender(false);
@@ -223,7 +223,7 @@ void TransformMachine::start(QPoint currentMousePos)
 	}
 
 	m_oldCursorPos = currentMousePos;
-	m_oldCursorDir = m_camera->getCursorDir(m_oldCursorPos);
+	m_oldCursorDir = m_renderer->getCamera()->getCursorDir(m_oldCursorPos);
 
 	// Calculate the average position of the objects
 	// In world space
@@ -239,13 +239,13 @@ void TransformMachine::start(QPoint currentMousePos)
 	XMFLOAT4 objPos;
 	XMStoreFloat4(&objPos, groupPos);
 	objPos.w = 1.0f;
-	m_oldObjWindowPos = m_camera->worldToWindow(objPos);
+	m_oldObjWindowPos = m_renderer->getCamera()->worldToWindow(objPos);
 
 	// Calculate intersections with xz, xy and yz plane
 	XMVECTOR xzPlane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
 	XMVECTOR xyPlane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f));
 	XMVECTOR yzPlane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f));
-	XMVECTOR camPos = XMLoadFloat3(&m_camera->getCamPos());
+	XMVECTOR camPos = XMLoadFloat3(&m_renderer->getCamera()->getCamPos());
 	XMVECTOR cursorDir = XMLoadFloat3(&m_oldCursorDir);
 
 	XMVECTOR xzInt = XMPlaneIntersectLine(xzPlane, camPos, camPos + cursorDir);
@@ -310,16 +310,17 @@ void TransformMachine::finish()
 void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers mods)
 {
 	XMVECTOR moveVec;
+	Camera* cam = m_renderer->getCamera();
 	if (m_state == Translate)  // Move object parallel to camera view plane
 	{
 		// The transformation is calculated from the old actor position(at the beginning of the transformation) and the mouse move vector(since the beginning of the transformation)
 		// Calculate the two rays through the mouse cursor positions (old and current) in world space. Compute a plane, parallel to the view plane at the averaged position of the translated objects
 		// Compute the two intersections of the mouse rays and the move plane and calculate the translation vector from these two intersections
-		XMVECTOR up = XMLoadFloat3(&m_camera->getUpVector());
-		XMVECTOR right = XMLoadFloat3(&m_camera->getRightVector());
-		XMVECTOR ncd = XMLoadFloat3(&m_camera->getCursorDir(currentCursorPos)); // New cursor direction vector
+		XMVECTOR up = XMLoadFloat3(&cam->getUpVector());
+		XMVECTOR right = XMLoadFloat3(&cam->getRightVector());
+		XMVECTOR ncd = XMLoadFloat3(&cam->getCursorDir(currentCursorPos)); // New cursor direction vector
 		XMVECTOR ocd = XMLoadFloat3(&m_oldCursorDir); // Old cursor direction vector
-		XMVECTOR origin = XMLoadFloat3(&m_camera->getCamPos()); // Origin of the two cursor rays
+		XMVECTOR origin = XMLoadFloat3(&cam->getCamPos()); // Origin of the two cursor rays
 
 		XMVECTOR movePlane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVector3Cross(up, right)); // The move plane, which is parallel two the viewing plane
 
@@ -331,8 +332,8 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		// Calculate intersection with corresponding global plane and check the distance in the specified direction (x,y,z) (i.e. check that coordinate of the intersection point)
 		// This corresponds to the distance on the specified axis
 		// Refer to intersection point at start of the transformation
-		XMVECTOR camPos = XMLoadFloat3(&m_camera->getCamPos());
-		XMVECTOR cursorDir = XMLoadFloat3(&m_camera->getCursorDir(currentCursorPos));
+		XMVECTOR camPos = XMLoadFloat3(&cam->getCamPos());
+		XMVECTOR cursorDir = XMLoadFloat3(&cam->getCursorDir(currentCursorPos));
 		XMVECTOR ocd = XMLoadFloat3(&m_oldCursorDir);
 		XMVECTOR axis;
 		XMVECTOR plane;
@@ -517,7 +518,7 @@ void TransformMachine::rotate(QPoint currentMousePos, Qt::KeyboardModifiers mods
 
 	XMVECTOR axis;
 	if (m_state == Rotate)
-		axis = XMVector3Normalize(XMLoadFloat3(&m_camera->getCamPos()) - XMLoadFloat3(&m_oldObjWorldPos)); // Perpendicular to view plane
+		axis = XMVector3Normalize(XMLoadFloat3(&m_renderer->getCamera()->getCamPos()) - XMLoadFloat3(&m_oldObjWorldPos)); // Perpendicular to view plane
 	else if (m_state == RotateX)
 		axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
 	else if (m_state == RotateY)

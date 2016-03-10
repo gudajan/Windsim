@@ -8,8 +8,8 @@
 
 using namespace DirectX;
 
-Axes::Axes(Logger* logger)
-	: Object3D(logger)
+Axes::Axes(DX11Renderer* renderer)
+	: Object3D(renderer)
 {
 	createAxesData();
 	m_numIndices = m_indexData.size();

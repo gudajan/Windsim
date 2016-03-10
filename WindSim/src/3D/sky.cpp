@@ -7,8 +7,8 @@
 
 using namespace DirectX;
 
-Sky::Sky(Logger* logger)
-	: Object3D(logger)
+Sky::Sky(DX11Renderer* renderer)
+	: Object3D(renderer)
 {
 	createCubeData();
 	m_numIndices = m_indexData.size();

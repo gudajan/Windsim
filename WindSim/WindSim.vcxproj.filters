@@ -1,14 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;cxx;c;def</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h</Extensions>
-    </Filter>
     <Filter Include="Form Files">
       <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
       <Extensions>ui</Extensions>
@@ -33,29 +25,29 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
-    <Filter Include="Header Files\3D">
-      <UniqueIdentifier>{6a82d16e-0a04-485d-8ccd-66ee8cfb3a90}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\GUI">
-      <UniqueIdentifier>{850b4ed7-7587-463c-96e1-a27d812eb580}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\3D">
-      <UniqueIdentifier>{65a1ac49-30e0-4ab1-8812-2f20b5c7211b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\GUI">
-      <UniqueIdentifier>{9fd4a4aa-d6b1-4e80-a35b-183988cfa60c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Shaders">
-      <UniqueIdentifier>{87a6056b-bbc1-41fd-82f2-2250d2fbbfc0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="util">
       <UniqueIdentifier>{35a1c641-ce8c-4db5-88d1-e82b37bb2d65}</UniqueIdentifier>
     </Filter>
+    <Filter Include="3D">
+      <UniqueIdentifier>{9e128e0d-7acb-4537-b230-0b2a10b4c781}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GUI">
+      <UniqueIdentifier>{8436782a-f05f-4190-b604-d9f2a144c11d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3D\Objects">
+      <UniqueIdentifier>{982da920-ff9f-4aa3-b0c3-60f7b59738be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3D\Actors">
+      <UniqueIdentifier>{8e1872ab-adb7-4ee9-b0f1-5ded05df2e3e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GUI\Dialogs">
+      <UniqueIdentifier>{8d67e9d7-2d24-46c8-88a3-be6091cafdfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3D\Shaders">
+      <UniqueIdentifier>{87a6056b-bbc1-41fd-82f2-2250d2fbbfc0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_windsim.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -95,98 +87,14 @@
     <ClCompile Include="GeneratedFiles\Release\moc_objectContainer.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="src\3D\actor.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\axes.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\axesActor.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\camera.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\dx11renderer.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\mesh3D.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\meshActor.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\object3D.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\objectManager.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\objLoader.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\sky.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\skyActor.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\commands.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\dx11widget.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\meshProperties.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\objectContainer.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\objectItem.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\project.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\settingsDialog.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\windsim.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
     <ClCompile Include="src\util\settings.cpp">
       <Filter>util</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\transformMachine.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\marker.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\markerActor.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\voxelGridActor.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\3D\voxelGrid.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\voxelGridInputDialog.cpp">
-      <Filter>Source Files\GUI</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_voxelGridProperties.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_voxelGridProperties.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\voxelGridProperties.cpp">
-      <Filter>Source Files\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\staticLogger.cpp">
-      <Filter>Source Files\GUI</Filter>
     </ClCompile>
     <ClCompile Include="src\util\logger.cpp">
       <Filter>util</Filter>
@@ -197,17 +105,114 @@
     <ClCompile Include="GeneratedFiles\Release\moc_logger.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="src\3D\simulator.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
     <ClCompile Include="src\util\pipe.cpp">
       <Filter>util</Filter>
     </ClCompile>
-    <ClCompile Include="src\3D\dynamics.cpp">
-      <Filter>Source Files\3D</Filter>
-    </ClCompile>
     <ClCompile Include="src\3D\volInt.h">
-      <Filter>Header Files\3D</Filter>
+      <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\camera.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\dx11renderer.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\dynamics.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\objectManager.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\objLoader.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\simulator.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\transformMachine.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\commands.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\dx11widget.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\objectContainer.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\objectItem.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\project.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\staticLogger.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\windsim.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\3D\axes.cpp">
+      <Filter>3D\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\marker.cpp">
+      <Filter>3D\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\mesh3D.cpp">
+      <Filter>3D\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\object3D.cpp">
+      <Filter>3D\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\sky.cpp">
+      <Filter>3D\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\voxelGrid.cpp">
+      <Filter>3D\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\axesActor.cpp">
+      <Filter>3D\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\markerActor.cpp">
+      <Filter>3D\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\meshActor.cpp">
+      <Filter>3D\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\skyActor.cpp">
+      <Filter>3D\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\voxelGridActor.cpp">
+      <Filter>3D\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\actor.cpp">
+      <Filter>3D\Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\voxelGridInputDialog.cpp">
+      <Filter>GUI\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\settingsDialog.cpp">
+      <Filter>GUI\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\meshProperties.cpp">
+      <Filter>GUI\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\voxelGridProperties.cpp">
+      <Filter>GUI\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_simulator.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_simulator.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_voxelGrid.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_voxelGrid.cpp">
+      <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -223,35 +228,41 @@
     <CustomBuild Include="windsim.qrc">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="src\3D\dx11renderer.h">
-      <Filter>Header Files\3D</Filter>
-    </CustomBuild>
-    <CustomBuild Include="src\GUI\dx11widget.h">
-      <Filter>Header Files\GUI</Filter>
-    </CustomBuild>
-    <CustomBuild Include="src\GUI\meshProperties.h">
-      <Filter>Header Files\GUI</Filter>
-    </CustomBuild>
-    <CustomBuild Include="src\GUI\objectContainer.h">
-      <Filter>Header Files\GUI</Filter>
-    </CustomBuild>
-    <CustomBuild Include="src\GUI\settingsDialog.h">
-      <Filter>Header Files\GUI</Filter>
-    </CustomBuild>
-    <CustomBuild Include="src\GUI\windsim.h">
-      <Filter>Header Files\GUI</Filter>
-    </CustomBuild>
     <CustomBuild Include="src\GUI\ui\voxelGridInput.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
     <CustomBuild Include="src\GUI\ui\voxelGridProperties.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="src\GUI\voxelGridProperties.h">
-      <Filter>Header Files\GUI</Filter>
-    </CustomBuild>
     <CustomBuild Include="src\util\logger.h">
       <Filter>util</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\3D\dx11renderer.h">
+      <Filter>3D</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\dx11widget.h">
+      <Filter>GUI</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\objectContainer.h">
+      <Filter>GUI</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\windsim.h">
+      <Filter>GUI</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\settingsDialog.h">
+      <Filter>GUI\Dialogs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\meshProperties.h">
+      <Filter>GUI\Dialogs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\voxelGridProperties.h">
+      <Filter>GUI\Dialogs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\3D\simulator.h">
+      <Filter>3D</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\3D\voxelGrid.h">
+      <Filter>3D\Objects</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -264,51 +275,6 @@
     <ClInclude Include="GeneratedFiles\ui_meshProperties.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\3D\actor.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\axes.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\axesActor.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\camera.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\intersection.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\mesh3D.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\meshActor.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\object3D.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\objectManager.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\objLoader.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\sky.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\skyActor.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GUI\commands.h">
-      <Filter>Header Files\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GUI\objectItem.h">
-      <Filter>Header Files\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GUI\project.h">
-      <Filter>Header Files\GUI</Filter>
-    </ClInclude>
     <ClInclude Include="src\util\common.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -318,26 +284,8 @@
     <ClInclude Include="src\util\settings.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="src\3D\transformMachine.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\marker.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\markerActor.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\voxelGrid.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\voxelGridActor.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_voxelGridInput.h">
       <Filter>Generated Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GUI\voxelGridInputDialog.h">
-      <Filter>Header Files\GUI</Filter>
     </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_voxelGridProperties.h">
       <Filter>Generated Files</Filter>
@@ -345,43 +293,100 @@
     <ClInclude Include="src\util\metaTypes.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="src\GUI\staticLogger.h">
-      <Filter>Header Files\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="src\3D\simulator.h">
-      <Filter>Header Files\3D</Filter>
-    </ClInclude>
     <ClInclude Include="src\util\msgDef.h">
       <Filter>util</Filter>
     </ClInclude>
     <ClInclude Include="src\util\pipe.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="src\3D\camera.h">
+      <Filter>3D</Filter>
+    </ClInclude>
     <ClInclude Include="src\3D\dynamics.h">
-      <Filter>Header Files\3D</Filter>
+      <Filter>3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\intersection.h">
+      <Filter>3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\objectManager.h">
+      <Filter>3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\objLoader.h">
+      <Filter>3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\transformMachine.h">
+      <Filter>3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\commands.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\objectItem.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\project.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\staticLogger.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\axes.h">
+      <Filter>3D\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\marker.h">
+      <Filter>3D\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\mesh3D.h">
+      <Filter>3D\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\object3D.h">
+      <Filter>3D\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\sky.h">
+      <Filter>3D\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\axesActor.h">
+      <Filter>3D\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\markerActor.h">
+      <Filter>3D\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\meshActor.h">
+      <Filter>3D\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\skyActor.h">
+      <Filter>3D\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\voxelGridActor.h">
+      <Filter>3D\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\actor.h">
+      <Filter>3D\Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\voxelGridInputDialog.h">
+      <Filter>GUI\Dialogs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\3D\shaders\axes.fx">
-      <Filter>Shaders</Filter>
+      <Filter>3D\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\sky.fx">
-      <Filter>Shaders</Filter>
+      <Filter>3D\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\mesh.fx">
-      <Filter>Shaders</Filter>
+      <Filter>3D\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\marker.fx">
-      <Filter>Shaders</Filter>
+      <Filter>3D\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\common.fx">
-      <Filter>Shaders</Filter>
+      <Filter>3D\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\voxelGrid.fx">
-      <Filter>Shaders</Filter>
+      <Filter>3D\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\dynamics.fx">
-      <Filter>Shaders</Filter>
+      <Filter>3D\Shaders</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

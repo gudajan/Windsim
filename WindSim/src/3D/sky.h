@@ -6,7 +6,6 @@
 struct ID3DX11EffectMatrixVariable;
 struct ID3DX11Effect;
 struct ID3D11InputLayout;
-class Logger;
 
 // A class to render a skybox
 class Sky : public Object3D
@@ -15,7 +14,7 @@ public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
 
-	Sky(Logger* logger);
+	Sky(DX11Renderer* renderer);
 	Sky(Sky&& other);
 	~Sky();
 

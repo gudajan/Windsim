@@ -2,19 +2,19 @@
 #include "common.h"
 #include "intersection.h"
 #include "objLoader.h"
-#include "logger.h"
+#include "dx11renderer.h"
 
 #include <d3d11.h>
 
 using namespace DirectX;
 
-Object3D::Object3D(Logger* logger)
+Object3D::Object3D(DX11Renderer* renderer)
 	: m_vertexBuffer(nullptr),
 	m_indexBuffer(nullptr),
 	m_numIndices(0),
 	m_vertexData(),
 	m_indexData(),
-	m_logger(logger)
+	m_renderer(renderer)
 {
 }
 
@@ -24,7 +24,7 @@ Object3D::Object3D(Object3D&& other)
 	m_numIndices(other.m_numIndices),
 	m_vertexData(std::move(other.m_vertexData)),
 	m_indexData(std::move(other.m_indexData)),
-	m_logger(std::move(other.m_logger))
+	m_renderer(std::move(other.m_renderer))
 {
 }
 
@@ -99,8 +99,7 @@ void Object3D::getBoundingBox(XMFLOAT3& center, XMFLOAT3& extends)
 
 void Object3D::log(const std::string& msg)
 {
-	if (m_logger)
-		m_logger->logit(QString::fromStdString(msg));
+	m_renderer->getLogger()->logit(QString::fromStdString(msg));
 }
 
 

@@ -33,6 +33,8 @@ public:
 	void setNearZ(const float nearZ) { m_nearZ = nearZ; computeProjectionMatrix(); };
 	void setFarZ(const float farZ) { m_farZ = farZ; computeProjectionMatrix(); };
 
+	float getNearZ() const { return m_nearZ; };
+
 	void handleMousePress(QPoint globalPos, Qt::MouseButton button, Qt::KeyboardModifiers modifiers);
 	void handleMouseRelease(QPoint globalPos, Qt::MouseButton button);
 	void handleMouseMove(QPoint globalPos);

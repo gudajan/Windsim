@@ -7,7 +7,6 @@ struct ID3DX11EffectMatrixVariable;
 struct ID3DX11EffectScalarVariable;
 struct ID3DX11Effect;
 struct ID3D11InputLayout;
-class Logger;
 
 class Marker : public Object3D
 {
@@ -15,7 +14,7 @@ public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
 
-	Marker(Logger* logger);
+	Marker(DX11Renderer* renderer);
 	Marker(Marker&& other);
 	~Marker();
 

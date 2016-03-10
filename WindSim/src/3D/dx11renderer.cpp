@@ -175,12 +175,12 @@ void DX11Renderer::frame()
 	//OutputDebugStringA(("Current FPS: " + std::to_string(m_currentFPS) + "\n").c_str());
 	//OutputDebugStringA(("Elapsed: " + std::to_string(elapsedTime * 0.000001) + "msec\n").c_str());
 	m_elapsedTimer.restart();
-	double t = static_cast<double>(elapsedTime)* 0.000000001; // to seconds
+	double t = static_cast<double>(elapsedTime) * 1.0e-9; // to seconds
 	update(t);
 	render(t);
 
 	m_elapsedTimes.pop_back();
-	m_elapsedTimes.push_front(1000000000.0 / elapsedTime); // 1 sec / elapsedTime nsec = fps
+	m_elapsedTimes.push_front(1.0e9 / elapsedTime); // 1 sec / elapsedTime nsec = fps
 	m_currentFPS = std::accumulate(m_elapsedTimes.begin(), m_elapsedTimes.end(), 0.0, [](float acc, const float& val) {return acc + fpsFramesWeight * val; });
 	emit updateFPS(static_cast<int>(m_currentFPS)); // Show fps in statusBar
 }

@@ -5,11 +5,14 @@
 #include "simulator.h"
 #include "common.h"
 
+#include <WindTunnelLib/IWindTunnelRenderer.h>
+
 #include <DirectXMath.h>
 
 #include <vector>
-#include <thread>
-#include <mutex>
+
+#include <QObject>
+#include <QThread>
 
 class ObjectManager;
 struct ID3D11UnorderedAccessView;
@@ -24,24 +27,14 @@ struct ID3DX11Effect;
 struct ID3D11InputLayout;
 class Logger;
 
-enum VoxelType : char
+class VoxelGrid : public Object3D, public QObject
 {
-	CELL_TYPE_FLUID = 0,
-	CELL_TYPE_INFLOW, // 1
-	CELL_TYPE_OUTFLOW, // 2
-	CELL_TYPE_SOLID_SLIP, // 3
-	CELL_TYPE_SOLID_NO_SLIP, // 4
-	CELL_TYPE_SOLID_BOUNDARY //5
-};
-
-class VoxelGrid : public Object3D
-{
+	Q_OBJECT
 public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
 
-	VoxelGrid(ObjectManager* manager, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize, const std::string& simulator, Logger* logger);
-	//VoxelGrid(VoxelGrid&& other);
+	VoxelGrid(ObjectManager* manager, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize, int clDevice, int clPlatform, const std::string& simSettingsFile, DX11Renderer* renderer, QObject* parent = nullptr);
 	~VoxelGrid();
 
 	HRESULT create(ID3D11Device* device, bool clearClientBuffers = false) override; // Create custom viewport, renderTargets, UAV etc
@@ -53,19 +46,29 @@ public:
 	DirectX::XMUINT3 getResolution() const { return m_resolution; };
 	DirectX::XMFLOAT3 getVoxelSize() const { return m_voxelSize; };
 
+	// GUI Settings
 	bool resize(DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize);
 	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
 	void setRenderVoxel(bool renderVoxel) { m_renderVoxel = renderVoxel; };
 	void setRenderGlyphs(bool renderGlyphs) { m_renderGlyphs = renderGlyphs; };
 	void setGlyphSettings(Orientation orientation, float position);
 	void setGlyphQuantity(const DirectX::XMUINT2& quantity);
-	void setSimulator(const std::string& exe);
-	void updateSimulation();
+
+public slots:
+	void processSimResult() { m_processSimResults = true; };
+	void enableGridUpdate() { m_updateGrid = true; };
+
+signals:
+	void gridUpdated();
+	void gridResized(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize);
+	void windTunnelSettingsChanged(int clDevice, int clPlatform, const QString& settingsFile);
+	void stopSimulation();
 
 private:
 	void createGridData(); // Create cube for line rendering
 	void updateVelocity(ID3D11DeviceContext* context);
 	void copyGrid(ID3D11DeviceContext* context);
+	void read3DTexture(D3D11_MAPPED_SUBRESOURCE msr, void* outData, int bytePerElem = 1);
 
 	void renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, bool copyStaging);
@@ -115,15 +118,13 @@ private:
 	DirectX::XMFLOAT3 m_voxelSize; // Size of one voxel in object space of the grid
 	DirectX::XMUINT2 m_glyphQuantity;
 
-	bool m_reinit; // Indicates if voxelgrid has to be reinitialized, because resolution, voxelSize or simulator changed
-	bool m_initSim; // Indicates that the simulation has to be initialized
-	bool m_updateDimensions; // Indicates that the simulation dimensions have to be updated
+	bool m_resize; // Indicates if voxelgrid has to be reinitialized, because resolution, voxelSize changed
 	bool m_updateGrid; // Indicates that the simulation should be updated after next voxelization
+	bool m_processSimResults; // Indicate that we may copy the data from the local simulation vectors to the GPU
 
 	uint32_t m_cubeIndices;
 
 	bool m_voxelize;
-	int m_counter;
 	bool m_renderVoxel;
 	bool m_renderGlyphs;
 	bool m_calculateDynamics;
@@ -144,9 +145,10 @@ private:
 	ID3D11Texture3D* m_velocityTextureStaging;
 	ID3D11ShaderResourceView* m_velocitySRV;
 
+	wtl::WindTunnelRenderer m_wtRenderer;
+
 	Simulator m_simulator;
-	std::thread m_simulatorThread;
-	std::unique_lock<std::mutex> m_lock;
+	QThread m_simulationThread;
 
 };
 #endif
