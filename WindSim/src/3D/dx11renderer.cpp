@@ -14,7 +14,6 @@
 
 // DirectX
 #include <DirectXColors.h>
-#include <d3d11.h>
 #include <d3dx11effect.h>
 
 #include <comdef.h>
@@ -38,6 +37,7 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_renderTargetView(nullptr),
 	m_depthStencilView(nullptr),
 	m_rasterizerState(nullptr),
+	m_backBufferDesc(),
 	m_width(width),
 	m_height(height),
 	m_containsCursor(false),
@@ -50,15 +50,12 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_renderTimer(this),
 	m_voxelizationTimer(this),
 	m_camera(width, height),
-	m_manager(),
-	m_transformer(&m_manager, &m_camera),
+	m_manager(this),
+	m_transformer(&m_manager, &m_camera, this),
 	m_logger()
 {
 	connect(&m_renderTimer, &QTimer::timeout, this, &DX11Renderer::frame);
 	connect(&m_voxelizationTimer, &QTimer::timeout, this, &DX11Renderer::issueVoxelization);
-
-	m_manager.setLogger(&m_logger);
-	m_transformer.setLogger(&m_logger);
 }
 
 DX11Renderer::~DX11Renderer()
@@ -194,8 +191,8 @@ void DX11Renderer::execute()
 {
 	OutputDebugStringA(("WORKER THREAD: " + std::to_string(reinterpret_cast<int>(thread()->currentThreadId())) + "\n").c_str());
 	m_elapsedTimer.start();
-	m_renderTimer.start(25); // Rendering happens with 125 FPS at max
-	m_voxelizationTimer.start(25); // Voxelization happens 40 times per second at maximum
+	m_renderTimer.start(8); // Rendering happens with 125 FPS at max
+	m_voxelizationTimer.start(8); // Voxelization happens 40 times per second at maximum
 }
 
 void DX11Renderer::stop()
@@ -227,8 +224,12 @@ void DX11Renderer::onResize(int width, int height)
 
 	ID3D11Texture2D* pBackBuffer = nullptr;
 	m_swapChain->GetBuffer(0, __uuidof(*pBackBuffer), reinterpret_cast<LPVOID*>(&pBackBuffer));
+	IDXGISurface* pSurface = nullptr;
+	pBackBuffer->QueryInterface(__uuidof(pSurface), reinterpret_cast<LPVOID*>(&pSurface));
+	pSurface->GetDesc(&m_backBufferDesc);
 	m_device->CreateRenderTargetView(pBackBuffer, nullptr, &m_renderTargetView);
 	SAFE_RELEASE(pBackBuffer);
+	SAFE_RELEASE(pSurface);
 
 	D3D11_TEXTURE2D_DESC descDepth;
 	descDepth.Width = m_width;
@@ -268,6 +269,7 @@ void DX11Renderer::onResize(int width, int height)
 
 	m_context->RSSetViewports(1, &vp);
 
+	m_manager.onResizeSwapChain(m_device, &m_backBufferDesc);
 }
 
 void DX11Renderer::onMouseMove(QPoint localPos, QPoint globalPos, int modifiers)

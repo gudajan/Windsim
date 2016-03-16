@@ -28,6 +28,8 @@ public:
 
 	void calcMassProps(const float density, const DirectX::XMFLOAT3& scale, DirectX::XMFLOAT3X3& inertiaTensor, DirectX::XMFLOAT3& centerOfMass) const;
 
+	DX11Renderer* getRenderer() { return m_renderer; };
+
 private:
 	bool readObj(const std::string& path);
 

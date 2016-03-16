@@ -32,6 +32,7 @@ public:
 	// Render ALL objects at their current transformation
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime);
 	// Release the DirectX objects of ALL objects
+	void onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc);
 	void release(bool withAccessories);
 	void voxelizeNextFrame(); // Issue a voxelization for all voxelgrids in the next frame
 
@@ -45,7 +46,6 @@ public:
 	const void setSelection(const std::unordered_set<int>& selection);
 	std::shared_ptr<Actor> getActor(int id) { return m_actors[id]; }
 	std::unordered_map<int, std::shared_ptr<Actor>>& getActors() { return m_actors; };
-	void setLogger(Logger* logger) { m_logger = logger; };
 
 	void addAccessoryObject(const std::string& name, std::shared_ptr<Object3D> obj, std::shared_ptr<Actor> act);
 	std::shared_ptr<Actor> getAccessory(const std::string& name) { return m_accessoryActors[name]; };
@@ -53,7 +53,6 @@ public:
 private:
 	// Get ID of object with intersection
 	int computeIntersection(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float& distance) const;
-	void updateSimulation(); // Update the simulator
 
 	void log(const std::string& msg);
 

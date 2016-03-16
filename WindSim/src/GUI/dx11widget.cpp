@@ -11,7 +11,8 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	m_renderer(nullptr)
 {
 	// Create DirectX Renderer on our widget
-	m_renderer= new DX11Renderer(winId(), width(), height(), nullptr);
+	// Parent MUST NOT be 'this', because we want to move this object to another thread, which is not possible for child objects
+	m_renderer = new DX11Renderer(winId(), width(), height(), nullptr);
 
 	if (!m_renderer->init())
 	{

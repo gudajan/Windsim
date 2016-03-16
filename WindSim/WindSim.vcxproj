@@ -57,7 +57,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
-      <AdditionalLibraryDirectories>..\..\WindTunnelSource\WindTunnelLib\$(Platform);$(Configuration)$(QTDIR)\lib;$(SolutionDir)FX11\Bin\Desktop_2013\x64\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\WindTunnelSource\WindTunnelLib\bin\$(Platform)\$(Configuration);$(QTDIR)\lib;$(SolutionDir)FX11\Bin\Desktop_2013\x64\$(Configuration)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>WindTunnelLib.lib;Effects11.lib;d3dcompiler.lib;d3d11.lib;qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -89,7 +89,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
-      <AdditionalLibraryDirectories>..\..\WindTunnelSource\WindTunnelLib\$(Platform);$(Configuration)$(QTDIR)\lib;$(SolutionDir)FX11\Bin\Desktop_2013\x64\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\WindTunnelSource\WindTunnelLib\bin\$(Platform)\$(Configuration);$(QTDIR)\lib;$(SolutionDir)FX11\Bin\Desktop_2013\x64\$(Configuration)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalDependencies>WindTunnelLib.lib;Effects11.lib;d3dcompiler.lib;d3d11.lib;qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>

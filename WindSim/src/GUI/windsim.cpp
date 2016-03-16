@@ -253,7 +253,9 @@ bool WindSim::actionCreateVoxelGridTriggered()
 
 	std::vector<int> res = dialog.getGridResolution();
 	std::vector<double> size = dialog.getVoxelSize();
-	QString exe = dialog.getSimulator();
+	QString filename = dialog.getSimulatorSettings();
+	int clDevice = dialog.getClDevice();
+	int clPlatform = dialog.getClPlatform();
 
 	QJsonObject resolution
 	{
@@ -273,7 +275,9 @@ bool WindSim::actionCreateVoxelGridTriggered()
 		{ "type", QString::fromStdString(objectTypeToString(ObjectType::VoxelGrid)) },
 		{ "resolution", resolution },
 		{ "voxelSize", voxelSize },
-		{ "simulator", exe }
+		{ "clDevice", clDevice },
+		{ "clPlatform", clPlatform },
+		{ "windTunnelSettings", filename }
 	};
 
 	m_container.addCmd(json);

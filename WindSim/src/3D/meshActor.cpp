@@ -7,7 +7,7 @@ using namespace DirectX;
 
 MeshActor::MeshActor(Mesh3D& mesh, int id)
 	: Actor(ObjectType::Mesh, id),
-	m_marker(mesh.getLogger()),
+	m_marker(mesh.getRenderer()),
 	m_mesh(mesh),
 	m_dynamics(mesh),
 	m_dynRenderWorld(),

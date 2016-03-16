@@ -52,16 +52,6 @@ void VoxelGridActor::setRenderVoxel(bool renderVoxel)
 	m_grid.setRenderVoxel(renderVoxel);
 }
 
-void VoxelGridActor::setSimulator(const std::string& cmdline)
-{
-	m_grid.setSimulator(cmdline);
-}
-
-void VoxelGridActor::updateSimulation()
-{
-	m_grid.updateSimulation();
-}
-
 void VoxelGridActor::setGlyphSettings(bool render, Orientation orientation, float position, const XMUINT2& quantity)
 {
 	m_grid.setRenderGlyphs(render);

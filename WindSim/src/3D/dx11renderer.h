@@ -1,6 +1,8 @@
 #ifndef DX11_RENDERER_H
 #define DX11_RENDERER_H
 
+#include <d3d11.h>
+
 #include "common.h"
 #include "metaTypes.h"
 #include "camera.h"
@@ -22,14 +24,6 @@ namespace State
 	enum RendererState { CameraMove, Modifying, Default, ShaderError };
 }
 
-struct ID3D11Devicee;
-struct ID3D11DeviceContext;
-struct IDXGISwapChain;
-struct ID3D11Texture2D;
-struct ID3D11RenderTargetView;
-struct ID3D11DepthStencilView;
-struct ID3D11RasterizerState;
-
 class DX11Renderer : public QObject
 {
 	Q_OBJECT
@@ -45,6 +39,7 @@ public:
 	int getHeight(){ return m_height; };
 	Camera* getCamera() { return &m_camera; };
 	Logger* getLogger() { return &m_logger; };
+	const DXGI_SURFACE_DESC* getBackBufferDesc() const { return &m_backBufferDesc; };
 
 public slots:
 	void frame(); // Compute one Frame
@@ -83,7 +78,6 @@ private:
 	bool createShaders(); // Load all shaders
 	void destroy(); // Delete renderer and directx11
 
-
 	// Called per frame
 	void update(double elapsedTime); // Update the scene
 	void render(double elapsedTime); // Render the scene
@@ -97,6 +91,7 @@ private:
 	ID3D11RenderTargetView* m_renderTargetView;
 	ID3D11DepthStencilView* m_depthStencilView;
 	ID3D11RasterizerState* m_rasterizerState;
+	DXGI_SURFACE_DESC m_backBufferDesc;
 
 	// Viewport resolution
 	int m_width;

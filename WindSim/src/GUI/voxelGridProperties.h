@@ -21,14 +21,15 @@ public:
 private slots:
 	void nameChanged(const QString & text);
 	void disabledChanged(int state);
-	void simulatorChanged(const QString& text);
+	void simulatorSettingsChanged();
 	void showVoxelChanged(int state);
 	void positionChanged();
 	void resolutionChanged();
 	void voxelSizeChanged();
 	void glyphSettingsChanged();
 
-	void chooseSimulator(); // Open Filedialog to choose executable
+	void chooseSimulatorSettings(); // Open Filedialog to choose settings file
+	void showOpenCLInfo();
 
 	void buttonClicked(QAbstractButton* button);
 

@@ -78,12 +78,13 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			QJsonObject voxelSize = data["voxelSize"].toObject();
 			XMFLOAT3 vs(voxelSize["x"].toDouble(), voxelSize["y"].toDouble(), voxelSize["z"].toDouble());
 
-			VoxelGrid* obj = new VoxelGrid(this, res, vs, data["simulator"].toString().toStdString(), m_renderer);
+			VoxelGrid* obj = new VoxelGrid(this, res, vs, data["clDevice"].toInt(), data["clPlatform"].toInt(), data["windTunnelSettings"].toString().toStdString(), m_renderer);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
 			VoxelGridActor* act = new VoxelGridActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, false);
+			obj->onResizeSwapChain(device, m_renderer->getBackBufferDesc()); // Call resize manually for the first time to properly initialize object
 		}
 		else
 		{
@@ -137,7 +138,7 @@ void ObjectManager::modify(const QJsonObject& data)
 	else
 	{
 		mod = Modifications(data["modifications"].toInt());
-		for (auto m : { Position, Scaling, Rotation, Voxelization, Resolution, VoxelSize, SimulatorExe, All })
+		for (auto m : { Position, Scaling, Rotation, Voxelization, Resolution, VoxelSize, ClDevice, ClPlatform, WindTunnelSettings , All })
 		{
 			if (mod.testFlag(m))
 			{
@@ -226,11 +227,9 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->computeWorld();
 		act->resize(res, vs);
 		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
-		act->setSimulator(data["simulator"].toString().toStdString());
 		act->setGlyphSettings(renderGlyphs, orientation, position, quantity);
+		act->getObject()->setSimulation(data["clDevice"].toInt(), data["clPlatform"].toInt(), data["windTunnelSettings"].toString());
 	}
-	//if (updateSim)
-	//	updateSimulation();
 }
 
 void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime)
@@ -244,6 +243,18 @@ void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, c
 		actor.second->render(device, context, view, projection, elapsedTime);
 	}
 }
+void ObjectManager::onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc)
+{
+	for (const auto& actor : m_actors)
+	{
+		actor.second->getObject()->onResizeSwapChain(device, backBufferDesc);
+	}
+	for (const auto& actor : m_accessoryActors)
+	{
+		actor.second->getObject()->onResizeSwapChain(device, backBufferDesc);
+	}
+}
+
 
 void ObjectManager::release(bool withAccessories)
 {
@@ -275,15 +286,6 @@ void ObjectManager::voxelizeNextFrame()
 	{
 		if (act.second->getType() == ObjectType::VoxelGrid)
 			std::dynamic_pointer_cast<VoxelGridActor>(act.second)->voxelize();
-	}
-}
-
-void ObjectManager::updateSimulation()
-{
-	for (const auto& act : m_actors)
-	{
-		if (act.second->getType() == ObjectType::VoxelGrid)
-			std::dynamic_pointer_cast<VoxelGridActor>(act.second)->updateSimulation();
 	}
 }
 

@@ -2,8 +2,8 @@
 #define SKY_ACTOR_H
 
 #include "actor.h"
+#include "marker.h"
 
-class Marker;
 
 class MarkerActor : public Actor
 {
@@ -12,6 +12,8 @@ public:
 
 	MarkerActor* clone() override;
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
+
+	Marker* getObject() override { return &m_marker; };
 
 	void setXAxisRendered(bool render) { m_renderX = render; };
 	void setYAxisRendered(bool render) { m_renderY = render; };

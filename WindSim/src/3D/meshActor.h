@@ -3,10 +3,11 @@
 
 #include "actor.h"
 #include "marker.h"
+#include "mesh3D.h"
 #include "dynamics.h"
 #include <DirectXPackedVector.h>
 
-class Mesh3D;
+
 struct ID3D11ShaderResourceView;
 
 class MeshActor : public Actor
@@ -27,6 +28,7 @@ public:
 	void release();
 
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
+	Mesh3D* getObject() override { return &m_mesh; };
 	void calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& worldToVoxelTex, const DirectX::XMUINT3& texResolution, const DirectX::XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime);
 	void updateCalcRotation() { m_dynamics.updateCalcRotation(); };
 	const DirectX::XMFLOAT3 getAngularVelocity() const;

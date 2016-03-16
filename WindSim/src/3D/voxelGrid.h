@@ -5,7 +5,7 @@
 #include "simulator.h"
 #include "common.h"
 
-#include <WindTunnelLib/IWindTunnelRenderer.h>
+#include <WindTunnelLib/WindTunnelRenderer.h>
 
 #include <DirectXMath.h>
 
@@ -25,9 +25,10 @@ struct ID3DX11EffectUnorderedAccessViewVariable;
 struct ID3DX11EffectShaderResourceVariable;
 struct ID3DX11Effect;
 struct ID3D11InputLayout;
+struct D3D11_MAPPED_SUBRESOURCE;
 class Logger;
 
-class VoxelGrid : public Object3D, public QObject
+class VoxelGrid : public QObject, public Object3D
 {
 	Q_OBJECT
 public:
@@ -43,6 +44,8 @@ public:
 	// Iterate mesh objects and render/voxelize into voxelGrid
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
 
+	void onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc) override;
+
 	DirectX::XMUINT3 getResolution() const { return m_resolution; };
 	DirectX::XMFLOAT3 getVoxelSize() const { return m_voxelSize; };
 
@@ -53,6 +56,7 @@ public:
 	void setRenderGlyphs(bool renderGlyphs) { m_renderGlyphs = renderGlyphs; };
 	void setGlyphSettings(Orientation orientation, float position);
 	void setGlyphQuantity(const DirectX::XMUINT2& quantity);
+	void setSimulation(int clDevice, int clPlatform, const QString& settingsFile);
 
 public slots:
 	void processSimResult() { m_processSimResults = true; };
@@ -68,7 +72,7 @@ private:
 	void createGridData(); // Create cube for line rendering
 	void updateVelocity(ID3D11DeviceContext* context);
 	void copyGrid(ID3D11DeviceContext* context);
-	void read3DTexture(D3D11_MAPPED_SUBRESOURCE msr, void* outData, int bytePerElem = 1);
+	void read3DTexture(D3D11_MAPPED_SUBRESOURCE* msr, void* outData, int bytePerElem = 1);
 
 	void renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, bool copyStaging);
@@ -121,6 +125,8 @@ private:
 	bool m_resize; // Indicates if voxelgrid has to be reinitialized, because resolution, voxelSize changed
 	bool m_updateGrid; // Indicates that the simulation should be updated after next voxelization
 	bool m_processSimResults; // Indicate that we may copy the data from the local simulation vectors to the GPU
+	int m_dynamicsCounter;
+	int m_voxelizationCounter;
 
 	uint32_t m_cubeIndices;
 
@@ -150,5 +156,7 @@ private:
 	Simulator m_simulator;
 	QThread m_simulationThread;
 
+
+	QElapsedTimer t;
 };
 #endif

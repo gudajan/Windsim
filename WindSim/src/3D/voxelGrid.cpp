@@ -16,8 +16,8 @@
 using namespace DirectX;
 
 VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelSize, int clDevice, int clPlatform, const std::string& simSettingsFile, DX11Renderer* renderer, QObject* parent)
-	: Object3D(renderer),
-	QObject(parent),
+	: QObject(parent),
+	Object3D(renderer),
 	m_manager(manager),
 	m_resolution(resolution),
 	m_voxelSize(voxelSize),
@@ -25,6 +25,8 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_resize(false),
 	m_updateGrid(true),
 	m_processSimResults(false),
+	m_dynamicsCounter(-1),
+	m_voxelizationCounter(-1),
 	m_cubeIndices(0),
 	m_voxelize(true),
 	m_renderVoxel(true),
@@ -56,7 +58,8 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	// Start/stop thread
 	connect(&m_simulationThread, &QThread::started, &m_simulator, &Simulator::start);
 	connect(this, &VoxelGrid::stopSimulation, &m_simulator, &Simulator::stop);
-	connect(&m_simulationThread, &QThread::finished, &m_simulator, &QObject::deleteLater);
+	//connect(&m_simulationThread, &QThread::finished, &m_simulator, &QObject::deleteLater); // Error in delete of windtunnel
+	connect(&m_simulationThread, &QThread::finished, &m_simulationThread, &QObject::deleteLater);
 
 	// Grid -> Simulation/WindTunnel
 	connect(this, &VoxelGrid::windTunnelSettingsChanged, &m_simulator, &Simulator::createWindTunnel);
@@ -66,10 +69,16 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	// Simulation/WindTunnel -> Grid
 	connect(&m_simulator, &Simulator::stepDone, this, &VoxelGrid::processSimResult);
 	connect(&m_simulator, &Simulator::simUpdated, this, &VoxelGrid::enableGridUpdate);
+
+	m_simulationThread.start();
+
+	t.start();
 }
 
 VoxelGrid::~VoxelGrid()
 {
+	emit stopSimulation();
+	m_simulator.continueSim(true);
 	m_simulationThread.wait(); // Wait until simulation thread finished
 }
 
@@ -256,6 +265,8 @@ void VoxelGrid::release()
 
 void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, double elapsedTime)
 {
+	QElapsedTimer timer;
+	timer.start();
 	if (m_resize)
 	{
 		createGridData();
@@ -264,33 +275,41 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	}
 
 	// Process simulation results
-	static int dynamicsCounter = -1;
-	if (m_processSimResults && dynamicsCounter == -1)
+	if (m_processSimResults && m_dynamicsCounter == -1)
 	{
+		QElapsedTimer t2;
+		t2.start();
 		updateVelocity(context);
+		OutputDebugStringA(("Update velocity lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		t2.restart();
 		m_wtRenderer.updateDensity(context, m_simulator.getDensity(), m_simulator.getDensitySum());
-		m_wtRenderer.updateLines(context, m_simulator.getLines(), m_simulator.getReseedCounter());
+		OutputDebugStringA(("Update density lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		t2.restart();
+		m_wtRenderer.updateLines(context, m_simulator.getLines(), m_simulator.getReseedCounter(), m_simulator.getNumLines());
 		m_processSimResults = false;
+		OutputDebugStringA(("Update lines lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		t2.restart();
 		m_simulator.continueSim();
+		OutputDebugStringA(("Wait for continueSim lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		m_dynamicsCounter = 0;
 	}
 	// Calculates dynamics motion of meshes, depending on the current velocity field (wait 2 frames until the staging texture is copied to the GPU)
-	if (dynamicsCounter >= 2)
+	if (m_dynamicsCounter >= 0)
 	{
 		calculateDynamics(device, context, world, elapsedTime);
-		dynamicsCounter = -1;
+		m_dynamicsCounter = -1;
 	}
-	if (dynamicsCounter > -1)
-		dynamicsCounter++;
+	if (m_dynamicsCounter > -1)
+		m_dynamicsCounter++;
 
 	// Voxelization
-	static int voxelizationCounter = -1;
 	if (m_voxelize)
 	{
 		// Only copy to staging if last copy to CPU is finished and grid update possible
-		if (voxelizationCounter == -1 && m_updateGrid)
+		if (m_voxelizationCounter == -1 && m_updateGrid)
 		{
 			voxelize(device, context, world, true);
-			voxelizationCounter = 0;
+			m_voxelizationCounter = 0;
 		}
 		else
 			voxelize(device, context, world, false);
@@ -299,12 +318,19 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	}
 	// Make sure, the cpu only accesses the voxel grid if the GPU copying is done, to avoid pipeline stalling ( GPU copying needs 2 frames)
 	// Additionally only copy to cpu if former grid was written to shared memory and upgrad is necessary or simulation should be reinitialized
-	if (voxelizationCounter >= 2)
+	if (m_voxelizationCounter >= 2)
 	{
 		copyGrid(context);
-		m_updateGrid = false;
-		emit gridUpdated();
-		voxelizationCounter = -1; // Voxelization cycle finished
+
+		static bool first = true;
+		if (first && t.elapsed() > 1000)
+		{
+			OutputDebugStringA("UPDATE\n");
+			m_updateGrid = false;
+			emit gridUpdated();
+			//first = false;
+		}
+		m_voxelizationCounter = -1; // Voxelization cycle finished
 
 		// When voxel grid of simulation is updated, reset the dynamic rotation, used for the dynamics calculation, to the current rotation of the mesh
 		// This is needed to sample the velocity from appropriate positions (which correspond to the simulation) during the dynamics calculation
@@ -314,8 +340,8 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 				std::dynamic_pointer_cast<MeshActor>(it.second)->updateCalcRotation();
 		}
 	}
-	if (voxelizationCounter > -1)
-		voxelizationCounter++;
+	if (m_voxelizationCounter > -1)
+		m_voxelizationCounter++;
 
 	renderGridBox(device, context, world, view, projection);
 
@@ -325,7 +351,18 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	if (m_renderGlyphs)
 		renderVelocity(device, context, world, view, projection);
 
-	m_wtRenderer.render(device, context, world, view, projection, m_renderer->getCamera()->getNearZ());
+	XMFLOAT3 gridPos;
+	XMVECTOR scale, rot, trans;
+	XMMatrixDecompose(&scale, &rot, &trans, XMLoadFloat4x4(&world));
+	XMStoreFloat3(&gridPos, trans);
+	m_wtRenderer.render(device, context, view, projection, gridPos, m_renderer->getCamera()->getCamPos(), m_renderer->getCamera()->getNearZ());
+
+	OutputDebugStringA(("VoxelGrid render lasted " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+}
+
+void VoxelGrid::onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc)
+{
+	m_wtRenderer.onResizeSwapChain(device, backBufferDesc);
 }
 
 bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
@@ -364,6 +401,11 @@ void VoxelGrid::setGlyphQuantity(const XMUINT2& quantity)
 {
 	m_glyphQuantity = quantity;
 	s_shaderVariables.glyphQuantity->SetIntVector(reinterpret_cast<int*>(&m_glyphQuantity));
+}
+
+void VoxelGrid::setSimulation(int clDevice, int clPlatform, const QString& settingsFile)
+{
+	emit windTunnelSettingsChanged(clDevice, clPlatform, settingsFile);
 }
 
 void VoxelGrid::createGridData()
@@ -423,7 +465,7 @@ void VoxelGrid::updateVelocity(ID3D11DeviceContext* context)
 	// Map staging texture, write velocity field to it, unmap, copy resource to gpu
 	D3D11_MAPPED_SUBRESOURCE msr;
 	context->Map(m_velocityTextureStaging, 0, D3D11_MAP_WRITE, 0, &msr);
-	std::vector<float> velocity = m_simulator.getVelocity();
+	const float* velocity = m_simulator.getVelocity().data();
 	if (msr.pData)
 	{
 		int paddedRowPitch = msr.RowPitch / sizeof(float);
@@ -471,31 +513,31 @@ void VoxelGrid::copyGrid(ID3D11DeviceContext* context)
 	std::vector<wtl::CellType>& cellTypes = m_simulator.getCellTypes();
 	D3D11_MAPPED_SUBRESOURCE msr;
 	context->Map(m_gridAllTextureStaging, 0, D3D11_MAP_READ, 0, &msr);
-	read3DTexture(msr, cellTypes.data(), sizeof(wtl::CellType));
+	read3DTexture(&msr, cellTypes.data(), sizeof(wtl::CellType));
 	context->Unmap(m_gridAllTextureStaging, 0);
 
-	// Copy grid velocity
-	std::vector<float>& solidVelocity = m_simulator.getSolidVelocity();
-	context->Map(m_gridVelTextureStaging, 0, D3D11_MAP_READ, 0, &msr);
-	read3DTexture(msr, solidVelocity.data(), 4 * sizeof(float));
-	context->Unmap(m_gridVelTextureStaging, 0);
+	//// Copy grid velocity
+	//std::vector<float>& solidVelocity = m_simulator.getSolidVelocity();
+	//context->Map(m_gridVelTextureStaging, 0, D3D11_MAP_READ, 0, &msr);
+	//read3DTexture(&msr, solidVelocity.data(), 4 * sizeof(float));
+	//context->Unmap(m_gridVelTextureStaging, 0);
 }
 
-void VoxelGrid::read3DTexture(D3D11_MAPPED_SUBRESOURCE msr, void* outData, int bytePerElem)
+void VoxelGrid::read3DTexture(D3D11_MAPPED_SUBRESOURCE* msr, void* outData, int bytePerElem)
 {
-	if (!msr.pData || !outData)
+	if (!msr->pData || !outData)
 		return;
 
 	// The mapped data may include padding in the memory, because of GPU optimizations
 	// This means a 10x10x10 texture may be mapped as a 16x16x16 block
 	// The real pitches from one row/depth slice to another are given by the D3D11_MAPPED_SUBRESOURCE
 
-	char* tex = static_cast<char*>(msr.pData);
+	char* tex = static_cast<char*>(msr->pData);
 	char* data = static_cast<char*>(outData);
 
 	// Temps
-	int paddedRowPitch = msr.RowPitch; // convert byte size to block resolution
-	int paddedDepthPitch = msr.DepthPitch;
+	int paddedRowPitch = msr->RowPitch; // convert byte size to block resolution
+	int paddedDepthPitch = msr->DepthPitch;
 	int rowPitch = m_resolution.x * bytePerElem;
 	int depthPitch = rowPitch * m_resolution.y;
 

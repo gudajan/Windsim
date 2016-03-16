@@ -19,7 +19,7 @@ class Actor;
 class MarkerActor;
 class ObjectManager;
 class Camera;
-class Logger;
+class DX11Renderer;
 
 struct ID3D11Device;
 

@@ -1,15 +1,18 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
+#include <DirectXMath.h>
+
 #include <QObject>
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QMutex>
 #include <QWaitCondition>
+#include <QDateTime>
 
 #include <vector>
 
-#include <WindTunnelLib/IWindTunnel.h>
+#include <WindTunnelLib/WindTunnel.h>
 
 class Logger;
 
@@ -19,18 +22,19 @@ class Simulator : public QObject
 public:
 	Simulator(Logger* logger = nullptr, QObject* parent = nullptr);
 
-	void continueSim(); // Continue simulation after simulation results are processed by rendering thread
+	void continueSim(bool stop = false); // Continue simulation after simulation results are processed by rendering thread
 
 	// Get vectors for writing
 	std::vector<wtl::CellType>& getCellTypes() { return m_cellTypes; };
 	std::vector<float>& getSolidVelocity() { return m_solidVelocity; };
 
 	// Get vectors for reading
-	const std::vector<float>& getVelocity() const { return m_velocityXYZW; };
+	const std::vector<float>& getVelocity() const { return m_velocity; };
 	const std::vector<float>& getDensity() const { return m_density; };
 	const std::vector<float>& getDensitySum() const { return m_densitySum; };
 	const std::vector<char>& getLines() const { return m_lines; };
 	const int getReseedCounter() const { return m_reseedCounter; };
+	const int getNumLines() const { return m_numLines; };
 
 signals:
 	void stepDone(); // One simulation thread done, local output vectors filled
@@ -52,6 +56,12 @@ private:
 
 	wtl::WindTunnel m_windTunnel;
 
+	// WindTunnel creation parameters
+	int m_clDevice;
+	int m_clPlatform;
+	QString m_settingsFile;
+	QDateTime m_fileLastModified;
+
 	// WindTunnel input
 	std::vector<wtl::CellType> m_cellTypes;
 	std::vector<float> m_solidVelocity;
@@ -63,6 +73,7 @@ private:
 	std::vector<float> m_densitySum;
 	std::vector<char> m_lines;
 	int m_reseedCounter;
+	int m_numLines;
 
 	// Grid variables
 	DirectX::XMUINT3 m_resolution;
@@ -73,6 +84,8 @@ private:
 	bool m_simSmoke;
 	bool m_simLines;
 
+	bool m_initialized;
+
 	// Thread synchronization
 	QElapsedTimer m_elapsedTimer;
 	QTimer m_simTimer;
@@ -80,6 +93,7 @@ private:
 	QWaitCondition m_waitCond;
 	bool m_doWait; // Indicates if thread must wait on condition
 	bool m_isWaiting; // Indicates if thread is currently waiting on condition and must be woke up
+	bool m_stop;
 
 	Logger* m_logger;
 };

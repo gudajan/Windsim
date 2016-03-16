@@ -63,9 +63,11 @@ enum Modification
 	Color = 0x80,
 	Resolution = 0x100,
 	VoxelSize = 0x200,
-	SimulatorExe = 0x400,
-	GlyphSettings = 0x800,
-	DynamicsSettings = 0x1000,
+	ClDevice = 0x400,
+	ClPlatform = 0x800,
+	WindTunnelSettings = 0x1000,
+	GlyphSettings = 0x2000,
+	DynamicsSettings = 0x4000,
 
 	All = UINT_MAX
 };

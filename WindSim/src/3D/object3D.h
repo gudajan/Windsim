@@ -9,6 +9,7 @@
 struct ID3D11Buffer;
 struct ID3D11Device;
 struct ID3D11DeviceContext;
+struct DXGI_SURFACE_DESC;
 class DX11Renderer;
 
 class Object3D
@@ -23,6 +24,10 @@ public:
 
 	// Depends on shader variables -> must be reimplemented
 	virtual void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) = 0;
+
+	// Called when render target is resized
+	// default implementation does nothing
+	virtual void onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc) {};
 
 	// Computes intersection position in object space
 	// Returns true if intersection found, otherwise false
