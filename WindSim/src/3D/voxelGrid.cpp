@@ -15,7 +15,7 @@
 
 using namespace DirectX;
 
-VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelSize, int clDevice, int clPlatform, const std::string& simSettingsFile, DX11Renderer* renderer, QObject* parent)
+VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelSize, const std::string& simSettingsFile, DX11Renderer* renderer, QObject* parent)
 	: QObject(parent),
 	Object3D(renderer),
 	m_manager(manager),
@@ -51,7 +51,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 {
 	createGridData();
 
-	m_simulator.createWindTunnel(clDevice, clPlatform, QString::fromStdString(simSettingsFile));
+	m_simulator.createWindTunnel(QString::fromStdString(simSettingsFile));
 	m_simulator.setGridDimensions(resolution, voxelSize);
 	m_simulator.moveToThread(&m_simulationThread);
 
@@ -62,7 +62,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	connect(&m_simulationThread, &QThread::finished, &m_simulationThread, &QObject::deleteLater);
 
 	// Grid -> Simulation/WindTunnel
-	connect(this, &VoxelGrid::windTunnelSettingsChanged, &m_simulator, &Simulator::createWindTunnel);
+	connect(this, &VoxelGrid::windTunnelSettingsChanged, &m_simulator, &Simulator::changeWindTunnelSettings);
 	connect(this, &VoxelGrid::gridUpdated, &m_simulator, &Simulator::updateGrid);
 	connect(this, &VoxelGrid::gridResized, &m_simulator, &Simulator::setGridDimensions);
 
@@ -403,9 +403,9 @@ void VoxelGrid::setGlyphQuantity(const XMUINT2& quantity)
 	s_shaderVariables.glyphQuantity->SetIntVector(reinterpret_cast<int*>(&m_glyphQuantity));
 }
 
-void VoxelGrid::setSimulation(int clDevice, int clPlatform, const QString& settingsFile)
+void VoxelGrid::setSimulation(const QString& settingsFile)
 {
-	emit windTunnelSettingsChanged(clDevice, clPlatform, settingsFile);
+	emit windTunnelSettingsChanged(settingsFile);
 }
 
 void VoxelGrid::createGridData()

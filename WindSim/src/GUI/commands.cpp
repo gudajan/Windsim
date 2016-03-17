@@ -125,8 +125,6 @@ bool ModifyObjectCmd::mergeWith(const QUndoCommand* cmd)
 		if (type == ObjectType::Mesh)
 			m_newData["voxelize"] = json["voxelize"].toInt();
 	}
-	if (m.testFlag(ClDevice)) m_newData["clDevice"] = json["clDevice"].toString();
-	if (m.testFlag(ClPlatform)) m_newData["clPlatform"] = json["clPlatform"].toString();
 	if (m.testFlag(WindTunnelSettings)) m_newData["windTunnelSettings"] = json["windTunnelSettings"].toString();
 	if (m.testFlag(Shading)) m_newData["Shading"] = json["Visibility"].toString();
 	if (m.testFlag(Name)) m_newData["name"] = json["name"].toString();

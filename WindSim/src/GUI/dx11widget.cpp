@@ -39,7 +39,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	connect(this, &DX11Widget::mouseEnter, m_renderer, &DX11Renderer::onMouseEnter);
 	connect(this, &DX11Widget::mouseLeave, m_renderer, &DX11Renderer::onMouseLeave);
 	connect(this, &DX11Widget::reloadShadersTriggered, m_renderer, &DX11Renderer::reloadShaders);
-	connect(this, &DX11Widget::reloadIniTriggered, m_renderer, &DX11Renderer::reloadIni);
+	connect(this, &DX11Widget::settingsChanged, m_renderer, &DX11Renderer::changeSettings);
 
 	// Arbitrary Events Renerer -> Widget
 	connect(m_renderer->getLogger(), &Logger::log, this, &DX11Widget::logit);
@@ -75,7 +75,7 @@ void DX11Widget::cleanUp()
 // Trigger update of current settings
 void DX11Widget::applySettings()
 {
-	emit reloadIniTriggered();
+	emit settingsChanged();
 }
 
 void DX11Widget::logit(const QString& str)

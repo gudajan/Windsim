@@ -20,11 +20,8 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	connect(ui.cbDisabled, SIGNAL(stateChanged(int)), this, SLOT(disabledChanged(int)));
 
 	// Simulator
-	connect(ui.leSim, SIGNAL(textChanged()), this, SLOT(simulatorSettingsChanged()));
+	connect(ui.leSim, SIGNAL(textChanged(const QString &)), this, SLOT(simulatorSettingsChanged()));
 	connect(ui.pbSim, SIGNAL(clicked()), this, SLOT(chooseSimulatorSettings()));
-	connect(ui.spDevice, SIGNAL(valueChanged(int)), this, SLOT(simulatorSettingsChanged()));
-	connect(ui.spPlatform, SIGNAL(valueChanged(int)), this, SLOT(simulatorSettingsChanged()));
-	connect(ui.pbInfo, SIGNAL(clicked()), this, SLOT(showOpenCLInfo()));
 
 	// Show voxel
 	connect(ui.cbShowVoxel, SIGNAL(stateChanged(int)), this, SLOT(showVoxelChanged(int)));
@@ -85,8 +82,6 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 
 		// Simulator
 		ui.leSim->setText(properties["windTunnelSettings"].toString());
-		ui.spDevice->setValue(properties["clDevice"].toInt());
-		ui.spPlatform->setValue(properties["clPlatform"].toInt());
 
 		// Position
 		const QJsonObject& pos = properties.find("Position")->toObject();
@@ -139,8 +134,6 @@ void VoxelGridProperties::disabledChanged(int state)
 void VoxelGridProperties::simulatorSettingsChanged()
 {
 	m_properties["windTunnelSettings"] = ui.leSim->text();
-	m_properties["clDevice"] = ui.spDevice->value();
-	m_properties["clPlatform"] = ui.spPlatform->value();
 }
 
 void VoxelGridProperties::chooseSimulatorSettings()
@@ -155,13 +148,6 @@ void VoxelGridProperties::chooseSimulatorSettings()
 	ui.leSim->setText(exe);
 
 	m_properties["windTunnelSettings"] = exe;
-}
-
-void VoxelGridProperties::showOpenCLInfo()
-{
-	QString info = QString::fromStdString(wtl::getOpenCLInfo());
-
-	QMessageBox::information(this, tr("Available OpenCL platforms and devices"), info);
 }
 
 void VoxelGridProperties::showVoxelChanged(int state)
@@ -269,7 +255,7 @@ void VoxelGridProperties::buttonClicked(QAbstractButton* button)
 	QDialogButtonBox::StandardButton sb = ui.buttonBox->standardButton(button);
 	if (sb == QDialogButtonBox::Apply || sb == QDialogButtonBox::Ok)
 	{
-		emit propertiesChanged(m_properties, Position | Name | Voxelization | Visibility | Resolution | VoxelSize | ClDevice | ClPlatform | WindTunnelSettings | GlyphSettings);
+		emit propertiesChanged(m_properties, Position | Name | Voxelization | Visibility | Resolution | VoxelSize | WindTunnelSettings | GlyphSettings);
 	}
 }
 
@@ -283,8 +269,6 @@ void VoxelGridProperties::blockSignals()
 
 	// Simulator
 	ui.leSim->blockSignals(true);
-	ui.spDevice->blockSignals(true);
-	ui.spPlatform->blockSignals(true);
 
 	// Position
 	ui.xP->blockSignals(true);
@@ -321,8 +305,6 @@ void VoxelGridProperties::enableSignals()
 
 	// Simulator
 	ui.leSim->blockSignals(false);
-	ui.spDevice->blockSignals(false);
-	ui.spPlatform->blockSignals(false);
 
 	// Position
 	ui.xP->blockSignals(false);

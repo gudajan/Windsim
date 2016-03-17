@@ -20,6 +20,8 @@ class Simulator : public QObject
 {
 	Q_OBJECT
 public:
+	static void initOpenCL();
+
 	Simulator(Logger* logger = nullptr, QObject* parent = nullptr);
 
 	void continueSim(bool stop = false); // Continue simulation after simulation results are processed by rendering thread
@@ -44,7 +46,10 @@ public slots:
 	void start(); // Start thread loop
 	void stop(); // Stop thread loop
 
-	void createWindTunnel(int clDevice, int clPlatform, const QString& settingsFile); // Construct new windtunnel, (re-)initializes OpenCL
+	//void runSimulation(bool enabled); // Pause/Continue simulation
+
+	void changeWindTunnelSettings(const QString& settingsFile); // Called when the json settings file changed
+	bool createWindTunnel(const QString& settingsFile); // Construct new windtunnel
 	void updateGrid(); // Update CellTypes and solid velocity from local vectors
 	void setGridDimensions(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Update grid dimensions (empties cellTypes until next updateGrid)
 
@@ -54,11 +59,14 @@ private slots:
 private:
 	void log(const QString& msg);
 
+	static QMutex m_openCLMutex;
+	static int m_clDevice;
+	static int m_clPlatform;
+	static bool m_pauseSim;
+
 	wtl::WindTunnel m_windTunnel;
 
 	// WindTunnel creation parameters
-	int m_clDevice;
-	int m_clPlatform;
 	QString m_settingsFile;
 	QDateTime m_fileLastModified;
 
@@ -83,8 +91,6 @@ private:
 	bool m_sim;
 	bool m_simSmoke;
 	bool m_simLines;
-
-	bool m_initialized;
 
 	// Thread synchronization
 	QElapsedTimer m_elapsedTimer;

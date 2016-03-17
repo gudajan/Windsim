@@ -28,6 +28,12 @@ struct Settings
 
 	} cam;
 
+	struct OpenCL
+	{
+		int device;
+		int platform;
+	} opencl;
+
 	struct Mesh
 	{
 		struct DefaultColor

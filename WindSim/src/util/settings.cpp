@@ -9,6 +9,10 @@ Settings conf = {
 		10.0f,
 		FirstPerson
 	},
+	{
+		0,
+		0
+	},
 	// Mesh
 	{
 		{ 204, 204, 204 }, // DefaultColor rgb
@@ -50,6 +54,9 @@ void loadIni(const std::string& path)
 	std::string type = conf.cam.type == FirstPerson ? "FirstPerson" : "ModelView";
 	type = getIniVal(iniMap, "Camera", "Type", type);
 	conf.cam.type = type == "ModelView" ? ModelView : FirstPerson;
+
+	conf.opencl.device = std::stoi(getIniVal(iniMap, "OpenCL", "Device", std::to_string(conf.opencl.device)));
+	conf.opencl.platform = std::stoi(getIniVal(iniMap, "OpenCL", "Platform", std::to_string(conf.opencl.platform)));
 
 	conf.mesh.dc.r = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.red", std::to_string(conf.mesh.dc.r)));
 	conf.mesh.dc.g = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.green", std::to_string(conf.mesh.dc.g)));

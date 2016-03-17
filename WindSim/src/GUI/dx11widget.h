@@ -56,7 +56,7 @@ signals:
 	void mouseLeave();
 
 	void reloadShadersTriggered();
-	void reloadIniTriggered();
+	void settingsChanged();
 
 private:
 	QThread m_renderThread;

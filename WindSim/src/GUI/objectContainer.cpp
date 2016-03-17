@@ -265,10 +265,6 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["Rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
 		if (!object.contains("renderVoxel"))
 			object["renderVoxel"] = Qt::Checked;
-		if (!object.contains("clDevice"))
-			object["clDevice"] = 0;
-		if (!object.contains("clPlatform"))
-			object["clPlatform"] = 0;
 		if (!object.contains("windtunnelSettings"))
 			object["windtunnelSettings"] = ""; // Simulation uses default values
 		if (!object.contains("glyphs"))

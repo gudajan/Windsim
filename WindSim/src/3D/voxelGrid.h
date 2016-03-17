@@ -35,7 +35,7 @@ public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
 
-	VoxelGrid(ObjectManager* manager, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize, int clDevice, int clPlatform, const std::string& simSettingsFile, DX11Renderer* renderer, QObject* parent = nullptr);
+	VoxelGrid(ObjectManager* manager, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize, const std::string& simSettingsFile, DX11Renderer* renderer, QObject* parent = nullptr);
 	~VoxelGrid();
 
 	HRESULT create(ID3D11Device* device, bool clearClientBuffers = false) override; // Create custom viewport, renderTargets, UAV etc
@@ -56,7 +56,7 @@ public:
 	void setRenderGlyphs(bool renderGlyphs) { m_renderGlyphs = renderGlyphs; };
 	void setGlyphSettings(Orientation orientation, float position);
 	void setGlyphQuantity(const DirectX::XMUINT2& quantity);
-	void setSimulation(int clDevice, int clPlatform, const QString& settingsFile);
+	void setSimulation(const QString& settingsFile);
 
 public slots:
 	void processSimResult() { m_processSimResults = true; };
@@ -65,7 +65,8 @@ public slots:
 signals:
 	void gridUpdated();
 	void gridResized(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize);
-	void windTunnelSettingsChanged(int clDevice, int clPlatform, const QString& settingsFile);
+	void windTunnelSettingsChanged(const QString& settingsFile);
+	void runSimulation(bool enabled);
 	void stopSimulation();
 
 private:

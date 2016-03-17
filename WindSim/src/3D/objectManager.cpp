@@ -78,7 +78,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			QJsonObject voxelSize = data["voxelSize"].toObject();
 			XMFLOAT3 vs(voxelSize["x"].toDouble(), voxelSize["y"].toDouble(), voxelSize["z"].toDouble());
 
-			VoxelGrid* obj = new VoxelGrid(this, res, vs, data["clDevice"].toInt(), data["clPlatform"].toInt(), data["windTunnelSettings"].toString().toStdString(), m_renderer);
+			VoxelGrid* obj = new VoxelGrid(this, res, vs, data["windTunnelSettings"].toString().toStdString(), m_renderer);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
 			VoxelGridActor* act = new VoxelGridActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
@@ -138,7 +138,7 @@ void ObjectManager::modify(const QJsonObject& data)
 	else
 	{
 		mod = Modifications(data["modifications"].toInt());
-		for (auto m : { Position, Scaling, Rotation, Voxelization, Resolution, VoxelSize, ClDevice, ClPlatform, WindTunnelSettings , All })
+		for (auto m : { Position, Scaling, Rotation, Voxelization, Resolution, VoxelSize, WindTunnelSettings , All })
 		{
 			if (mod.testFlag(m))
 			{
@@ -228,7 +228,7 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->resize(res, vs);
 		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
 		act->setGlyphSettings(renderGlyphs, orientation, position, quantity);
-		act->getObject()->setSimulation(data["clDevice"].toInt(), data["clPlatform"].toInt(), data["windTunnelSettings"].toString());
+		act->getObject()->setSimulation(data["windTunnelSettings"].toString());
 	}
 }
 

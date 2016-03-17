@@ -67,7 +67,7 @@ public slots:
 	void onRemoveAll();
 	void onSelectionChanged(std::unordered_set<int> ids);
 	bool reloadShaders(); // Recompile and load all shaders
-	void reloadIni(); // Update everything, which depends on ini-values
+	void changeSettings(); // Update everything, which depends on ini-values
 
 signals:
 	void updateFPS(int fps);

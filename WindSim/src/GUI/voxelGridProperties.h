@@ -27,9 +27,7 @@ private slots:
 	void resolutionChanged();
 	void voxelSizeChanged();
 	void glyphSettingsChanged();
-
 	void chooseSimulatorSettings(); // Open Filedialog to choose settings file
-	void showOpenCLInfo();
 
 	void buttonClicked(QAbstractButton* button);
 

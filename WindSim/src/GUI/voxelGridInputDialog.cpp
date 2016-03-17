@@ -12,7 +12,6 @@ VoxelGridInputDialog::VoxelGridInputDialog(QWidget* parent)
 	ui.setupUi(this);
 
 	connect(ui.pbSim, SIGNAL(clicked()), this, SLOT(chooseSimulatorSettings()));
-	connect(ui.pbInfo, SIGNAL(clicked()), this, SLOT(showOpenCLInfo()));
 }
 
 std::vector<int> VoxelGridInputDialog::getGridResolution()
@@ -28,16 +27,6 @@ std::vector<double> VoxelGridInputDialog::getVoxelSize()
 QString VoxelGridInputDialog::getSimulatorSettings()
 {
 	return ui.leSim->text();
-}
-
-int VoxelGridInputDialog::getClDevice()
-{
-	return ui.spDevice->value();
-}
-
-int VoxelGridInputDialog::getClPlatform()
-{
-	return ui.spPlatform->value();
 }
 
 void VoxelGridInputDialog::chooseSimulatorSettings()

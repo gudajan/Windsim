@@ -4,8 +4,10 @@
 #include "axes.h"
 #include "marker.h"
 #include "voxelGrid.h"
+#include "simulator.h"
 #include "dynamics.h"
 #include "settings.h"
+
 
 #include <iostream>
 #include <cassert>
@@ -159,6 +161,8 @@ bool DX11Renderer::init()
 	m_transformer.initDX11(m_device);
 
 	OutputDebugStringA("Initialized DirectX 11\n");
+
+	Simulator::initOpenCL();
 
 	return createShaders();
 }
@@ -501,8 +505,9 @@ bool DX11Renderer::reloadShaders()
 	return reloaded;
 }
 
-void DX11Renderer::reloadIni()
+void DX11Renderer::changeSettings()
 {
+	Simulator::initOpenCL();
 	m_camera.computeViewMatrix(); // Depends on camera type
 }
 

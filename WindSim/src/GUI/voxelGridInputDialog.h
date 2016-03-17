@@ -14,8 +14,6 @@ public:
 	std::vector<int> getGridResolution();
 	std::vector<double> getVoxelSize();
 	QString getSimulatorSettings();
-	int getClDevice();
-	int getClPlatform();
 
 private slots:
 	void chooseSimulatorSettings();
