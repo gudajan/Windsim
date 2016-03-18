@@ -66,6 +66,9 @@ enum Modification
 	WindTunnelSettings = 0x400,
 	GlyphSettings = 0x800,
 	DynamicsSettings = 0x1000,
+	RunSimulation = 0x2000,
+	SmokeSettings = 0x4000,
+	LineSettings = 0x8000,
 
 	All = UINT_MAX
 };

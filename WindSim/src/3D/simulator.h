@@ -9,6 +9,7 @@
 #include <QMutex>
 #include <QWaitCondition>
 #include <QDateTime>
+#include <QJsonObject>
 
 #include <vector>
 
@@ -46,12 +47,14 @@ public slots:
 	void start(); // Start thread loop
 	void stop(); // Stop thread loop
 
-	//void runSimulation(bool enabled); // Pause/Continue simulation
-
-	void changeWindTunnelSettings(const QString& settingsFile); // Called when the json settings file changed
+	void changeSimSettings(const QString& settingsFile); // Called when the json settings file changed
 	bool createWindTunnel(const QString& settingsFile); // Construct new windtunnel
 	void updateGrid(); // Update CellTypes and solid velocity from local vectors
 	void setGridDimensions(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Update grid dimensions (empties cellTypes until next updateGrid)
+
+	void runSimulation(bool enabled); // Pause/Continue simulation
+	void changeSmokeSettings(const QJsonObject& settings);
+	void changeLineSettings(const QJsonObject& settings);
 
 private slots:
 	void step(); // Thread loop

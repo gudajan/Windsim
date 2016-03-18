@@ -99,7 +99,7 @@ void Simulator::stop()
 	thread()->quit(); // Quit the thread
 }
 
-void Simulator::changeWindTunnelSettings(const QString& settingsFile)
+void Simulator::changeSimSettings(const QString& settingsFile)
 {
 	if (createWindTunnel(settingsFile))
 		setGridDimensions(m_resolution, m_voxelSize);
@@ -160,6 +160,31 @@ void Simulator::setGridDimensions(const XMUINT3& resolution, const XMFLOAT3& vox
 
 	log("INFO: Done.");
 	emit simUpdated();
+}
+
+void Simulator::runSimulation(bool enabled)
+{
+	m_sim = enabled;
+}
+
+void Simulator::changeSmokeSettings(const QJsonObject& settings)
+{
+	m_simSmoke = settings["enabled"].toBool();
+	m_windTunnel.smokeSim(m_simSmoke ? Smoke::Enabled : Smoke::Disabled);
+	const QJsonObject& pos = settings["seedPosition"].toObject();
+	m_windTunnel.setSmokePosition({ static_cast<float>(pos["x"].toDouble()), static_cast<float>(pos["y"].toDouble()), static_cast<float>(pos["z"].toDouble()) });
+	m_windTunnel.setSmokeSeedRadius(static_cast<float>(settings["seedRadius"].toDouble()));
+}
+
+void Simulator::changeLineSettings(const QJsonObject& settings)
+{
+	m_simLines = settings["enabled"].toBool();
+	m_windTunnel.lineSim(m_simLines ? Line::Enabled : Line::Disabled);
+	QString tmp = settings["orientation"].toString();
+	m_windTunnel.setLineOrientation(tmp == "X" ? Line::X : (tmp == "Y" ? Line::Y : Line::Z));
+	tmp = settings["type"].toString();
+	m_windTunnel.setLineType(tmp == "Streamline" ? Line::StreamLine : Line::StreakLine);
+	m_windTunnel.setLinePosition(static_cast<float>(settings["position"].toDouble()));
 }
 
 void Simulator::step()

@@ -13,6 +13,7 @@
 
 #include <QObject>
 #include <QThread>
+#include <QJsonObject>
 
 class ObjectManager;
 struct ID3D11UnorderedAccessView;
@@ -56,7 +57,11 @@ public:
 	void setRenderGlyphs(bool renderGlyphs) { m_renderGlyphs = renderGlyphs; };
 	void setGlyphSettings(Orientation orientation, float position);
 	void setGlyphQuantity(const DirectX::XMUINT2& quantity);
-	void setSimulation(const QString& settingsFile);
+
+	void changeSimSettings(const QString& settingsFile) { first = true; emit simSettingsChanged(settingsFile); };
+	void runSimulation(bool enabled) { emit runSimulationChanged(enabled); };
+	void changeSmokeSettings(const QJsonObject& settings);
+	void changeLineSettings(const QJsonObject& settings);
 
 public slots:
 	void processSimResult() { m_processSimResults = true; };
@@ -65,9 +70,12 @@ public slots:
 signals:
 	void gridUpdated();
 	void gridResized(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize);
-	void windTunnelSettingsChanged(const QString& settingsFile);
-	void runSimulation(bool enabled);
+	void simSettingsChanged(const QString& settingsFile);
 	void stopSimulation();
+
+	void runSimulationChanged(bool enabled);
+	void smokeSettingsChanged(const QJsonObject& settings);
+	void lineSettingsChanged(const QJsonObject& settings);
 
 private:
 	void createGridData(); // Create cube for line rendering
@@ -159,5 +167,6 @@ private:
 
 
 	QElapsedTimer t;
+	bool first;
 };
 #endif

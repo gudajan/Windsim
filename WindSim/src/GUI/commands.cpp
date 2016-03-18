@@ -132,6 +132,9 @@ bool ModifyObjectCmd::mergeWith(const QUndoCommand* cmd)
 	if (m.testFlag(Resolution)) m_newData["resolution"] = json["resolution"].toObject();
 	if (m.testFlag(VoxelSize)) m_newData["voxelSize"] = json["voxelSize"].toObject();
 	if (m.testFlag(GlyphSettings)) m_newData["glyphs"] = json["glyphs"].toObject();
+	if (m.testFlag(RunSimulation)) m_newData["runSimulation"] = json["runSimulation"].toBool();
+	if (m.testFlag(SmokeSettings)) m_newData["smoke"] = json["smoke"].toObject();
+	if (m.testFlag(LineSettings)) m_newData["lines"] = json["lines"].toObject();
 
 	return true;
 }

@@ -62,9 +62,13 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	connect(&m_simulationThread, &QThread::finished, &m_simulationThread, &QObject::deleteLater);
 
 	// Grid -> Simulation/WindTunnel
-	connect(this, &VoxelGrid::windTunnelSettingsChanged, &m_simulator, &Simulator::changeWindTunnelSettings);
 	connect(this, &VoxelGrid::gridUpdated, &m_simulator, &Simulator::updateGrid);
 	connect(this, &VoxelGrid::gridResized, &m_simulator, &Simulator::setGridDimensions);
+	// Gui settings
+	connect(this, &VoxelGrid::simSettingsChanged, &m_simulator, &Simulator::changeSimSettings);
+	connect(this, &VoxelGrid::runSimulationChanged, &m_simulator, &Simulator::runSimulation);
+	connect(this, &VoxelGrid::smokeSettingsChanged, &m_simulator, &Simulator::changeSmokeSettings);
+	connect(this, &VoxelGrid::lineSettingsChanged, &m_simulator, &Simulator::changeLineSettings);
 
 	// Simulation/WindTunnel -> Grid
 	connect(&m_simulator, &Simulator::stepDone, this, &VoxelGrid::processSimResult);
@@ -73,6 +77,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_simulationThread.start();
 
 	t.start();
+	first = true;
 }
 
 VoxelGrid::~VoxelGrid()
@@ -322,13 +327,12 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	{
 		copyGrid(context);
 
-		static bool first = true;
 		if (first && t.elapsed() > 1000)
 		{
 			OutputDebugStringA("UPDATE\n");
 			m_updateGrid = false;
 			emit gridUpdated();
-			//first = false;
+			first = false;
 		}
 		m_voxelizationCounter = -1; // Voxelization cycle finished
 
@@ -403,9 +407,18 @@ void VoxelGrid::setGlyphQuantity(const XMUINT2& quantity)
 	s_shaderVariables.glyphQuantity->SetIntVector(reinterpret_cast<int*>(&m_glyphQuantity));
 }
 
-void VoxelGrid::setSimulation(const QString& settingsFile)
+void VoxelGrid::changeSmokeSettings(const QJsonObject& settings)
 {
-	emit windTunnelSettingsChanged(settingsFile);
+	bool tmp = settings["enabled"].toBool();
+	m_wtRenderer.smokeRendering(tmp ? wtl::Smoke::Enabled : wtl::Smoke::Disabled);
+	emit smokeSettingsChanged(settings);
+}
+
+void VoxelGrid::changeLineSettings(const QJsonObject& settings)
+{
+	bool tmp = settings["enabled"].toBool();
+	m_wtRenderer.lineRendering(tmp ? wtl::Line::Enabled : wtl::Line::Disabled);
+	emit lineSettingsChanged(settings);
 }
 
 void VoxelGrid::createGridData()

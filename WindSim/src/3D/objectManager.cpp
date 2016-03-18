@@ -227,8 +227,16 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->computeWorld();
 		act->resize(res, vs);
 		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
-		act->setGlyphSettings(renderGlyphs, orientation, position, quantity);
-		act->getObject()->setSimulation(data["windTunnelSettings"].toString());
+		if (mod.testFlag(GlyphSettings))
+			act->setGlyphSettings(renderGlyphs, orientation, position, quantity);
+		if (mod.testFlag(WindTunnelSettings))
+			act->getObject()->changeSimSettings(data["windTunnelSettings"].toString());
+		if (mod.testFlag(RunSimulation))
+			act->getObject()->runSimulation(data["runSimulation"].toInt() == Qt::Checked);
+		if (mod.testFlag(SmokeSettings))
+			act->getObject()->changeSmokeSettings(data["smoke"].toObject());
+		if (mod.testFlag(LineSettings))
+			act->getObject()->changeLineSettings(data["lines"].toObject());
 	}
 }
 

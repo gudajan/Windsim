@@ -239,7 +239,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		if (!object.contains("density"))
 			object["density"] = 1.0;
 		if (!object.contains("localRotAxis"))
-			object["localRotAxis"] = QJsonObject{ { "enabled", false }, { "x", 0.0f }, { "y", 0.0f }, { "z", 0.0f } };
+			object["localRotAxis"] = QJsonObject{ { "enabled", Qt::Unchecked }, { "x", 0.0f }, { "y", 0.0f }, { "z", 0.0f } };
 
 	}
 	if (type == ObjectType::VoxelGrid)
@@ -265,13 +265,22 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["Rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
 		if (!object.contains("renderVoxel"))
 			object["renderVoxel"] = Qt::Checked;
-		if (!object.contains("windtunnelSettings"))
-			object["windtunnelSettings"] = ""; // Simulation uses default values
 		if (!object.contains("glyphs"))
 		{
 			QJsonObject tmp{ { "x", object["resolution"].toObject()["x"].toInt() }, { "y", object["resolution"].toObject()["y"].toInt() } };
-			object["glyphs"] = QJsonObject{ { "enabled", false }, { "orientation", XY_PLANE }, { "position", 0.5}, {"quantity", tmp} };
+			object["glyphs"] = QJsonObject{ { "enabled", true }, { "orientation", XY_PLANE }, { "position", 0.5}, {"quantity", tmp} };
 		}
+		if (!object.contains("windtunnelSettings"))
+			object["windtunnelSettings"] = ""; // Simulation uses default values
+		if (!object.contains("runSimulation"))
+			object["runSimulation"] = Qt::Checked;
+		if (!object.contains("smoke"))
+		{
+			QJsonObject tmp{ { "x", 0.125 }, { "y", 0.5 }, { "z", 0.5 } };
+			object["smoke"] = QJsonObject{ { "enabled", true }, { "seedRadius", 0.125 }, { "seedPosition", tmp } };
+		}
+		if (!object.contains("lines"))
+			object["lines"] = QJsonObject{ { "enabled", false }, { "orientation", "Z" }, { "type", "Streakline" }, { "position", 0.5 } };
 	}
 
 	return true;

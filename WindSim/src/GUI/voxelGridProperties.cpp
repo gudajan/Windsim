@@ -50,6 +50,24 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	connect(ui.sbOriX, SIGNAL(valueChanged(int)), this, SLOT(glyphSettingsChanged()));
 	connect(ui.sbOriY, SIGNAL(valueChanged(int)), this, SLOT(glyphSettingsChanged()));
 
+	// WindTunnel
+
+	// Run Simulation
+	connect(ui.cbRunSim, SIGNAL(stateChanged(int)), this, SLOT(runSimulationChanged(int)));
+
+	// Smoke settings
+	connect(ui.gbSmoke, SIGNAL(toggled(bool)), this, SLOT(smokeSettingsChanged()));
+	connect(ui.hsRadius, SIGNAL(valueChanged(int)), this, SLOT(smokeSettingsChanged()));
+	connect(ui.hsSmokePosX, SIGNAL(valueChanged(int)), this, SLOT(smokeSettingsChanged()));
+	connect(ui.hsSmokePosY, SIGNAL(valueChanged(int)), this, SLOT(smokeSettingsChanged()));
+	connect(ui.hsSmokePosZ, SIGNAL(valueChanged(int)), this, SLOT(smokeSettingsChanged()));
+
+	// Line settings
+	connect(ui.gbLines, SIGNAL(toggled(bool)), this, SLOT(lineSettingsChanged()));
+	connect(ui.cbLineOri, SIGNAL(currentIndexChanged(int)), this, SLOT(lineSettingsChanged()));
+	connect(ui.cbLineType, SIGNAL(currentIndexChanged(int)), this, SLOT(lineSettingsChanged()));
+	connect(ui.hsLinePos, SIGNAL(valueChanged(int)), this, SLOT(lineSettingsChanged()));
+
 	// Button
 	connect(ui.buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(buttonClicked(QAbstractButton*)));
 
@@ -80,9 +98,6 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
 		ui.cbShowVoxel->setChecked(properties["renderVoxel"].toInt() == Qt::Checked);
 
-		// Simulator
-		ui.leSim->setText(properties["windTunnelSettings"].toString());
-
 		// Position
 		const QJsonObject& pos = properties.find("Position")->toObject();
 		ui.xP->setValue(pos.find("x")->toDouble()); // right: x in DX1
@@ -108,11 +123,34 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		if (o == XY_PLANE) ui.rbOriZ->setChecked(true);
 		else if (o == XZ_PLANE) ui.rbOriY->setChecked(true);
 		else ui.rbOriX->setChecked(true);
-		ui.hsPos->setValue(gs["position"].toDouble() * ui.hsPos->maximum());
+		setSliderValue(ui.hsPos, gs["position"].toDouble());
 		const QJsonObject& quant = gs["quantity"].toObject();
 		ui.sbOriX->setValue(quant["x"].toInt());
 		ui.sbOriY->setValue(quant["y"].toInt());
 
+		// WindTunnel Settings
+
+		// Run Simulation
+		ui.cbRunSim->setChecked(properties["runSimulation"].toInt() == Qt::Checked);
+
+		// Simulator
+		ui.leSim->setText(properties["windTunnelSettings"].toString());
+
+		// Smoke
+		const QJsonObject& smoke = properties.find("smoke")->toObject();
+		ui.gbSmoke->setChecked(smoke["enabled"].toBool());
+		setSliderValue(ui.hsRadius, smoke["seedRadius"].toDouble());
+		const QJsonObject& smokePos = smoke["seedPosition"].toObject();
+		setSliderValue(ui.hsSmokePosX, smokePos["x"].toDouble());
+		setSliderValue(ui.hsSmokePosY, smokePos["y"].toDouble());
+		setSliderValue(ui.hsSmokePosZ, smokePos["z"].toDouble());
+
+		// Lines
+		const QJsonObject& lines = properties.find("lines")->toObject();
+		ui.gbLines->setChecked(lines["enabled"].toBool());
+		ui.cbLineOri->setCurrentText(lines["orientation"].toString());
+		ui.cbLineType->setCurrentText(lines["type"].toString());
+		setSliderValue(ui.hsLinePos, lines["position"].toDouble());
 
 		m_properties = properties; // Copy properties
 	}
@@ -241,12 +279,51 @@ void VoxelGridProperties::glyphSettingsChanged()
 	{
 		{ "enabled", ui.gbGlyph->isChecked() },
 		{ "orientation", ui.rbOriX->isChecked() ? YZ_PLANE : ui.rbOriY->isChecked() ? XZ_PLANE : XY_PLANE },
-		{ "position", static_cast<float>(ui.hsPos->value()) / static_cast<float>(ui.hsPos->maximum()) }, // Assume minimum slider value is zero -> transform to [0 - 1]
+		{ "position", sliderFloatValue(ui.hsPos) }, // Assume minimum slider value is zero -> transform to [0 - 1]
 		{ "quantity", quantity }
 	};
 	m_properties["glyphs"] = gs;
 
 	emit propertiesChanged( m_properties, GlyphSettings);
+}
+
+void VoxelGridProperties::runSimulationChanged(int state)
+{
+	m_properties["runSimulation"] = state;
+	emit propertiesChanged(m_properties, RunSimulation);
+}
+
+void VoxelGridProperties::smokeSettingsChanged()
+{
+	QJsonObject position
+	{
+		{ "x", sliderFloatValue(ui.hsSmokePosX) },
+		{ "y", sliderFloatValue(ui.hsSmokePosY) },
+		{ "z", sliderFloatValue(ui.hsSmokePosZ) }
+	};
+	QJsonObject smoke
+	{
+		{ "enabled", ui.gbSmoke->isChecked() },
+		{ "seedRadius", sliderFloatValue(ui.hsRadius) },
+		{ "seedPosition", position }
+	};
+	m_properties["smoke"] = smoke;
+
+	emit propertiesChanged(m_properties, SmokeSettings);
+}
+
+void VoxelGridProperties::lineSettingsChanged()
+{
+	QJsonObject lines
+	{
+		{ "enabled", ui.gbLines->isChecked() },
+		{ "orientation", ui.cbLineOri->currentText() },
+		{ "type", ui.cbLineType->currentText() },
+		{ "position", sliderFloatValue(ui.hsLinePos) }
+	};
+	m_properties["lines"] = lines;
+
+	emit propertiesChanged(m_properties, LineSettings);
 }
 
 void VoxelGridProperties::buttonClicked(QAbstractButton* button)
@@ -255,7 +332,7 @@ void VoxelGridProperties::buttonClicked(QAbstractButton* button)
 	QDialogButtonBox::StandardButton sb = ui.buttonBox->standardButton(button);
 	if (sb == QDialogButtonBox::Apply || sb == QDialogButtonBox::Ok)
 	{
-		emit propertiesChanged(m_properties, Position | Name | Voxelization | Visibility | Resolution | VoxelSize | WindTunnelSettings | GlyphSettings);
+		emit propertiesChanged(m_properties, Position | Name | Voxelization | Visibility | Resolution | VoxelSize | WindTunnelSettings | GlyphSettings | RunSimulation | SmokeSettings | LineSettings);
 	}
 }
 
@@ -266,9 +343,6 @@ void VoxelGridProperties::blockSignals()
 	// Visibility
 	ui.cbDisabled->blockSignals(true);
 	ui.cbShowVoxel->blockSignals(true);
-
-	// Simulator
-	ui.leSim->blockSignals(true);
 
 	// Position
 	ui.xP->blockSignals(true);
@@ -293,6 +367,27 @@ void VoxelGridProperties::blockSignals()
 	ui.hsPos->blockSignals(true);
 	ui.sbOriX->blockSignals(true);
 	ui.sbOriY->blockSignals(true);
+
+	// WindTunnel
+
+	// Simulator
+	ui.leSim->blockSignals(true);
+
+	// Run Simulation
+	ui.cbRunSim->blockSignals(true);
+
+	// Smoke
+	ui.gbSmoke->blockSignals(true);
+	ui.hsRadius->blockSignals(true);
+	ui.hsSmokePosX->blockSignals(true);
+	ui.hsSmokePosY->blockSignals(true);
+	ui.hsSmokePosZ->blockSignals(true);
+
+	// Lines
+	ui.gbLines->blockSignals(true);
+	ui.cbLineOri->blockSignals(true);
+	ui.cbLineType->blockSignals(true);
+	ui.hsLinePos->blockSignals(true);
 }
 
 void VoxelGridProperties::enableSignals()
@@ -302,9 +397,6 @@ void VoxelGridProperties::enableSignals()
 	// Visibility
 	ui.cbDisabled->blockSignals(false);
 	ui.cbShowVoxel->blockSignals(false);
-
-	// Simulator
-	ui.leSim->blockSignals(false);
 
 	// Position
 	ui.xP->blockSignals(false);
@@ -329,4 +421,25 @@ void VoxelGridProperties::enableSignals()
 	ui.hsPos->blockSignals(false);
 	ui.sbOriX->blockSignals(false);
 	ui.sbOriY->blockSignals(false);
+
+	// WindTunnel
+
+	// Simulator
+	ui.leSim->blockSignals(false);
+
+	// Run Simulation
+	ui.cbRunSim->blockSignals(false);
+
+	// Smoke
+	ui.gbSmoke->blockSignals(false);
+	ui.hsRadius->blockSignals(false);
+	ui.hsSmokePosX->blockSignals(false);
+	ui.hsSmokePosY->blockSignals(false);
+	ui.hsSmokePosZ->blockSignals(false);
+
+	// Lines
+	ui.gbLines->blockSignals(false);
+	ui.cbLineOri->blockSignals(false);
+	ui.cbLineType->blockSignals(false);
+	ui.hsLinePos->blockSignals(false);
 }
