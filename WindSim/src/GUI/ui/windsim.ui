@@ -6,18 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1016</width>
-    <height>772</height>
+    <width>1105</width>
+    <height>660</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>WindSim</string>
-  </property>
-  <property name="windowOpacity">
-   <double>1.000000000000000</double>
-  </property>
-  <property name="toolTipDuration">
-   <number>-1</number>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -261,7 +255,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1016</width>
+     <width>1105</width>
      <height>21</height>
     </rect>
    </property>

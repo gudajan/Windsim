@@ -78,13 +78,13 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			QJsonObject voxelSize = data["voxelSize"].toObject();
 			XMFLOAT3 vs(voxelSize["x"].toDouble(), voxelSize["y"].toDouble(), voxelSize["z"].toDouble());
 
-			VoxelGrid* obj = new VoxelGrid(this, res, vs, data["windTunnelSettings"].toString().toStdString(), m_renderer);
+
+			VoxelGrid* obj = new VoxelGrid(this, data["windTunnelSettings"].toString(), res, vs, m_renderer);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
 			VoxelGridActor* act = new VoxelGridActor(*obj, id);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, false);
-			obj->onResizeSwapChain(device, m_renderer->getBackBufferDesc()); // Call resize manually for the first time to properly initialize object
 		}
 		else
 		{
@@ -260,6 +260,15 @@ void ObjectManager::onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_D
 	for (const auto& actor : m_accessoryActors)
 	{
 		actor.second->getObject()->onResizeSwapChain(device, backBufferDesc);
+	}
+}
+
+void ObjectManager::initOpenCL()
+{
+	for (const auto& actor : m_actors)
+	{
+		if (actor.second->getType() == ObjectType::VoxelGrid)
+			std::dynamic_pointer_cast<VoxelGridActor>(actor.second)->getObject()->reinitWindTunnel();
 	}
 }
 

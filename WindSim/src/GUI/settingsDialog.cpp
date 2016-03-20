@@ -49,6 +49,9 @@ void SettingsDialog::updateSettings()
 
 	ui.cbUseDynWorld->setChecked(conf.dyn.useDynWorldForCalc);
 	ui.cbShowDynTrans->setChecked(conf.dyn.showDynDuringMod);
+
+	ui.sbPlatform->setValue(conf.opencl.platform);
+	ui.sbDevice->setValue(conf.opencl.device);
 }
 
 void SettingsDialog::cameraTypeToggled(bool b)

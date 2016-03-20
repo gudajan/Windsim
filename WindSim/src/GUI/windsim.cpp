@@ -42,7 +42,6 @@ WindSim::WindSim(QWidget *parent)
 
 	m_container.setRenderer(ui.dx11Viewer->getRenderer()); // Set renderer for object container, so it can propagate changes directly to the renderer
 
-
 	// Project-actions
 	connect(ui.actionNew, SIGNAL(triggered()), this, SLOT(actionNewTriggered()));
 	connect(ui.actionOpen, SIGNAL(triggered()), this, SLOT(actionOpenTriggered()));
@@ -62,6 +61,8 @@ WindSim::WindSim(QWidget *parent)
 	connect(ui.objectView->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)), this, SLOT(onGUISelectionChanged()));
 	// WindSim to 3D Renderer (in another thread)
 	connect(this, &WindSim::selectionChanged, ui.dx11Viewer->getRenderer(), &DX11Renderer::onSelectionChanged);
+	connect(this, &WindSim::startRendering, ui.dx11Viewer->getRenderer(), &DX11Renderer::execute);
+	connect(this, &WindSim::pauseRendering, ui.dx11Viewer->getRenderer(), &DX11Renderer::pause);
 	// 3D Renderer to WindSim
 	connect(ui.dx11Viewer->getRenderer(), &DX11Renderer::selectionChanged, this, &WindSim::on3DSelectionChanged);
 	connect(ui.dx11Viewer->getRenderer(), &DX11Renderer::updateFPS, this, &WindSim::onUpdateFPS);
@@ -132,6 +133,8 @@ bool WindSim::actionNewTriggered()
 
 	g_undoStack.clear();
 
+	emit startRendering();
+
 	return true;
 }
 
@@ -163,6 +166,8 @@ bool WindSim::actionOpenTriggered()
 	g_undoStack.clear();
 	StaticLogger::logit("INFO: Opened project from '" + filename + "'.");
 
+	emit startRendering();
+
 	return true;
 }
 
@@ -180,6 +185,8 @@ void WindSim::actionCloseTriggered()
 
 	g_undoStack.clear();
 	StaticLogger::logit("INFO: Closed project.");
+
+	emit pauseRendering();
 }
 
 bool WindSim::actionSaveTriggered()

@@ -36,7 +36,7 @@ public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
 
-	VoxelGrid(ObjectManager* manager, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize, const std::string& simSettingsFile, DX11Renderer* renderer, QObject* parent = nullptr);
+	VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize, DX11Renderer* renderer, QObject* parent = nullptr);
 	~VoxelGrid();
 
 	HRESULT create(ID3D11Device* device, bool clearClientBuffers = false) override; // Create custom viewport, renderTargets, UAV etc
@@ -58,22 +58,25 @@ public:
 	void setGlyphSettings(Orientation orientation, float position);
 	void setGlyphQuantity(const DirectX::XMUINT2& quantity);
 
-	void changeSimSettings(const QString& settingsFile) { first = true; emit simSettingsChanged(settingsFile); };
-	void runSimulation(bool enabled) { emit runSimulationChanged(enabled); };
+	void changeSimSettings(const QString& settingsFile);
+	void runSimulation(bool enabled) { if (enabled) emit startSimulation(); else emit pauseSimulation(); };
 	void changeSmokeSettings(const QJsonObject& settings);
 	void changeLineSettings(const QJsonObject& settings);
+	void reinitWindTunnel() { m_simulator.reinitWindTunnel(); }
 
 public slots:
 	void processSimResult() { m_processSimResults = true; };
 	void enableGridUpdate() { m_updateGrid = true; };
+	void simulatorResized() { m_simResize = false; m_updateGrid = true; first = true; }
 
 signals:
 	void gridUpdated();
 	void gridResized(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize);
 	void simSettingsChanged(const QString& settingsFile);
+	void startSimulation();
 	void stopSimulation();
+	void pauseSimulation();
 
-	void runSimulationChanged(bool enabled);
 	void smokeSettingsChanged(const QJsonObject& settings);
 	void lineSettingsChanged(const QJsonObject& settings);
 
@@ -131,9 +134,9 @@ private:
 	DirectX::XMFLOAT3 m_voxelSize; // Size of one voxel in object space of the grid
 	DirectX::XMUINT2 m_glyphQuantity;
 
-	bool m_resize; // Indicates if voxelgrid has to be reinitialized, because resolution, voxelSize changed
 	bool m_updateGrid; // Indicates that the simulation should be updated after next voxelization
 	bool m_processSimResults; // Indicate that we may copy the data from the local simulation vectors to the GPU
+	bool m_simResize;
 	int m_dynamicsCounter;
 	int m_voxelizationCounter;
 

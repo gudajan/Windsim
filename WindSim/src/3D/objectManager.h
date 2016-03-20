@@ -35,6 +35,7 @@ public:
 	void onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc);
 	void release(bool withAccessories);
 	void voxelizeNextFrame(); // Issue a voxelization for all voxelgrids in the next frame
+	void initOpenCL();
 
 	void updateCursor(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, bool containsCursor); // Update id of hovered object
 	bool updateSelection(Selection op);

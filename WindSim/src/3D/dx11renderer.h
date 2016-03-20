@@ -40,6 +40,9 @@ public:
 	Camera* getCamera() { return &m_camera; };
 	Logger* getLogger() { return &m_logger; };
 	const DXGI_SURFACE_DESC* getBackBufferDesc() const { return &m_backBufferDesc; };
+	ID3D11Device* getDevice() { return m_device; };
+
+	void drawInfo(const QString& info);
 
 public slots:
 	void frame(); // Compute one Frame
@@ -48,6 +51,7 @@ public slots:
 	// Start/Stop rendering
 	void execute(); // Enter Render loop
 	void stop(); // Stop Render loop
+	void pause(); // Pause Render loop
 
 	// Arbitrary Events
 	void onResize(int width, int height); // Resize viewport
@@ -59,7 +63,6 @@ public slots:
 	void onWheelUse(QPoint angleDelta);
 	void onMouseEnter() { m_containsCursor = true; };
 	void onMouseLeave() { m_containsCursor = false; };
-
 
 	void onAddObject(const QJsonObject& data);
 	void onModifyObject(const QJsonObject& data);
@@ -73,6 +76,7 @@ signals:
 	void updateFPS(int fps);
 	void selectionChanged(std::unordered_set<int> ids);
 	void modify(std::vector<QJsonObject> data);
+	void drawText(const QString& str);
 
 private:
 	bool createShaders(); // Load all shaders

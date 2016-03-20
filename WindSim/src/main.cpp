@@ -7,6 +7,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <DirectXMath.h>
+
 int main(int argc, char *argv[])
 {
 #if defined(DEBUG) | defined(_DEBUG)
@@ -19,6 +21,8 @@ int main(int argc, char *argv[])
 	qRegisterMetaType<ObjectType>();
 	qRegisterMetaType <std::unordered_set<int>>();
 	qRegisterMetaType <std::vector<QJsonObject>>();
+	qRegisterMetaType<DirectX::XMUINT3>();
+	qRegisterMetaType<DirectX::XMFLOAT3>();
 
 	QApplication a(argc, argv);
 	WindSim w;

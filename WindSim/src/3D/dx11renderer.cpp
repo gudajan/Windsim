@@ -167,6 +167,11 @@ bool DX11Renderer::init()
 	return createShaders();
 }
 
+void DX11Renderer::drawInfo(const QString& info)
+{
+	emit drawText(info);
+}
+
 void DX11Renderer::frame()
 {
 	if (m_state == State::ShaderError)
@@ -183,6 +188,7 @@ void DX11Renderer::frame()
 	m_elapsedTimes.pop_back();
 	m_elapsedTimes.push_front(1.0e9 / elapsedTime); // 1 sec / elapsedTime nsec = fps
 	m_currentFPS = std::accumulate(m_elapsedTimes.begin(), m_elapsedTimes.end(), 0.0, [](float acc, const float& val) {return acc + fpsFramesWeight * val; });
+	//emit drawText(QString::number(m_currentFPS, 'f', 2));
 	emit updateFPS(static_cast<int>(m_currentFPS)); // Show fps in statusBar
 }
 
@@ -193,7 +199,6 @@ void DX11Renderer::issueVoxelization()
 
 void DX11Renderer::execute()
 {
-	OutputDebugStringA(("WORKER THREAD: " + std::to_string(reinterpret_cast<int>(thread()->currentThreadId())) + "\n").c_str());
 	m_elapsedTimer.start();
 	m_renderTimer.start(8); // Rendering happens with 125 FPS at max
 	m_voxelizationTimer.start(8); // Voxelization happens 40 times per second at maximum
@@ -205,6 +210,12 @@ void DX11Renderer::stop()
 	m_voxelizationTimer.stop();
 	destroy();
 	thread()->quit(); // Quit the thread
+}
+
+void DX11Renderer::pause()
+{
+	m_renderTimer.stop();
+	m_voxelizationTimer.stop();
 }
 
 void DX11Renderer::onResize(int width, int height)
@@ -507,7 +518,14 @@ bool DX11Renderer::reloadShaders()
 
 void DX11Renderer::changeSettings()
 {
-	Simulator::initOpenCL();
+	if (Simulator::initOpenCLNecessary())
+	{
+		QMutexLocker lock(&Simulator::mutex()); // Lock all simulations
+		Simulator::initOpenCL();
+		// Init all objects that require OpenCL to use new OpenCL objects
+		// within THIS thread so we can synchronize with the static operation
+		m_manager.initOpenCL();
+	}
 	m_camera.computeViewMatrix(); // Depends on camera type
 }
 

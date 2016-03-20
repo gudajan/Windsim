@@ -15,16 +15,16 @@
 
 using namespace DirectX;
 
-VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelSize, const std::string& simSettingsFile, DX11Renderer* renderer, QObject* parent)
+VoxelGrid::VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, XMUINT3 resolution, XMFLOAT3 voxelSize, DX11Renderer* renderer, QObject* parent)
 	: QObject(parent),
 	Object3D(renderer),
 	m_manager(manager),
 	m_resolution(resolution),
 	m_voxelSize(voxelSize),
 	m_glyphQuantity(32, 32),
-	m_resize(false),
 	m_updateGrid(true),
 	m_processSimResults(false),
+	m_simResize(false),
 	m_dynamicsCounter(-1),
 	m_voxelizationCounter(-1),
 	m_cubeIndices(0),
@@ -45,34 +45,34 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, XMUINT3 resolution, XMFLOAT3 voxelS
 	m_velocityTexture(nullptr),
 	m_velocityTextureStaging(nullptr),
 	m_velocitySRV(nullptr),
-	m_wtRenderer(simSettingsFile),
-	m_simulator(m_renderer->getLogger()),
+	m_wtRenderer(),
+	m_simulator(windTunnelSettings, resolution, voxelSize, m_renderer),
 	m_simulationThread()
 {
 	createGridData();
 
-	m_simulator.createWindTunnel(QString::fromStdString(simSettingsFile));
-	m_simulator.setGridDimensions(resolution, voxelSize);
 	m_simulator.moveToThread(&m_simulationThread);
 
 	// Start/stop thread
-	connect(&m_simulationThread, &QThread::started, &m_simulator, &Simulator::start);
+	//connect(&m_simulationThread, &QThread::started, &m_simulator, &Simulator::start);
+	connect(this, &VoxelGrid::startSimulation, &m_simulator, &Simulator::start);
 	connect(this, &VoxelGrid::stopSimulation, &m_simulator, &Simulator::stop);
+	connect(this, &VoxelGrid::pauseSimulation, &m_simulator, &Simulator::pause);
 	//connect(&m_simulationThread, &QThread::finished, &m_simulator, &QObject::deleteLater); // Error in delete of windtunnel
 	connect(&m_simulationThread, &QThread::finished, &m_simulationThread, &QObject::deleteLater);
 
 	// Grid -> Simulation/WindTunnel
 	connect(this, &VoxelGrid::gridUpdated, &m_simulator, &Simulator::updateGrid);
-	connect(this, &VoxelGrid::gridResized, &m_simulator, &Simulator::setGridDimensions);
+	connect(this, &VoxelGrid::gridResized, &m_simulator, &Simulator::setGridDimension);
 	// Gui settings
 	connect(this, &VoxelGrid::simSettingsChanged, &m_simulator, &Simulator::changeSimSettings);
-	connect(this, &VoxelGrid::runSimulationChanged, &m_simulator, &Simulator::runSimulation);
 	connect(this, &VoxelGrid::smokeSettingsChanged, &m_simulator, &Simulator::changeSmokeSettings);
 	connect(this, &VoxelGrid::lineSettingsChanged, &m_simulator, &Simulator::changeLineSettings);
 
 	// Simulation/WindTunnel -> Grid
 	connect(&m_simulator, &Simulator::stepDone, this, &VoxelGrid::processSimResult);
 	connect(&m_simulator, &Simulator::simUpdated, this, &VoxelGrid::enableGridUpdate);
+	connect(&m_simulator, &Simulator::simulatorResized, this, &VoxelGrid::simulatorResized);
 
 	m_simulationThread.start();
 
@@ -245,6 +245,7 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_gridVelTextureStaging));
 
 	m_wtRenderer.init(device, m_resolution, m_voxelSize);
+	m_wtRenderer.onResizeSwapChain(device, m_renderer->getBackBufferDesc());
 
 	return S_OK;
 }
@@ -272,15 +273,9 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 {
 	QElapsedTimer timer;
 	timer.start();
-	if (m_resize)
-	{
-		createGridData();
-		create(device, false);
-		m_resize = false;
-	}
 
 	// Process simulation results
-	if (m_processSimResults && m_dynamicsCounter == -1)
+	if (!m_simResize && m_processSimResults && m_dynamicsCounter == -1)
 	{
 		QElapsedTimer t2;
 		t2.start();
@@ -311,7 +306,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	if (m_voxelize)
 	{
 		// Only copy to staging if last copy to CPU is finished and grid update possible
-		if (m_voxelizationCounter == -1 && m_updateGrid)
+		if (m_voxelizationCounter == -1 && m_updateGrid && !m_simResize)
 		{
 			voxelize(device, context, world, true);
 			m_voxelizationCounter = 0;
@@ -332,7 +327,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 			OutputDebugStringA("UPDATE\n");
 			m_updateGrid = false;
 			emit gridUpdated();
-			first = false;
+			//first = false;
 		}
 		m_voxelizationCounter = -1; // Voxelization cycle finished
 
@@ -384,12 +379,20 @@ bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
 
 	m_resolution = resolution;
 	m_voxelSize = voxelSize;
+
+	// Recreate with new dimensions
+	createGridData();
+	create(m_renderer->getDevice(), false);
+
 	emit gridResized(m_resolution, m_voxelSize);
-	m_resize = true; // Cannot resize here, because we have no dx11 device
 
 	// Disable access to local simulation vectors until they are resized by the simulation thread
 	m_updateGrid = false;
 	m_processSimResults = false;
+	m_simResize = true;
+	// Abort current render cycles
+	m_voxelizationCounter = -1;
+	m_dynamicsCounter = -1;
 	m_simulator.continueSim(); // Make sure the resize event is processed
 
 	return true;
@@ -406,6 +409,19 @@ void VoxelGrid::setGlyphQuantity(const XMUINT2& quantity)
 	m_glyphQuantity = quantity;
 	s_shaderVariables.glyphQuantity->SetIntVector(reinterpret_cast<int*>(&m_glyphQuantity));
 }
+
+void VoxelGrid::changeSimSettings(const QString& settingsFile)
+{
+	first = true;
+
+	// Currently simulation settings file also contains rendering settings
+	// -> Create new renderer with new file and initialize properly
+	m_wtRenderer = wtl::WindTunnelRenderer(settingsFile.toStdString());
+	m_wtRenderer.init(m_renderer->getDevice(), m_resolution, m_voxelSize);
+	m_wtRenderer.onResizeSwapChain(m_renderer->getDevice(), m_renderer->getBackBufferDesc());
+
+	emit simSettingsChanged(settingsFile);
+};
 
 void VoxelGrid::changeSmokeSettings(const QJsonObject& settings)
 {

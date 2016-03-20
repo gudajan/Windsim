@@ -4,12 +4,24 @@
 #include <QResizeEvent>
 #include <QApplication>
 #include <QMessageBox>
+#include <QPainter>
+
+void Overlay::paintEvent(QPaintEvent* event)
+{
+	QPainter p(this);
+	p.fillRect(rect(), Qt::GlobalColor::lightGray);
+	p.drawText(rect(), m_text);
+}
 
 DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	: QWidget(parent, flags),
 	m_renderThread(),
-	m_renderer(nullptr)
+	m_renderer(nullptr)//,
+	//m_overlay(parent)
 {
+	//m_overlay.setGeometry(0, 14, 200, 80);
+	//m_overlay.show();
+
 	// Create DirectX Renderer on our widget
 	// Parent MUST NOT be 'this', because we want to move this object to another thread, which is not possible for child objects
 	m_renderer = new DX11Renderer(winId(), width(), height(), nullptr);
@@ -24,7 +36,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	m_renderer->moveToThread(&m_renderThread);
 
 	// Start/Stop rendering
-	connect(&m_renderThread, &QThread::started, m_renderer, &DX11Renderer::execute);
+	//connect(&m_renderThread, &QThread::started, m_renderer, &DX11Renderer::execute);
 	connect(this, &DX11Widget::stopRendering, m_renderer, &DX11Renderer::stop);
 	connect(&m_renderThread, &QThread::finished, m_renderer, &QObject::deleteLater);
 
@@ -43,6 +55,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 
 	// Arbitrary Events Renerer -> Widget
 	connect(m_renderer->getLogger(), &Logger::log, this, &DX11Widget::logit);
+	connect(m_renderer, &DX11Renderer::drawText, this, &DX11Widget::drawText);
 
 	setAttribute(Qt::WA_PaintOnScreen, true);
 	setAttribute(Qt::WA_NativeWindow, true);
@@ -81,6 +94,12 @@ void DX11Widget::applySettings()
 void DX11Widget::logit(const QString& str)
 {
 	StaticLogger::logit(str);
+}
+
+void DX11Widget::drawText(const QString& str)
+{
+	//m_overlay.setText(str);
+	//m_overlay.repaint();
 }
 
 void DX11Widget::paintEvent(QPaintEvent* event)

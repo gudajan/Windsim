@@ -1,5 +1,5 @@
 #include "simulator.h"
-#include "logger.h"
+#include "dx11Renderer.h"
 #include "settings.h"
 
 #include <QThread>
@@ -16,30 +16,26 @@ using namespace wtl;
 QMutex Simulator::m_openCLMutex;
 int Simulator::m_clDevice = -1;
 int Simulator::m_clPlatform = -1;
-bool Simulator::m_pauseSim = true;
+
+bool Simulator::initOpenCLNecessary()
+{
+	return (conf.opencl.device != m_clDevice || conf.opencl.platform != m_clPlatform);
+}
 
 void Simulator::initOpenCL()
 {
-	{
-		QMutexLocker lock(&m_openCLMutex);
-		m_pauseSim = true;
-	}
-
-	if (conf.opencl.device != m_clDevice || conf.opencl.platform != m_clPlatform)
-	{
-		m_clDevice = conf.opencl.device;
-		m_clPlatform = conf.opencl.platform;
-		WindTunnel::shutdownOpenCL();
-		WindTunnel::initOpenCL(m_clDevice, m_clPlatform);
-	}
-
-	{
-		QMutexLocker lock(&m_openCLMutex);
-		m_pauseSim = false;
-	}
+	m_clDevice = conf.opencl.device;
+	m_clPlatform = conf.opencl.platform;
+	WindTunnel::shutdownOpenCL();
+	WindTunnel::initOpenCL(m_clDevice, m_clPlatform);
 }
 
-Simulator::Simulator(Logger* logger, QObject* parent)
+QMutex& Simulator::mutex()
+{
+	return m_openCLMutex;
+};
+
+Simulator::Simulator(const QString& settingsFile, const XMUINT3& resolution, const XMFLOAT3& voxelSize, DX11Renderer* renderer, QObject* parent)
 	: QObject(parent)
 	, m_windTunnel()
 	, m_settingsFile("<NONE>") // Needed so it is different to the default string '<' character not allowed in file names -> no valid filename
@@ -52,9 +48,8 @@ Simulator::Simulator(Logger* logger, QObject* parent)
 	, m_lines()
 	, m_reseedCounter(0)
 	, m_numLines(0)
-	, m_resolution(0, 0, 0)
-	, m_voxelSize(0.0f, 0.0f, 0.0f)
-	, m_sim(true)
+	, m_resolution(resolution)
+	, m_voxelSize(voxelSize)
 	, m_simSmoke(true)
 	, m_simLines(true)
 	, m_elapsedTimer()
@@ -64,18 +59,17 @@ Simulator::Simulator(Logger* logger, QObject* parent)
 	, m_doWait(false)
 	, m_isWaiting(false)
 	, m_stop(false)
-	, m_logger(logger)
+	, m_renderer(renderer)
 {
 	connect(&m_simTimer, &QTimer::timeout, this, &Simulator::step);
+
+	createWindTunnel(settingsFile);
+	setGridDimension(m_resolution, m_voxelSize);
 }
 
 void Simulator::continueSim(bool stop)
 {
-	{
-		QMutexLocker lock(&m_openCLMutex);
-		if(m_pauseSim)
-			return;
-	}
+	if (!checkContinue()) return;
 
 	QMutexLocker lock(&m_simMutex);
 
@@ -87,9 +81,18 @@ void Simulator::continueSim(bool stop)
 	if (stop) m_stop = true;
 }
 
+void Simulator::reinitWindTunnel()
+{
+	// Silently recreate windtunnel with the existing settings
+	// Necessary when the static OpenCL context and queue are recreated
+	log("INFO: Reinitializing OpenCL...");
+	m_windTunnel = WindTunnel(m_settingsFile.toStdString());
+	m_windTunnel.setGridDimension(m_resolution, m_voxelSize);
+}
+
 void Simulator::start()
 {
-	m_simTimer.start(0);
+	m_simTimer.start(1);
 	m_elapsedTimer.start();
 }
 
@@ -99,14 +102,22 @@ void Simulator::stop()
 	thread()->quit(); // Quit the thread
 }
 
+void Simulator::pause()
+{
+	m_simTimer.stop();
+	m_elapsedTimer.invalidate();
+}
+
 void Simulator::changeSimSettings(const QString& settingsFile)
 {
 	if (createWindTunnel(settingsFile))
-		setGridDimensions(m_resolution, m_voxelSize);
+		setGridDimension(m_resolution, m_voxelSize);
 }
 
 bool Simulator::createWindTunnel(const QString& settingsFile)
 {
+	if (!checkContinue()) return false;
+
 	// Only recreate the wind tunnel if settings have changed or cl device/platform changed
 	QDateTime lastMod;
 	if (settingsFile != m_settingsFile || (lastMod = QFileInfo(settingsFile).lastModified()) > m_fileLastModified)
@@ -122,23 +133,15 @@ bool Simulator::createWindTunnel(const QString& settingsFile)
 
 void Simulator::updateGrid()
 {
-	{
-		QMutexLocker lock(&m_openCLMutex);
-		if (m_pauseSim)
-			return;
-	}
+	if (!checkContinue()) return;
 
 	m_windTunnel.updateGrid(m_cellTypes); // , m_solidVelocity);
 	emit simUpdated();
 }
 
-void Simulator::setGridDimensions(const XMUINT3& resolution, const XMFLOAT3& voxelSize)
+void Simulator::setGridDimension(const XMUINT3& resolution, const XMFLOAT3& voxelSize)
 {
-	{
-		QMutexLocker lock(&m_openCLMutex);
-		if (m_pauseSim)
-			return;
-	}
+	if (!checkContinue()) return;
 
 	log("INFO: Setting grid dimensions to (" + QString::number(resolution.x) + ", " + QString::number(resolution.y) + ", " + QString::number(resolution.z) + ") with cell size (" + QString::number(voxelSize.x, 'g', 2) + ", " + QString::number(voxelSize.y, 'g', 2) + ", " + QString::number(voxelSize.z, 'g', 2) + ") ...");
 	m_resolution = resolution;
@@ -159,16 +162,13 @@ void Simulator::setGridDimensions(const XMUINT3& resolution, const XMFLOAT3& vox
 	m_lines.resize(lineBufferSize);
 
 	log("INFO: Done.");
-	emit simUpdated();
-}
-
-void Simulator::runSimulation(bool enabled)
-{
-	m_sim = enabled;
+	emit simulatorResized();
 }
 
 void Simulator::changeSmokeSettings(const QJsonObject& settings)
 {
+	if (!checkContinue()) return;
+
 	m_simSmoke = settings["enabled"].toBool();
 	m_windTunnel.smokeSim(m_simSmoke ? Smoke::Enabled : Smoke::Disabled);
 	const QJsonObject& pos = settings["seedPosition"].toObject();
@@ -178,6 +178,8 @@ void Simulator::changeSmokeSettings(const QJsonObject& settings)
 
 void Simulator::changeLineSettings(const QJsonObject& settings)
 {
+	if (!checkContinue()) return;
+
 	m_simLines = settings["enabled"].toBool();
 	m_windTunnel.lineSim(m_simLines ? Line::Enabled : Line::Disabled);
 	QString tmp = settings["orientation"].toString();
@@ -189,11 +191,8 @@ void Simulator::changeLineSettings(const QJsonObject& settings)
 
 void Simulator::step()
 {
-	{
-		QMutexLocker lock(&m_openCLMutex);
-		if (m_pauseSim)
-			return;
-	}
+	if (!checkContinue()) return;
+
 	{
 		QMutexLocker lock(&m_simMutex);
 		if (m_stop)
@@ -204,9 +203,6 @@ void Simulator::step()
 	m_elapsedTimer.restart();
 
 	QElapsedTimer timer;
-
-	if (!m_sim)
-		return;
 
 	timer.start();
 	m_windTunnel.step(static_cast<double>(elapsedTime) * 1.0e-9 ); // nanosec to sec
@@ -235,12 +231,22 @@ void Simulator::step()
 	if (m_simLines)
 		m_windTunnel.fillLines(m_lines, m_reseedCounter, m_numLines);
 
+	m_renderer->drawInfo(QString::fromStdString(m_windTunnel.getOpenCLStats()));
+
 	emit stepDone();
 }
 
 void Simulator::log(const QString& msg)
 {
-	if (m_logger)
-		m_logger->logit(msg);
+	m_renderer->getLogger()->logit(msg);
+}
+
+bool Simulator::checkContinue()
+{
+	if (!m_openCLMutex.tryLock(1000))
+		return false;
+
+	m_openCLMutex.unlock();
+	return true;
 }
 

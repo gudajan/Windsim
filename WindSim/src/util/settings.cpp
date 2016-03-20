@@ -9,9 +9,10 @@ Settings conf = {
 		10.0f,
 		FirstPerson
 	},
+	// OpenCL
 	{
-		0,
-		0
+		0, // device
+		0  // platform
 	},
 	// Mesh
 	{

@@ -221,12 +221,10 @@ void csCellType(uint3 threadID : SV_DispatchThreadID)
 		if (posVS.x == 0)
 		{
 			cellVoxel[u] = CELL_TYPE_INFLOW;
-			continue;
 		}
 		else if (posVS.x == int(g_vResolution.x) - 1)
 		{
 			cellVoxel[u] = CELL_TYPE_OUTFLOW;
-			continue;
 		}
 
 		if (posVS.y == 0 || posVS.y == int(g_vResolution.y) - 1 || posVS.z == 0 || posVS.z == int(g_vResolution.z) - 1)
@@ -246,18 +244,31 @@ void csCellType(uint3 threadID : SV_DispatchThreadID)
 			if (any(posVS + neighbours[i] < int3(0, 0, 0)) || any(posVS + neighbours[i] >= int3(g_vResolution)))
 				continue;
 
-			uint neighbourVoxel;
+			uint neighbourVoxel = CELL_TYPE_FLUID;
 			if (i == 0)
 			{
-				if (u <= 0) neighbourVoxel = getVoxelValue(neighbourCells[i], 3); // left neighbour of left voxel in cell
-				else neighbourVoxel = cellVoxel[u - 1]; // left voxel neighbour in current cell
+				if (u == 0)
+					neighbourVoxel = getVoxelValue(neighbourCells[0], 3); // left neighbour of left voxel in cell
+				else if (u == 1)
+					neighbourVoxel = cellVoxel[0]; // left voxel neighbour in current cell
+				else if (u == 2)
+					neighbourVoxel = cellVoxel[1];
+				else if (u == 3)
+					neighbourVoxel = cellVoxel[2];
 			}
 			else if (i == 1)
 			{
-				if (u >= 3) neighbourVoxel = getVoxelValue(neighbourCells[i], 0); // right neighbour of right voxel in cell
-				else neighbourVoxel = cellVoxel[u + 1]; // right voxel neighbour in current cell
+				if (u == 3)
+					neighbourVoxel = getVoxelValue(neighbourCells[1], 0); // right neighbour of right voxel in cell
+				else if (u == 2)
+					neighbourVoxel = cellVoxel[3]; // right voxel neighbour in current cell
+				else if (u == 1)
+					neighbourVoxel = cellVoxel[2];
+				else if (u == 0)
+					neighbourVoxel = cellVoxel[1];
 			}
-			else neighbourVoxel = getVoxelValue(neighbourCells[i], u); // y,z neighbours with same index within cell
+			else
+				neighbourVoxel = getVoxelValue(neighbourCells[i], u); // y,z neighbours with same index within cell
 
 			if (neighbourVoxel != CELL_TYPE_SOLID_NO_SLIP && neighbourVoxel != CELL_TYPE_SOLID_BOUNDARY)
 			{

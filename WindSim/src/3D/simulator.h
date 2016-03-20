@@ -15,17 +15,20 @@
 
 #include <WindTunnelLib/WindTunnel.h>
 
-class Logger;
+class DX11Renderer;
 
 class Simulator : public QObject
 {
 	Q_OBJECT
 public:
+	static bool initOpenCLNecessary();
 	static void initOpenCL();
+	static QMutex& mutex();
 
-	Simulator(Logger* logger = nullptr, QObject* parent = nullptr);
+	Simulator(const QString& settingsFile, const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize, DX11Renderer* renderer = nullptr, QObject* parent = nullptr);
 
 	void continueSim(bool stop = false); // Continue simulation after simulation results are processed by rendering thread
+	void reinitWindTunnel(); // Called from the rendering thread when static OpenCL was reinitialized; the static m_openCLMutex must be locked
 
 	// Get vectors for writing
 	std::vector<wtl::CellType>& getCellTypes() { return m_cellTypes; };
@@ -42,17 +45,18 @@ public:
 signals:
 	void stepDone(); // One simulation thread done, local output vectors filled
 	void simUpdated();
+	void simulatorResized();
 
 public slots:
-	void start(); // Start thread loop
+	void start(); // Start/continue thread loop
 	void stop(); // Stop thread loop
+	void pause(); // Pause thread loop
 
 	void changeSimSettings(const QString& settingsFile); // Called when the json settings file changed
 	bool createWindTunnel(const QString& settingsFile); // Construct new windtunnel
 	void updateGrid(); // Update CellTypes and solid velocity from local vectors
-	void setGridDimensions(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Update grid dimensions (empties cellTypes until next updateGrid)
+	void setGridDimension(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Update grid dimensions (empties cellTypes until next updateGrid)
 
-	void runSimulation(bool enabled); // Pause/Continue simulation
 	void changeSmokeSettings(const QJsonObject& settings);
 	void changeLineSettings(const QJsonObject& settings);
 
@@ -61,11 +65,11 @@ private slots:
 
 private:
 	void log(const QString& msg);
+	bool checkContinue();
 
 	static QMutex m_openCLMutex;
 	static int m_clDevice;
 	static int m_clPlatform;
-	static bool m_pauseSim;
 
 	wtl::WindTunnel m_windTunnel;
 
@@ -91,7 +95,6 @@ private:
 	DirectX::XMFLOAT3 m_voxelSize;
 
 	// Simulation settings
-	bool m_sim;
 	bool m_simSmoke;
 	bool m_simLines;
 
@@ -104,7 +107,7 @@ private:
 	bool m_isWaiting; // Indicates if thread is currently waiting on condition and must be woke up
 	bool m_stop;
 
-	Logger* m_logger;
+	DX11Renderer* m_renderer;
 };
 
 #endif

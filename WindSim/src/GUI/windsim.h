@@ -57,6 +57,8 @@ private slots:
 signals:
 	void settingsChanged();
 	void selectionChanged(std::unordered_set<int> ids); // Propagate changes from the GUI to the 3D View
+	void startRendering();
+	void pauseRendering();
 
 private:
 	void reloadIni();
