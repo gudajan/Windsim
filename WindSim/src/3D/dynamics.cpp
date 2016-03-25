@@ -107,16 +107,11 @@ Dynamics::Dynamics(Mesh3D& mesh)
 	, m_renderRot()
 	, m_calcRot()
 {
-	XMStoreFloat4(&m_renderRot, XMQuaternionIdentity());
-	XMStoreFloat4(&m_calcRot, XMQuaternionIdentity());
+	reset();
 }
 
 void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& objectToWorld, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime)
 {
-	//m_counter++;
-	//if (m_counter < 2)
-	//	return;
-
 	// #############################
 	// Copy calculated torque from last frame to CPU
 	// #############################

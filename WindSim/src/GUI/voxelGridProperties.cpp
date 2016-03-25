@@ -176,16 +176,14 @@ void VoxelGridProperties::simulatorSettingsChanged()
 
 void VoxelGridProperties::chooseSimulatorSettings()
 {
-	QString exe = QFileDialog::getOpenFileName(this, tr("Choose simulator settings"), QString(), tr("Json-files (*.json *.txt)"));
+	QString settings = QFileDialog::getOpenFileName(this, tr("Choose WindTunnel settings"), QString(), tr("Json-files (*.json *.txt)"));
 
-	if (exe == ui.leSim->text())
-		return;
-	else if (exe.isEmpty())
+	if (settings.isEmpty())
 		return;
 
-	ui.leSim->setText(exe);
+	ui.leSim->setText(settings);
 
-	m_properties["windTunnelSettings"] = exe;
+	m_properties["windTunnelSettings"] = settings;
 }
 
 void VoxelGridProperties::showVoxelChanged(int state)

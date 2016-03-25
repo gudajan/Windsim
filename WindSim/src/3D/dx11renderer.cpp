@@ -46,6 +46,7 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_localCursorPos(),
 	m_pressedId(0),
 	m_state(State::Default),
+	m_renderingPaused(true),
 	m_elapsedTimes(fpsFramesSaved, 0),
 	m_currentFPS(0),
 	m_elapsedTimer(),
@@ -62,11 +63,14 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 
 DX11Renderer::~DX11Renderer()
 {
-
+	//OutputDebugStringA("Destr DX11Renderer\n");
 }
 
 bool DX11Renderer::init()
 {
+	if (Simulator::initOpenCLNecessary())
+		Simulator::initOpenCL();
+
 	unsigned int createDeviceFlags = 0;
 
 #ifndef NDEBUG
@@ -162,8 +166,6 @@ bool DX11Renderer::init()
 
 	OutputDebugStringA("Initialized DirectX 11\n");
 
-	Simulator::initOpenCL();
-
 	return createShaders();
 }
 
@@ -188,8 +190,7 @@ void DX11Renderer::frame()
 	m_elapsedTimes.pop_back();
 	m_elapsedTimes.push_front(1.0e9 / elapsedTime); // 1 sec / elapsedTime nsec = fps
 	m_currentFPS = std::accumulate(m_elapsedTimes.begin(), m_elapsedTimes.end(), 0.0, [](float acc, const float& val) {return acc + fpsFramesWeight * val; });
-	//emit drawText(QString::number(m_currentFPS, 'f', 2));
-	emit updateFPS(static_cast<int>(m_currentFPS)); // Show fps in statusBar
+	emit updateFPS(m_currentFPS); // Show fps
 }
 
 void DX11Renderer::issueVoxelization()
@@ -201,7 +202,7 @@ void DX11Renderer::execute()
 {
 	m_elapsedTimer.start();
 	m_renderTimer.start(8); // Rendering happens with 125 FPS at max
-	m_voxelizationTimer.start(8); // Voxelization happens 40 times per second at maximum
+	m_voxelizationTimer.start(125); // Voxelization happens 40 times per second at maximum
 }
 
 void DX11Renderer::stop()
@@ -212,10 +213,14 @@ void DX11Renderer::stop()
 	thread()->quit(); // Quit the thread
 }
 
+void DX11Renderer::cont()
+{
+	m_renderingPaused = false;
+}
+
 void DX11Renderer::pause()
 {
-	m_renderTimer.stop();
-	m_voxelizationTimer.stop();
+	m_renderingPaused = true;
 }
 
 void DX11Renderer::onResize(int width, int height)
@@ -520,11 +525,15 @@ void DX11Renderer::changeSettings()
 {
 	if (Simulator::initOpenCLNecessary())
 	{
-		QMutexLocker lock(&Simulator::mutex()); // Lock all simulations
+		m_logger.logit("INFO: Reinitializing OpenCL...");
+		QMutexLocker lock(&Simulator::mutex()); // Lock all simulations (just avoids new simulation step events to be generated)
+		m_manager.runSimulation(false); // Blocks until all currently running simulation steps finished
 		Simulator::initOpenCL();
+		m_logger.logit("INFO: Done.");
 		// Init all objects that require OpenCL to use new OpenCL objects
 		// within THIS thread so we can synchronize with the static operation
 		m_manager.initOpenCL();
+		m_manager.runSimulation(true); // Continue simulation again
 	}
 	m_camera.computeViewMatrix(); // Depends on camera type
 }
@@ -584,7 +593,10 @@ void DX11Renderer::destroy()
 	Dynamics::releaseShader();
 
 	// Release all objects
+	m_manager.removeAll();
 	m_manager.release(true);
+
+	Simulator::shutdownOpenCL();
 
 	if (m_device)
 	{
@@ -607,6 +619,8 @@ void DX11Renderer::destroy()
 
 void DX11Renderer::update(double elapsedTime)
 {
+	if (m_renderingPaused) return;
+
 	m_camera.update(elapsedTime);
 
 	// Pass ray from Camera to cursor position in world space
@@ -616,10 +630,12 @@ void DX11Renderer::update(double elapsedTime)
 
 void DX11Renderer::render(double elapsedTime)
 {
-	m_context->ClearRenderTargetView(m_renderTargetView, Colors::WhiteSmoke);
+	FLOAT color[] = { 240.0f / 255.0f, 240.0f / 255.0f, 240.0f / 255.0f, 1.0f }; // Qt pale gray
+	m_context->ClearRenderTargetView(m_renderTargetView, color);
 	m_context->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH , 1.0f, 0);
 
-	m_manager.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix(), elapsedTime);
+	if (!m_renderingPaused)
+		m_manager.render(m_device, m_context, m_camera.getViewMatrix(), m_camera.getProjectionMatrix(), elapsedTime);
 
 	m_swapChain->Present(0, 0);
 }

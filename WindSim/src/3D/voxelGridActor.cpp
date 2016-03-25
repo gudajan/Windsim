@@ -23,6 +23,14 @@ void VoxelGridActor::render(ID3D11Device* device, ID3D11DeviceContext* context, 
 	}
 }
 
+void VoxelGridActor::renderWindTunnel(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, double elapsedTime)
+{
+	if (m_render)
+	{
+		m_grid.renderWindTunnel(device, context, m_world, view, projection, elapsedTime);
+	}
+}
+
 void VoxelGridActor::reCenter()
 {
 	// Origin of voxel grid is at x = y = z = 0 (viewing along +z axis -> origin is at left, lower, back of grid)

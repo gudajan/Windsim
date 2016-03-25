@@ -250,6 +250,11 @@ void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, c
 	{
 		actor.second->render(device, context, view, projection, elapsedTime);
 	}
+	for (const auto& actor : m_actors)
+	{
+		if (actor.second->getType() == ObjectType::VoxelGrid)
+			std::dynamic_pointer_cast<VoxelGridActor>(actor.second)->renderWindTunnel(device, context, view, projection, elapsedTime);
+	}
 }
 void ObjectManager::onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc)
 {
@@ -272,6 +277,14 @@ void ObjectManager::initOpenCL()
 	}
 }
 
+void ObjectManager::runSimulation(bool enabled)
+{
+	for (const auto& actor : m_actors)
+	{
+		if (actor.second->getType() == ObjectType::VoxelGrid)
+			std::dynamic_pointer_cast<VoxelGridActor>(actor.second)->getObject()->runSimulationSync(enabled);
+	}
+}
 
 void ObjectManager::release(bool withAccessories)
 {

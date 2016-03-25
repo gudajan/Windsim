@@ -214,6 +214,18 @@
     <ClCompile Include="GeneratedFiles\Release\moc_voxelGrid.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_voxelGridInputDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_textOverlay.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_textOverlay.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\textOverlay.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\ui\windsim.ui">
@@ -263,6 +275,12 @@
     </CustomBuild>
     <CustomBuild Include="src\3D\voxelGrid.h">
       <Filter>3D\Objects</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\voxelGridInputDialog.h">
+      <Filter>GUI\Dialogs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\textOverlay.h">
+      <Filter>GUI</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -361,9 +379,6 @@
     </ClInclude>
     <ClInclude Include="src\3D\actor.h">
       <Filter>3D\Actors</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GUI\voxelGridInputDialog.h">
-      <Filter>GUI\Dialogs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -6,21 +6,14 @@
 #include <QMessageBox>
 #include <QPainter>
 
-void Overlay::paintEvent(QPaintEvent* event)
-{
-	QPainter p(this);
-	p.fillRect(rect(), Qt::GlobalColor::lightGray);
-	p.drawText(rect(), m_text);
-}
 
 DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	: QWidget(parent, flags),
 	m_renderThread(),
-	m_renderer(nullptr)//,
-	//m_overlay(parent)
+	m_renderer(nullptr),
+	m_overlay(parent)
 {
-	//m_overlay.setGeometry(0, 14, 200, 80);
-	//m_overlay.show();
+	m_overlay.show();
 
 	// Create DirectX Renderer on our widget
 	// Parent MUST NOT be 'this', because we want to move this object to another thread, which is not possible for child objects
@@ -36,7 +29,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	m_renderer->moveToThread(&m_renderThread);
 
 	// Start/Stop rendering
-	//connect(&m_renderThread, &QThread::started, m_renderer, &DX11Renderer::execute);
+	connect(&m_renderThread, &QThread::started, m_renderer, &DX11Renderer::execute);
 	connect(this, &DX11Widget::stopRendering, m_renderer, &DX11Renderer::stop);
 	connect(&m_renderThread, &QThread::finished, m_renderer, &QObject::deleteLater);
 
@@ -55,6 +48,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 
 	// Arbitrary Events Renerer -> Widget
 	connect(m_renderer->getLogger(), &Logger::log, this, &DX11Widget::logit);
+	connect(m_renderer, &DX11Renderer::updateFPS, this, &DX11Widget::drawFps);
 	connect(m_renderer, &DX11Renderer::drawText, this, &DX11Widget::drawText);
 
 	setAttribute(Qt::WA_PaintOnScreen, true);
@@ -66,8 +60,6 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	setMouseTracking(true);
 
 	m_renderThread.start();
-
-	OutputDebugStringA(("MAIN THREAD: " + std::to_string(reinterpret_cast<int>(thread()->currentThreadId())) + "\n").c_str());
 }
 
 DX11Widget::~DX11Widget()
@@ -96,10 +88,16 @@ void DX11Widget::logit(const QString& str)
 	StaticLogger::logit(str);
 }
 
+void DX11Widget::drawFps(float fps)
+{
+	m_overlay.setFps(fps);
+	m_overlay.repaint();
+}
+
 void DX11Widget::drawText(const QString& str)
 {
-	//m_overlay.setText(str);
-	//m_overlay.repaint();
+	m_overlay.setText(str);
+	m_overlay.repaint();
 }
 
 void DX11Widget::paintEvent(QPaintEvent* event)

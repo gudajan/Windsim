@@ -174,7 +174,12 @@ void MeshProperties::scalingChanged()
 		{ "z", ui.zS->value() }
 	};
 	m_properties["Scaling"] = scale;
-	emit propertiesChanged(m_properties, Scaling);
+
+	Modifications mod = Scaling;
+	if (ui.cbDynamics->checkState() == Qt::Checked)
+		mod |= DynamicsSettings;
+
+	emit propertiesChanged(m_properties, mod);
 }
 
 void MeshProperties::rotationChanged()

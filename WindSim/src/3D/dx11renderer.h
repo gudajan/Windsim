@@ -51,6 +51,7 @@ public slots:
 	// Start/Stop rendering
 	void execute(); // Enter Render loop
 	void stop(); // Stop Render loop
+	void cont(); // Continue Render loop
 	void pause(); // Pause Render loop
 
 	// Arbitrary Events
@@ -105,6 +106,7 @@ private:
 	QPoint m_localCursorPos;
 	int m_pressedId; // Id of the object, which was hovered during last mouse press
 	State::RendererState m_state;
+	bool m_renderingPaused;
 
 	std::deque<float> m_elapsedTimes;
 	float m_currentFPS;

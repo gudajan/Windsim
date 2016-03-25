@@ -109,11 +109,9 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime)
 {
 	if (m_calcDynamics)
-		// Current state: pass original world matrix instead of dynamic one, so the calculated torque is more appropriate/consitent
-		// TODO: Update the voxel grid (and therefore the velcity field) dependently on the dynamic rotation so we get appropriate torque values if passing the dynamic world matrix here
-		if (conf.dyn.useDynWorldForCalc)
+		if (conf.dyn.useDynWorldForCalc) // Pass the world matrix, which was used for the last grid update
 			m_dynamics.calculate(device, context, m_dynCalcWorld, worldToVoxelTex, texResolution, voxelSize, velocityField, elapsedTime);
-		else
+		else // Pass original world matrix
 			m_dynamics.calculate(device, context, m_world, worldToVoxelTex, texResolution, voxelSize, velocityField, elapsedTime);
 }
 

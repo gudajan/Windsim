@@ -43,7 +43,7 @@ public:
 	const DirectX::XMFLOAT4& getCalcRotation() const { return m_calcRot; };
 	const DirectX::XMFLOAT3& getCenterOfMass() const { return m_centerOfMass; };
 	const DirectX::XMFLOAT3& getAngularVelocity() const { return m_angVel; };
-	void updateCalcRotation() { m_calcRot = m_renderRot; m_counter = 0; };
+	void updateCalcRotation() { m_calcRot = m_renderRot; };
 
 	void reset();
 
@@ -83,9 +83,6 @@ private:
 	DirectX::XMFLOAT3 m_angAcc;
 	DirectX::XMFLOAT4 m_renderRot; // Additional rotation arround the center of mass through Dynamics simulation, recalculated every frame
 	DirectX::XMFLOAT4 m_calcRot; // Additional rotation arround center of mass through Dynamics simulation, recalculated every dynamics calculation
-
-	int m_counter;
-
 };
 
 #endif

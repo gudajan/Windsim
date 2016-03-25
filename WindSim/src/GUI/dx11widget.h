@@ -3,26 +3,12 @@
 
 #include "common.h"
 #include "..\3D\dx11renderer.h"
+#include "textOverlay.h"
 
 #include <QWidget>
 #include <QThread>
 #include <QJsonObject>
 #include <QPointer>
-
-class Overlay : public QWidget
-{
-	Q_OBJECT
-public:
-	Overlay(QWidget* parent = nullptr) : QWidget(parent), m_text(){};
-
-	void setText(const QString& str) { m_text = str; };
-
-protected:
-	void paintEvent(QPaintEvent * event) override;
-
-private:
-	QString m_text;
-};
 
 class DX11Widget : public QWidget
 {
@@ -43,6 +29,7 @@ public:
 public slots:
 	void logit(const QString& str);
 	void drawText(const QString& str);
+	void drawFps(float fps);
 
 protected:
 	void paintEvent(QPaintEvent * event) override;
@@ -76,7 +63,7 @@ signals:
 private:
 	QThread m_renderThread;
 	QPointer<DX11Renderer> m_renderer;
-	//Overlay m_overlay;
+	TextOverlay m_overlay;
 
 };
 

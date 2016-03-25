@@ -24,6 +24,16 @@ WindSim::WindSim(QWidget *parent)
 	m_container(this),
 	m_project()
 {
+	bool iniErr = false;
+	try
+	{
+		loadIni(m_iniFilePath.toStdString());
+	}
+	catch (const std::runtime_error& re)
+	{
+		iniErr = true;
+	}
+
 	ui.setupUi(this);
 
 	// Create Undo/Redo actions
@@ -61,13 +71,15 @@ WindSim::WindSim(QWidget *parent)
 	connect(ui.objectView->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)), this, SLOT(onGUISelectionChanged()));
 	// WindSim to 3D Renderer (in another thread)
 	connect(this, &WindSim::selectionChanged, ui.dx11Viewer->getRenderer(), &DX11Renderer::onSelectionChanged);
-	connect(this, &WindSim::startRendering, ui.dx11Viewer->getRenderer(), &DX11Renderer::execute);
+	connect(this, &WindSim::startRendering, ui.dx11Viewer->getRenderer(), &DX11Renderer::cont);
 	connect(this, &WindSim::pauseRendering, ui.dx11Viewer->getRenderer(), &DX11Renderer::pause);
 	// 3D Renderer to WindSim
 	connect(ui.dx11Viewer->getRenderer(), &DX11Renderer::selectionChanged, this, &WindSim::on3DSelectionChanged);
-	connect(ui.dx11Viewer->getRenderer(), &DX11Renderer::updateFPS, this, &WindSim::onUpdateFPS);
 
-	reloadIni();
+	if (iniErr)
+		StaticLogger::logit("WARNING: Could not open ini-file '" + m_iniFilePath + "'. Settings not reloaded.");
+	else
+		StaticLogger::logit("INFO: Settings loaded from ini-file '" + m_iniFilePath + "'.");
 
 	//DEBUG
 	//undoView = std::shared_ptr<QUndoView>(new QUndoView(&g_undoStack));
@@ -371,18 +383,6 @@ void WindSim::applySettings()
 	ui.dx11Viewer->applySettings();
 }
 
-void WindSim::onUpdateFPS(int fps)
-{
-	if (fps <= 0)
-		return;
-
-	QString current = ui.statusBar->currentMessage();
-	// Remove FPS
-	current.remove(QRegularExpression("\\sFPS: \\d+"));
-	ui.statusBar->showMessage(current + "\tFPS: " + QString::number(fps));
-}
-
-
 void WindSim::reloadIni()
 {
 	try
@@ -394,7 +394,7 @@ void WindSim::reloadIni()
 	}
 	catch (const std::runtime_error& re)
 	{
-		StaticLogger::logit("INFO: Could not open ini-file '" + m_iniFilePath + "'. Settings not reloaded.");
+		StaticLogger::logit("WARNING: Could not open ini-file '" + m_iniFilePath + "'. Settings not reloaded.");
 	}
 }
 

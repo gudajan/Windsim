@@ -8,6 +8,7 @@
 
 class VoxelGridInputDialog : public QDialog
 {
+	Q_OBJECT
 public:
 	VoxelGridInputDialog(QWidget* parent = nullptr);
 

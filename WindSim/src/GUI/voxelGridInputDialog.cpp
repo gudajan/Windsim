@@ -31,12 +31,12 @@ QString VoxelGridInputDialog::getSimulatorSettings()
 
 void VoxelGridInputDialog::chooseSimulatorSettings()
 {
-	QString exe = QFileDialog::getOpenFileName(this, tr("Choose simulator executable"), QString(), tr("Executables (*.exe)"));
+	QString settings = QFileDialog::getOpenFileName(this, tr("Choose WindTunnel settings file"), QString(), tr("Json-files (*.json *.txt)"));
 
-	if (exe.isEmpty())
+	if (settings.isEmpty())
 		return;
 
-	ui.leSim->setText(exe);
+	ui.leSim->setText(settings);
 }
 
 void VoxelGridInputDialog::showOpenCLInfo()

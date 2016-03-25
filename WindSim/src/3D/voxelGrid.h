@@ -14,6 +14,7 @@
 #include <QObject>
 #include <QThread>
 #include <QJsonObject>
+#include <QDateTime>
 
 class ObjectManager;
 struct ID3D11UnorderedAccessView;
@@ -44,6 +45,7 @@ public:
 
 	// Iterate mesh objects and render/voxelize into voxelGrid
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
+	void renderWindTunnel(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime);
 
 	void onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc) override;
 
@@ -62,12 +64,14 @@ public:
 	void runSimulation(bool enabled) { if (enabled) emit startSimulation(); else emit pauseSimulation(); };
 	void changeSmokeSettings(const QJsonObject& settings);
 	void changeLineSettings(const QJsonObject& settings);
-	void reinitWindTunnel() { m_simulator.reinitWindTunnel(); }
+	void reinitWindTunnel() { m_simulator.reinitWindTunnel(); m_simAvailable = true; m_updateGrid = true; }
+
+	void runSimulationSync(bool enabled);
 
 public slots:
 	void processSimResult() { m_processSimResults = true; };
 	void enableGridUpdate() { m_updateGrid = true; };
-	void simulatorResized() { m_simResize = false; m_updateGrid = true; first = true; }
+	void simulatorReady() { m_simAvailable = true; };
 
 signals:
 	void gridUpdated();
@@ -136,7 +140,7 @@ private:
 
 	bool m_updateGrid; // Indicates that the simulation should be updated after next voxelization
 	bool m_processSimResults; // Indicate that we may copy the data from the local simulation vectors to the GPU
-	bool m_simResize;
+	bool m_simAvailable;
 	int m_dynamicsCounter;
 	int m_voxelizationCounter;
 
@@ -164,12 +168,11 @@ private:
 	ID3D11ShaderResourceView* m_velocitySRV;
 
 	wtl::WindTunnelRenderer m_wtRenderer;
+	QString m_wtSettings;
+	QDateTime m_lastMod;
 
 	Simulator m_simulator;
 	QThread m_simulationThread;
 
-
-	QElapsedTimer t;
-	bool first;
 };
 #endif

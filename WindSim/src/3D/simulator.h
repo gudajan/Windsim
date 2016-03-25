@@ -12,6 +12,7 @@
 #include <QJsonObject>
 
 #include <vector>
+#include <mutex>
 
 #include <WindTunnelLib/WindTunnel.h>
 
@@ -23,12 +24,17 @@ class Simulator : public QObject
 public:
 	static bool initOpenCLNecessary();
 	static void initOpenCL();
+	static void shutdownOpenCL();
 	static QMutex& mutex();
+
+	static QJsonObject getSmokeSettingsDefault();
+	static QJsonObject getLineSettingsDefault();
 
 	Simulator(const QString& settingsFile, const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize, DX11Renderer* renderer = nullptr, QObject* parent = nullptr);
 
-	void continueSim(bool stop = false); // Continue simulation after simulation results are processed by rendering thread
+	void continueSim(bool skip = false); // Continue simulation after simulation results are processed by rendering thread, say if future steps should be skipped
 	void reinitWindTunnel(); // Called from the rendering thread when static OpenCL was reinitialized; the static m_openCLMutex must be locked
+	std::mutex& getRunningMutex() { return m_simRunning; };
 
 	// Get vectors for writing
 	std::vector<wtl::CellType>& getCellTypes() { return m_cellTypes; };
@@ -45,7 +51,7 @@ public:
 signals:
 	void stepDone(); // One simulation thread done, local output vectors filled
 	void simUpdated();
-	void simulatorResized();
+	void simulatorReady();
 
 public slots:
 	void start(); // Start/continue thread loop
@@ -53,7 +59,7 @@ public slots:
 	void pause(); // Pause thread loop
 
 	void changeSimSettings(const QString& settingsFile); // Called when the json settings file changed
-	bool createWindTunnel(const QString& settingsFile); // Construct new windtunnel
+	void createWindTunnel(const QString& settingsFile); // Construct new windtunnel
 	void updateGrid(); // Update CellTypes and solid velocity from local vectors
 	void setGridDimension(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Update grid dimensions (empties cellTypes until next updateGrid)
 
@@ -75,7 +81,9 @@ private:
 
 	// WindTunnel creation parameters
 	QString m_settingsFile;
-	QDateTime m_fileLastModified;
+
+	QJsonObject m_smokeSettingsGUI;
+	QJsonObject m_lineSettingsGUI;
 
 	// WindTunnel input
 	std::vector<wtl::CellType> m_cellTypes;
@@ -105,7 +113,10 @@ private:
 	QWaitCondition m_waitCond;
 	bool m_doWait; // Indicates if thread must wait on condition
 	bool m_isWaiting; // Indicates if thread is currently waiting on condition and must be woke up
-	bool m_stop;
+	bool m_skipSteps;
+
+	std::mutex m_simRunning; // If sim thread holds lock -> sim is running/ timers running, use std::mutex as QMutex does not provide
+	std::unique_lock<std::mutex> m_simulatorLock;
 
 	DX11Renderer* m_renderer;
 };
