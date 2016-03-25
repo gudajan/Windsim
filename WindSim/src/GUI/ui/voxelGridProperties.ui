@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>514</width>
-    <height>465</height>
+    <height>471</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -695,8 +695,8 @@
       <attribute name="title">
        <string>Wind Tunnel</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
-       <item>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
         <widget class="QCheckBox" name="cbRunSim">
          <property name="text">
           <string>Run Simulation</string>
@@ -706,7 +706,7 @@
          </property>
         </widget>
        </item>
-       <item>
+       <item row="2" column="0" colspan="2">
         <widget class="QFrame" name="fSim">
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
@@ -766,7 +766,7 @@
          </layout>
         </widget>
        </item>
-       <item>
+       <item row="3" column="0" colspan="2">
         <widget class="QGroupBox" name="gbSmoke">
          <property name="title">
           <string>Smoke</string>
@@ -867,7 +867,30 @@
          </layout>
         </widget>
        </item>
-       <item>
+       <item row="5" column="1">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="0" column="1">
+        <widget class="QPushButton" name="pbReinit">
+         <property name="toolTip">
+          <string>The simulator is recreated, the settings file is reloaded.</string>
+         </property>
+         <property name="text">
+          <string>Restart simulator</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="2">
         <widget class="QGroupBox" name="gbLines">
          <property name="title">
           <string>Lines</string>
@@ -951,19 +974,6 @@
           </item>
          </layout>
         </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>

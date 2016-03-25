@@ -68,6 +68,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, 
 	// Grid -> Simulation/WindTunnel
 	connect(this, &VoxelGrid::gridUpdated, &m_simulator, &Simulator::updateGrid);
 	connect(this, &VoxelGrid::gridResized, &m_simulator, &Simulator::setGridDimension);
+	connect(this, &VoxelGrid::resetSimulation, &m_simulator, &Simulator::resetSimulation);
 	// Gui settings
 	connect(this, &VoxelGrid::simSettingsChanged, &m_simulator, &Simulator::changeSimSettings);
 	connect(this, &VoxelGrid::smokeSettingsChanged, &m_simulator, &Simulator::changeSmokeSettings);
@@ -411,14 +412,14 @@ void VoxelGrid::setGlyphQuantity(const XMUINT2& quantity)
 	s_shaderVariables.glyphQuantity->SetIntVector(reinterpret_cast<int*>(&m_glyphQuantity));
 }
 
-void VoxelGrid::changeSimSettings(const QString& settingsFile)
+bool VoxelGrid::changeSimSettings(const QString& settingsFile)
 {
 	// Currently simulation settings file also contains rendering settings
 	// -> Create new renderer with new file and initialize properly
 	// Only recreate the wind tunnel if settings have changed
 	QDateTime lastMod;
 	if (settingsFile == m_wtSettings && (lastMod = QFileInfo(settingsFile).lastModified()) <= m_lastMod)
-		return;
+		return false;
 
 	m_wtRenderer = wtl::WindTunnelRenderer(settingsFile.toStdString());
 	m_wtRenderer.init(m_renderer->getDevice(), m_resolution, m_voxelSize);
@@ -436,6 +437,8 @@ void VoxelGrid::changeSimSettings(const QString& settingsFile)
 	m_voxelizationCounter = -1;
 	m_dynamicsCounter = -1;
 	m_simulator.continueSim(true); // Make sure the settingsChange event is processed and further step events are not blocking
+
+	return true;
 };
 
 void VoxelGrid::changeSmokeSettings(const QJsonObject& settings)
@@ -450,6 +453,14 @@ void VoxelGrid::changeLineSettings(const QJsonObject& settings)
 	bool tmp = settings["enabled"].toBool();
 	m_wtRenderer.lineRendering(tmp ? wtl::Line::Enabled : wtl::Line::Disabled);
 	emit lineSettingsChanged(settings);
+}
+
+void VoxelGrid::restartSimulation()
+{
+	if (!changeSimSettings(m_wtSettings))
+	{
+		emit resetSimulation();
+	}
 }
 
 void VoxelGrid::runSimulationSync(bool enabled)

@@ -39,6 +39,8 @@ public:
 	QStandardItemModel& getModel() { return m_model; };
 	void setRenderer(DX11Renderer* renderer);
 
+	bool existsVoxelGrid() const { return m_voxelGridAdded; };
+
 public slots:
 	void showPropertiesDialog(const QModelIndex& index);
 
@@ -46,7 +48,9 @@ public slots:
 	void removeCmd(int id);
 	// Update the data of the object with id data["id"] => data MUST contain object id
 	void modifyCmd(const QJsonObject& data, Modifications mod); // Properties Dialogs and Renderer connect to this
-	void rendererModification(std::vector<QJsonObject> data); // Create modify command for each QJsonObject and combine them in group
+	void rendererModification(std::vector<QJsonObject> data); // Modifications from the renderer, Create modify command for each QJsonObject and combine them in group
+
+	void onTriggerFunction(const QJsonObject& data) { emit triggerFunction(data); };
 
 private slots:
 	// Propagate object changes in Object Model to other Views (i.e. 3D Representation and dialogs)
@@ -62,6 +66,7 @@ signals:
 	void modifyObject3DTriggered(const QJsonObject& data);
 	void removeObject3DTriggered(int id);
 	void removeAllObject3DTriggered();
+	void triggerFunction(const QJsonObject& data);
 
 private:
 	bool verifyData(QJsonObject& object);
@@ -75,6 +80,8 @@ private:
 	std::unordered_set<int> m_ids;
 	QStandardItemModel m_model; // Contains the object items
 	QPointer<DX11Renderer> m_renderer;
+
+	bool m_voxelGridAdded;
 
 	static int s_id;
 };

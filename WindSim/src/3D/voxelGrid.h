@@ -60,12 +60,13 @@ public:
 	void setGlyphSettings(Orientation orientation, float position);
 	void setGlyphQuantity(const DirectX::XMUINT2& quantity);
 
-	void changeSimSettings(const QString& settingsFile);
+	bool changeSimSettings(const QString& settingsFile);
 	void runSimulation(bool enabled) { if (enabled) emit startSimulation(); else emit pauseSimulation(); };
 	void changeSmokeSettings(const QJsonObject& settings);
 	void changeLineSettings(const QJsonObject& settings);
 	void reinitWindTunnel() { m_simulator.reinitWindTunnel(); m_simAvailable = true; m_updateGrid = true; }
 
+	void restartSimulation();
 	void runSimulationSync(bool enabled);
 
 public slots:
@@ -77,6 +78,7 @@ signals:
 	void gridUpdated();
 	void gridResized(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize);
 	void simSettingsChanged(const QString& settingsFile);
+	void resetSimulation();
 	void startSimulation();
 	void stopSimulation();
 	void pauseSimulation();

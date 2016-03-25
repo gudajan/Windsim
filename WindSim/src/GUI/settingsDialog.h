@@ -4,6 +4,8 @@
 #include <QDialog>
 #include "ui_settings.h"
 
+#include <WindTunnelLib/WindTunnel.h>
+
 class SettingsDialog : public QDialog
 {
 	Q_OBJECT
@@ -20,7 +22,10 @@ private slots:
 	void cameraTypeToggled(bool b);
 	void useDynWorldToggled(bool b);
 	void showDynTransToggled(bool b);
-	void simulatorSettingsChanged();
+	void plaformChanged();
+	void deviceChanged();
+	void displayCLInfoToggled(bool b);
+
 	void showOpenCLInfo();
 
 	void buttonClicked(QAbstractButton* button);
@@ -29,7 +34,11 @@ signals:
 	void settingsChanged(); // Emitted if settings are changed in the dialog at any time
 
 private:
+	void fillOpenCLPlatforms();
+	void fillOpenCLDevices();
 	Ui::settingsDialog ui;
+
+	std::vector<std::pair<wtl::description, std::vector<wtl::description>>> m_openCLInfo;
 
 };
 

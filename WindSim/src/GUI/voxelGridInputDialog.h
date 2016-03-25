@@ -18,7 +18,6 @@ public:
 
 private slots:
 	void chooseSimulatorSettings();
-	void showOpenCLInfo();
 
 private:
 	Ui::gridInput ui;

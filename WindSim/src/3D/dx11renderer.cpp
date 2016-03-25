@@ -4,6 +4,7 @@
 #include "axes.h"
 #include "marker.h"
 #include "voxelGrid.h"
+#include "voxelGridActor.h"
 #include "simulator.h"
 #include "dynamics.h"
 #include "settings.h"
@@ -459,6 +460,11 @@ void DX11Renderer::onRemoveObject(int id)
 void DX11Renderer::onRemoveAll()
 {
 	m_manager.removeAll();
+}
+
+void DX11Renderer::onTriggerFunction(const QJsonObject& data)
+{
+	m_manager.triggerObjectFunction(data);
 }
 
 void DX11Renderer::onSelectionChanged(std::unordered_set<int> ids)

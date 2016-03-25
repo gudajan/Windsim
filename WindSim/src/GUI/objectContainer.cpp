@@ -20,7 +20,8 @@ ObjectContainer::ObjectContainer(QWidget* parent)
 	m_voxelGridProperties(nullptr),
 	m_model(),
 	m_ids(),
-	m_renderer(nullptr)
+	m_renderer(nullptr),
+	m_voxelGridAdded(false)
 {
 	// Propagate object changes
 	connect(&m_model, SIGNAL(rowsInserted(const QModelIndex &, int, int)), this, SLOT(objectsInserted(const QModelIndex &, int, int)));
@@ -37,6 +38,7 @@ void ObjectContainer::clear()
 	m_model.clear();
 	m_ids.clear();
 	//m_meshProperties->close();
+	m_voxelGridAdded = false;
 	emit removeAllObject3DTriggered(); // Remove objects in renderer
 }
 
@@ -83,6 +85,7 @@ void ObjectContainer::setRenderer(DX11Renderer* renderer)
 	connect(this, &ObjectContainer::modifyObject3DTriggered, m_renderer, &DX11Renderer::onModifyObject);
 	connect(this, &ObjectContainer::removeObject3DTriggered, m_renderer, &DX11Renderer::onRemoveObject);
 	connect(this, &ObjectContainer::removeAllObject3DTriggered, m_renderer, &DX11Renderer::onRemoveAll);
+	connect(this, &ObjectContainer::triggerFunction, m_renderer, &DX11Renderer::onTriggerFunction);
 
 	// Connect changes from renderer to this container(and the properties dialogs)
 	connect(m_renderer, &DX11Renderer::modify, this, &ObjectContainer::rendererModification);
@@ -120,6 +123,15 @@ void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
 
 void ObjectContainer::addCmd(const QJsonObject& data)
 {
+	if (stringToObjectType(data["type"].toString().toStdString()) == ObjectType::VoxelGrid)
+	{
+		if (m_voxelGridAdded)
+		{
+			StaticLogger::logit("WARNING: Currently, multiple VoxelGrids are not supported. Creation aborted!");
+			return;
+		}
+		m_voxelGridAdded = true;
+	}
 	QUndoCommand* cmd = new AddObjectCmd(data, this);
 	g_undoStack.push(cmd);
 }
@@ -165,12 +177,16 @@ void ObjectContainer::objectsRemoved(const QModelIndex & parent, int first, int 
 	// Hide all properties dialogs if respective object was deleted:
 	for (int i = first; i <= last; ++i)
 	{
-		int id = m_model.item(i)->data().toJsonObject()["id"].toInt();
+		const QJsonObject& json = m_model.item(i)->data().toJsonObject();
+		int id = json["id"].toInt();
 		emit removeObject3DTriggered(id);
 		if (m_meshProperties && id == m_meshProperties->getCurrentID()) // Dialog already exists and is for removed object
 			m_meshProperties->hide();
 		if (m_voxelGridProperties && id == m_voxelGridProperties->getCurrentID()) // Dialog already exists and is for removed object
 			m_voxelGridProperties->hide();
+
+		if (stringToObjectType(json["type"].toString().toStdString()) == ObjectType::VoxelGrid)
+			m_voxelGridAdded = false;
 	}
 }
 

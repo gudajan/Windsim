@@ -69,6 +69,7 @@ public slots:
 	void onModifyObject(const QJsonObject& data);
 	void onRemoveObject(int name);
 	void onRemoveAll();
+	void onTriggerFunction(const QJsonObject& data);
 	void onSelectionChanged(std::unordered_set<int> ids);
 	bool reloadShaders(); // Recompile and load all shaders
 	void changeSettings(); // Update everything, which depends on ini-values

@@ -35,11 +35,13 @@ private slots:
 	void runSimulationChanged(int state);
 	void smokeSettingsChanged();
 	void lineSettingsChanged();
+	void restartSimulation();
 
 	void buttonClicked(QAbstractButton* button);
 
 signals:
 	void propertiesChanged(const QJsonObject& data, Modifications mod);
+	void triggerFunction(const QJsonObject& data); // Triggers a function for the given object and provides necessary data
 
 private:
 	void blockSignals();

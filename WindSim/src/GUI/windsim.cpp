@@ -260,6 +260,12 @@ bool WindSim::actionCreateMeshTriggered()
 
 bool WindSim::actionCreateVoxelGridTriggered()
 {
+	if (m_container.existsVoxelGrid())
+	{
+		StaticLogger::logit("WARNING: Currently, multiple VoxelGrids are not supported. Creation prohibited!");
+		return false;
+	}
+
 	QString name = getName("New Voxel Grid", "Voxel Grid name:", "VoxelGrid");
 	if (name.isEmpty())
 		return false;

@@ -32,6 +32,7 @@ struct Settings
 	{
 		int device;
 		int platform;
+		bool showInfo;
 	} opencl;
 
 	struct Mesh

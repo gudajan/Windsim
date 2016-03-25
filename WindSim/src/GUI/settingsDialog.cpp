@@ -2,12 +2,13 @@
 
 #include "settings.h"
 
-#include <WindTunnelLib/WindTunnel.h>
-
 #include <QMessageBox>
+
+#include <sstream>
 
 SettingsDialog::SettingsDialog(QWidget* parent)
 	: QDialog(parent)
+	, m_openCLInfo(wtl::getOpenCLInfo())
 {
 	ui.setupUi(this);
 
@@ -20,9 +21,10 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 	connect(ui.cbUseDynWorld, SIGNAL(toggled(bool)), this, SLOT(useDynWorldToggled(bool)));
 	connect(ui.cbShowDynTrans, SIGNAL(toggled(bool)), this, SLOT(showDynTransToggled(bool)));
 
-	connect(ui.sbDevice, SIGNAL(valueChanged(int)), this, SLOT(simulatorSettingsChanged()));
-	connect(ui.sbPlatform, SIGNAL(valueChanged(int)), this, SLOT(simulatorSettingsChanged()));
+	connect(ui.cmbCLPlatform, SIGNAL(currentIndexChanged(int)), this, SLOT(plaformChanged()));
+	connect(ui.cmbCLDevice, SIGNAL(currentIndexChanged(int)), this, SLOT(deviceChanged()));
 	connect(ui.pbInfo, SIGNAL(clicked()), this, SLOT(showOpenCLInfo()));
+	connect(ui.cbDisplayCLInfo, SIGNAL(toggled(bool)), this, SLOT(displayCLInfoToggled(bool)));
 
 	connect(ui.buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(buttonClicked(QAbstractButton*)));
 
@@ -50,8 +52,10 @@ void SettingsDialog::updateSettings()
 	ui.cbUseDynWorld->setChecked(conf.dyn.useDynWorldForCalc);
 	ui.cbShowDynTrans->setChecked(conf.dyn.showDynDuringMod);
 
-	ui.sbPlatform->setValue(conf.opencl.platform);
-	ui.sbDevice->setValue(conf.opencl.device);
+	fillOpenCLPlatforms();
+	ui.cmbCLPlatform->setCurrentIndex(conf.opencl.platform);
+	fillOpenCLDevices();
+	ui.cmbCLDevice->setCurrentIndex(conf.opencl.device);
 }
 
 void SettingsDialog::cameraTypeToggled(bool b)
@@ -77,23 +81,61 @@ void SettingsDialog::showDynTransToggled(bool b)
 	emit settingsChanged();
 }
 
-void SettingsDialog::simulatorSettingsChanged()
+void SettingsDialog::plaformChanged()
 {
-	// TODO: Either give possibility to choose from available or check if input is valid
-	int device = ui.sbDevice->value();
-	int platform = ui.sbPlatform->value();
+	// TODO: What if no devices exist for platform
+	conf.opencl.platform = ui.cmbCLPlatform->currentIndex();
+	fillOpenCLDevices();
+	conf.opencl.device = 0;
+	ui.cmbCLDevice->setCurrentIndex(conf.opencl.device);
+}
 
-	conf.opencl.device = device;
-	conf.opencl.platform = platform;
+void SettingsDialog::deviceChanged()
+{
+	conf.opencl.device = ui.cmbCLDevice->currentIndex();
+}
 
-	// Do only emit settingsChanged if apply button is clicked
+void SettingsDialog::displayCLInfoToggled(bool b)
+{
+	conf.opencl.showInfo = b;
+
+	emit settingsChanged();
 }
 
 void SettingsDialog::showOpenCLInfo()
 {
-	QString info = QString::fromStdString(wtl::getOpenCLInfo());
+	std::stringstream out;
+	out << "Available OpenCL Platforms:" << std::endl;
+	out << std::endl;
+	int pi = 0;
+	for (const auto& platform : m_openCLInfo)
+	{
+		const auto& pDesc = platform.first;
+		out << "Platform " << pi << ":\n";
+		out << "\tName: " << pDesc.at("name") << std::endl;
+		out << "\tVendor: " << pDesc.at("vendor") << std::endl;
+		out << "\tVersion: " << pDesc.at("version") << std::endl;
+		out << "\tProfile: " << pDesc.at("profile") << std::endl;
+		out << "\tAvailable OpenCL Devices:" << std::endl;
+		int di = 0;
+		for (const auto& device : platform.second)
+		{
+			out << "\t\tDevice " << di << ":\n";
+			out << "\t\t\tName: " << device.at("name") << std::endl;
+			out << "\t\t\tVendor: " << device.at("vendor") << std::endl;
+			out << "\t\t\tPCIe Bus: " << device.at("PCIeBus") << std::endl;
+			out << "\t\t\tGlobal Memory: " << device.at("globalMemory") << std::endl;
+			out << "\t\t\tCompute Units: " << device.at("computeUnits") << std::endl;
+			out << "\t\t\tVersion: " << device.at("version") << std::endl;
+			out << "\t\t\tProfile: " << device.at("profile") << std::endl;
+			out << std::endl;
+			di++;
+		}
+		out << std::endl;
+		pi++;
+	}
 
-	QMessageBox::information(this, tr("Available OpenCL platforms and devices"), info);
+	QMessageBox::information(this, tr("Available OpenCL platforms and devices"), QString::fromStdString(out.str()));
 }
 
 
@@ -103,5 +145,47 @@ void SettingsDialog::buttonClicked(QAbstractButton* button)
 	if (sb == QDialogButtonBox::Apply || sb == QDialogButtonBox::Ok)
 	{
 		emit settingsChanged();
+	}
+}
+
+void SettingsDialog::fillOpenCLPlatforms()
+{
+	ui.cmbCLPlatform->clear();
+	int i = 0;
+	for (const auto& platform : m_openCLInfo)
+	{
+		const auto& desc = platform.first;
+		ui.cmbCLPlatform->addItem(QString::fromStdString(desc.at("name"))); // Leave vendor
+
+		std::stringstream out;
+		out << "Name: " << desc.at("name") << std::endl;
+		out << "Vendor: " << desc.at("vendor") << std::endl;
+		out << "Version: " << desc.at("version") << std::endl;
+		out << "Profile: " << desc.at("profile") << std::endl;
+		ui.cmbCLPlatform->setItemData(i, QString::fromStdString(out.str()) , Qt::ToolTipRole);
+
+		i++;
+	}
+}
+
+void SettingsDialog::fillOpenCLDevices()
+{
+	ui.cmbCLDevice->clear();
+	int i = 0;
+	for (const auto& device : m_openCLInfo[ui.cmbCLPlatform->currentIndex()].second)
+	{
+		ui.cmbCLDevice->addItem(QString::fromStdString(device.at("name") + " " + device.at("vendor")));
+
+		std::stringstream out;
+		out << "Name: " << device.at("name") << std::endl;
+		out << "Vendor: " << device.at("vendor") << std::endl;
+		out << "PCIe Bus: " << device.at("PCIeBus") << std::endl;
+		out << "Global Memory: " << device.at("globalMemory") << std::endl;
+		out << "Compute Units: " << device.at("computeUnits") << std::endl;
+		out << "Version: " << device.at("version") << std::endl;
+		out << "Profile: " << device.at("profile") << std::endl;
+		ui.cmbCLDevice->setItemData(i, QString::fromStdString(out.str()), Qt::ToolTipRole);
+
+		i++;
 	}
 }

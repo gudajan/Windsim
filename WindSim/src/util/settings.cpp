@@ -12,7 +12,8 @@ Settings conf = {
 	// OpenCL
 	{
 		0, // device
-		0  // platform
+		0, // platform
+		false // showInfo
 	},
 	// Mesh
 	{
@@ -58,6 +59,7 @@ void loadIni(const std::string& path)
 
 	conf.opencl.device = std::stoi(getIniVal(iniMap, "OpenCL", "Device", std::to_string(conf.opencl.device)));
 	conf.opencl.platform = std::stoi(getIniVal(iniMap, "OpenCL", "Platform", std::to_string(conf.opencl.platform)));
+	conf.opencl.showInfo = std::stoi(getIniVal(iniMap, "OpenCL", "ShowInfo", std::to_string(conf.opencl.showInfo)));
 
 	conf.mesh.dc.r = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.red", std::to_string(conf.mesh.dc.r)));
 	conf.mesh.dc.g = std::stoi(getIniVal(iniMap, "Mesh", "DefaultColor.green", std::to_string(conf.mesh.dc.g)));

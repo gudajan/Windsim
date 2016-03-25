@@ -1,5 +1,6 @@
 #include "dx11widget.h"
 #include "staticLogger.h"
+#include "settings.h"
 
 #include <QResizeEvent>
 #include <QApplication>
@@ -80,6 +81,8 @@ void DX11Widget::cleanUp()
 // Trigger update of current settings
 void DX11Widget::applySettings()
 {
+	m_overlay.showText(conf.opencl.showInfo);
+
 	emit settingsChanged();
 }
 
@@ -96,8 +99,11 @@ void DX11Widget::drawFps(float fps)
 
 void DX11Widget::drawText(const QString& str)
 {
-	m_overlay.setText(str);
-	m_overlay.repaint();
+	if (conf.opencl.showInfo)
+	{
+		m_overlay.setText(str);
+		m_overlay.repaint();
+	}
 }
 
 void DX11Widget::paintEvent(QPaintEvent* event)

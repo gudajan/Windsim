@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>320</width>
-    <height>238</height>
+    <width>307</width>
+    <height>313</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -78,72 +78,42 @@
      <property name="title">
       <string>OpenCL</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_8">
-      <item>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="2" column="1">
+       <widget class="QComboBox" name="cmbCLPlatform"/>
+      </item>
+      <item row="2" column="0">
        <widget class="QLabel" name="lPlatform">
         <property name="text">
          <string>Platform:</string>
         </property>
-        <property name="buddy">
-         <cstring>sbPlatform</cstring>
-        </property>
        </widget>
       </item>
-      <item>
-       <widget class="QSpinBox" name="sbPlatform">
+      <item row="4" column="1">
+       <widget class="QComboBox" name="cmbCLDevice">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
           <horstretch>1</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="minimum">
-         <number>0</number>
-        </property>
-        <property name="maximum">
-         <number>100</number>
-        </property>
-        <property name="singleStep">
-         <number>1</number>
-        </property>
-        <property name="value">
-         <number>0</number>
-        </property>
        </widget>
       </item>
-      <item>
+      <item row="4" column="0">
        <widget class="QLabel" name="lDevice">
         <property name="text">
          <string>Device:</string>
         </property>
-        <property name="buddy">
-         <cstring>sbDevice</cstring>
+       </widget>
+      </item>
+      <item row="5" column="0" colspan="2">
+       <widget class="QCheckBox" name="cbDisplayCLInfo">
+        <property name="text">
+         <string>Display OpenCL performance info</string>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QSpinBox" name="sbDevice">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-          <horstretch>1</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimum">
-         <number>0</number>
-        </property>
-        <property name="maximum">
-         <number>100</number>
-        </property>
-        <property name="singleStep">
-         <number>1</number>
-        </property>
-        <property name="value">
-         <number>0</number>
-        </property>
-       </widget>
-      </item>
-      <item>
+      <item row="0" column="0">
        <widget class="QPushButton" name="pbInfo">
         <property name="text">
          <string>Show system info</string>

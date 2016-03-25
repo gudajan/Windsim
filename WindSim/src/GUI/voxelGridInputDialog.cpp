@@ -38,10 +38,3 @@ void VoxelGridInputDialog::chooseSimulatorSettings()
 
 	ui.leSim->setText(settings);
 }
-
-void VoxelGridInputDialog::showOpenCLInfo()
-{
-	QString info = QString::fromStdString(wtl::getOpenCLInfo());
-
-	QMessageBox::information(this, tr("Available OpenCL platforms and devices"), info);
-}

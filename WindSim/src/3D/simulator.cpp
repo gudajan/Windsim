@@ -147,6 +147,12 @@ void Simulator::changeSimSettings(const QString& settingsFile)
 	setGridDimension(m_resolution, m_voxelSize);
 }
 
+void Simulator::resetSimulation()
+{
+	log("INFO: Reset WindTunnel.");
+	m_windTunnel.reset();
+}
+
 void Simulator::createWindTunnel(const QString& settingsFile)
 {
 	// Only create one windtunnel at a time (releasing windtunnel includes opencl operations)

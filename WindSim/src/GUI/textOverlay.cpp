@@ -27,9 +27,6 @@ TextOverlay::TextOverlay(QWidget* parent)
 	connect(&m_timer, SIGNAL(timeout()), this, SLOT(moveToParent()));
 
 	m_timer.start(16);
-
-	//DEBUG
-	showText(true);
 }
 
 void TextOverlay::showText(bool showText)

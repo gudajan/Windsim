@@ -59,6 +59,7 @@ public slots:
 	void pause(); // Pause thread loop
 
 	void changeSimSettings(const QString& settingsFile); // Called when the json settings file changed
+	void resetSimulation();
 	void createWindTunnel(const QString& settingsFile); // Construct new windtunnel
 	void updateGrid(); // Update CellTypes and solid velocity from local vectors
 	void setGridDimension(const DirectX::XMUINT3& resolution, const DirectX::XMFLOAT3& voxelSize); // Update grid dimensions (empties cellTypes until next updateGrid)

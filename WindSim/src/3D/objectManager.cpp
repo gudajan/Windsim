@@ -117,6 +117,26 @@ void ObjectManager::removeAll()
 	m_actors.clear();
 }
 
+void ObjectManager::triggerObjectFunction(const QJsonObject& data)
+{
+	int id = data["id"].toInt();
+
+	auto it = m_actors.find(id);
+	if (it == m_actors.end())
+	{
+		throw std::runtime_error("Failed to trigger function of object with id '" + std::to_string(id) + "' as the id was not found!");
+	}
+
+	auto fIt = data.find("function");
+	if (fIt == data.end())
+	{
+		throw std::runtime_error("Failed to trigger function of object with id '" + std::to_string(id) + "' as the data did not contain 'function' key!");
+	}
+
+	if (fIt->toString() == "restartSimulation")
+		std::dynamic_pointer_cast<VoxelGridActor>(it->second)->getObject()->restartSimulation();
+}
+
 void ObjectManager::modify(const QJsonObject& data)
 {
 	int id = data["id"].toInt();
@@ -206,6 +226,8 @@ void ObjectManager::modify(const QJsonObject& data)
 	}
 	else if (type == ObjectType::VoxelGrid)
 	{
+		std::shared_ptr<VoxelGridActor> act = std::dynamic_pointer_cast<VoxelGridActor>(it->second);
+
 		QJsonObject jPos = data["Position"].toObject();
 		XMFLOAT3 pos(jPos["x"].toDouble(), jPos["y"].toDouble(), jPos["z"].toDouble());
 
@@ -222,7 +244,6 @@ void ObjectManager::modify(const QJsonObject& data)
 		QJsonObject jGq = jGs["quantity"].toObject();
 		XMUINT2 quantity(jGq["x"].toInt(), jGq["y"].toInt());
 
-		std::shared_ptr<VoxelGridActor> act = std::dynamic_pointer_cast<VoxelGridActor>(it->second);
 		act->setPos(pos);
 		act->computeWorld();
 		act->resize(res, vs);

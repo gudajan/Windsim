@@ -22,6 +22,7 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	// Simulator
 	connect(ui.leSim, SIGNAL(textChanged(const QString &)), this, SLOT(simulatorSettingsChanged()));
 	connect(ui.pbSim, SIGNAL(clicked()), this, SLOT(chooseSimulatorSettings()));
+	connect(ui.pbReinit, SIGNAL(clicked()), this, SLOT(restartSimulation()));
 
 	// Show voxel
 	connect(ui.cbShowVoxel, SIGNAL(stateChanged(int)), this, SLOT(showVoxelChanged(int)));
@@ -78,6 +79,8 @@ void VoxelGridProperties::setup(QObject* obj)
 {
 	// Create modifyCmd if properties changed in dialog
 	connect(this, SIGNAL(propertiesChanged(const QJsonObject&, Modifications)), obj, SLOT(modifyCmd(const QJsonObject&, Modifications)));
+	// Trigger function of voxel grid if necessary
+	connect(this, SIGNAL(triggerFunction(const QJsonObject&)), obj, SLOT(onTriggerFunction(const QJsonObject&)));
 }
 
 void VoxelGridProperties::updateProperties(const QJsonObject& properties)
@@ -322,6 +325,12 @@ void VoxelGridProperties::lineSettingsChanged()
 	m_properties["lines"] = lines;
 
 	emit propertiesChanged(m_properties, LineSettings);
+}
+
+void VoxelGridProperties::restartSimulation()
+{
+	QJsonObject data{ { "id", m_properties["id"].toInt() }, { "function", "restartSimulation" } };
+	emit triggerFunction(data);
 }
 
 void VoxelGridProperties::buttonClicked(QAbstractButton* button)

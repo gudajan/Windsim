@@ -27,6 +27,9 @@ public:
 	void remove(int id);
 	void removeAll();
 
+	// Trigger function of a single object
+	void triggerObjectFunction(const QJsonObject& data);
+
 	void modify(const QJsonObject& data);
 
 	// Render ALL objects at their current transformation
