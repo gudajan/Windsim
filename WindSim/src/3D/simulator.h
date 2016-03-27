@@ -34,7 +34,7 @@ public:
 
 	void continueSim(bool skip = false); // Continue simulation after simulation results are processed by rendering thread, say if future steps should be skipped
 	void reinitWindTunnel(); // Called from the rendering thread when static OpenCL was reinitialized; the static m_openCLMutex must be locked
-	std::mutex& getRunningMutex() { return m_simRunning; };
+	std::mutex& getRunningMutex() { return m_simRunning; }; // Get mutex, which indicates if simulation is currently running or not
 
 	// Get vectors for writing
 	std::vector<wtl::CellType>& getCellTypes() { return m_cellTypes; };
@@ -91,7 +91,6 @@ private:
 	std::vector<float> m_solidVelocity;
 
 	// WindTunnel output
-	std::vector<float> m_velocityXYZW; // DirectX needs RGBA Texture for sampling, Velocity from opencl are only 3D vectors
 	std::vector<float> m_velocity;
 	std::vector<float> m_density;
 	std::vector<float> m_densitySum;

@@ -257,7 +257,8 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["density"] = 2712.0; // Density of aluminium, Iron: 7850, Steel: 7850, Brass 60/40: 8520
 		if (!object.contains("localRotAxis"))
 			object["localRotAxis"] = QJsonObject{ { "enabled", Qt::Unchecked }, { "x", 0.0f }, { "y", 0.0f }, { "z", 0.0f } };
-
+		if (!object.contains("showAccelArrow"))
+			object["showAccellArrow"] = Qt::Unchecked;
 	}
 	if (type == ObjectType::VoxelGrid)
 	{

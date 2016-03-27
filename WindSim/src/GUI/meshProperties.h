@@ -31,6 +31,7 @@ private slots:
 	void pickColor();
 	void densityChanged();
 	void localRotAxisChanged();
+	void showAccelArrowChanged(int state);
 
 	void buttonClicked(QAbstractButton* button);
 

@@ -52,6 +52,7 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	connect(ui.dynAxisX, SIGNAL(valueChanged(double)), this, SLOT(localRotAxisChanged()));
 	connect(ui.dynAxisY, SIGNAL(valueChanged(double)), this, SLOT(localRotAxisChanged()));
 	connect(ui.dynAxisZ, SIGNAL(valueChanged(double)), this, SLOT(localRotAxisChanged()));
+	connect(ui.cbShowAccel, SIGNAL(stateChanged(int)), this, SLOT(showAccelArrowChanged(int)));
 
 	setModal(false);
 }
@@ -237,6 +238,12 @@ void MeshProperties::localRotAxisChanged()
 	emit propertiesChanged(m_properties, DynamicsSettings);
 }
 
+void MeshProperties::showAccelArrowChanged(int state)
+{
+	m_properties["showAccelArrow"] = state;
+	emit propertiesChanged(m_properties, DynamicsSettings);
+}
+
 void MeshProperties::buttonClicked(QAbstractButton* button)
 {
 	// Apply or Ok button was clicked
@@ -282,6 +289,7 @@ void MeshProperties::blockSignals()
 	ui.dynAxisX->blockSignals(true);
 	ui.dynAxisY->blockSignals(true);
 	ui.dynAxisZ->blockSignals(true);
+	ui.cbShowAccel->blockSignals(true);
 
 }
 
@@ -320,6 +328,7 @@ void MeshProperties::enableSignals()
 	ui.dynAxisX->blockSignals(false);
 	ui.dynAxisY->blockSignals(false);
 	ui.dynAxisZ->blockSignals(false);
+	ui.cbShowAccel->blockSignals(false);
 }
 
 void MeshProperties::setColorButton(int r, int g, int b)

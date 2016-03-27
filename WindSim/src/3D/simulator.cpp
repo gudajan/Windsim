@@ -58,7 +58,6 @@ Simulator::Simulator(const QString& settingsFile, const XMUINT3& resolution, con
 	, m_lineSettingsGUI(getLineSettingsDefault())
 	, m_cellTypes()
 	, m_solidVelocity()
-	, m_velocityXYZW()
 	, m_velocity()
 	, m_density()
 	, m_densitySum()
@@ -192,8 +191,8 @@ void Simulator::setGridDimension(const XMUINT3& resolution, const XMFLOAT3& voxe
 		m_cellTypes.resize(size);
 		m_solidVelocity.resize(size * 4); // float4
 
-		m_velocityXYZW.resize(size * 4);
-		m_velocity.resize(size * 3); // float3
+		//m_velocityXYZW.resize(size * 4);
+		m_velocity.resize(size * 4); // float3 + 1 padding
 		m_density.resize(size);
 		m_densitySum.resize(size);
 		m_lines.resize(lineBufferSize);

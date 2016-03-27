@@ -258,7 +258,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	context->CopyResource(m_torqueTexStaging, m_torqueTex);
 }
 
-void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4& objRot, const XMFLOAT3& objTrans, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, float elapsedTime)
+void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4& objRot, const XMFLOAT3& objTrans, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, float elapsedTime, bool showAccelArrow)
 {
 	// Calculate new dynamic rotation from current angular velocity and rotation in previous frame and elapsed time
 	XMVECTOR dynRot = XMLoadFloat4(&m_renderRot);
@@ -284,25 +284,27 @@ void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const 
 	//XMVECTOR newAngVel = oldAngVel + (angAcc - (acc * XMVector3Normalize(oldAngVel))) * elapsedTime;
 	XMStoreFloat3(&m_angVel, newAngVel);
 
+	if (showAccelArrow)
+	{
+		XMVECTOR rot = XMLoadFloat4(&objRot);
+		XMVECTOR trans = XMLoadFloat3(&objTrans);
+		// Transform angular velocity to world space
+		s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(XMVector3Rotate(XMLoadFloat3(&m_angAcc), rot).m128_f32));
+		//s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(&m_debugTrq));
+		s_shaderVariables.viewProj->SetMatrix(reinterpret_cast<float*>((XMLoadFloat4x4(&view) * XMLoadFloat4x4(&projection)).r));
+		// Transform center of mass to world space
+		s_shaderVariables.position->SetFloatVector((XMVector3Rotate(XMLoadFloat3(&m_centerOfMass), rot) + trans).m128_f32);
 
-	XMVECTOR rot = XMLoadFloat4(&objRot);
-	XMVECTOR trans = XMLoadFloat3(&objTrans);
-	// Transform angular velocity to world space
-	s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(XMVector3Rotate(XMLoadFloat3(&m_angAcc), rot).m128_f32));
-	//s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(&m_debugTrq));
-	s_shaderVariables.viewProj->SetMatrix(reinterpret_cast<float*>((XMLoadFloat4x4(&view) * XMLoadFloat4x4(&projection)).r));
-	// Transform center of mass to world space
-	s_shaderVariables.position->SetFloatVector((XMVector3Rotate(XMLoadFloat3(&m_centerOfMass), rot) + trans).m128_f32);
+		s_effect->GetTechniqueByName("Torque")->GetPassByName("AngularVelocity")->Apply(0, context);
 
-	s_effect->GetTechniqueByName("Torque")->GetPassByName("AngularVelocity")->Apply(0, context);
+		context->IASetInputLayout(nullptr);
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
 
-	context->IASetInputLayout(nullptr);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
-
-	UINT stride = 0;
-	UINT offset = 0;
-	context->IASetVertexBuffers(0, 0, nullptr, &stride, &offset);
-	context->Draw(1, 0);
+		UINT stride = 0;
+		UINT offset = 0;
+		context->IASetVertexBuffers(0, 0, nullptr, &stride, &offset);
+		context->Draw(1, 0);
+	}
 }
 
 

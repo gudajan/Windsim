@@ -44,6 +44,8 @@ public:
 	void setDynamics(bool dynamics) { m_calcDynamics = dynamics; m_dynamics.reset(); };
 	void setDensity(float density) { m_density = density; };
 	void setLocalRotationAxis(const DirectX::XMFLOAT3& axis) { m_dynamics.setRotationAxis(axis); m_dynamics.reset(); };
+	void setShowAccelArrow(bool showAccelArrow) { m_showAccelArrow = showAccelArrow; };
+	void setSimRunning(bool simRunning) { m_simRunning = simRunning; };
 	void updateInertiaTensor();
 
 private:
@@ -59,6 +61,8 @@ private:
 	DirectX::PackedVector::XMCOLOR m_color;
 	bool m_voxelize;
 	bool m_calcDynamics;
+	bool m_simRunning;
+	bool m_showAccelArrow;
 	float m_density;
 
 	bool m_hovered; // The mouse is hovering above the mesh

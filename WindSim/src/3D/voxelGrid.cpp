@@ -441,6 +441,28 @@ bool VoxelGrid::changeSimSettings(const QString& settingsFile)
 	return true;
 };
 
+void VoxelGrid::runSimulation(bool enabled)
+{
+	if (enabled)
+	{
+		emit startSimulation();
+		for (auto& it: m_manager->getActors())
+		{
+			if (it.second->getType() == ObjectType::Mesh)
+				std::dynamic_pointer_cast<MeshActor>(it.second)->setSimRunning(true);
+		}
+	}
+	else
+	{
+		emit pauseSimulation();
+		for (auto& it : m_manager->getActors())
+		{
+			if (it.second->getType() == ObjectType::Mesh)
+				std::dynamic_pointer_cast<MeshActor>(it.second)->setSimRunning(false);
+		}
+	}
+}
+
 void VoxelGrid::changeSmokeSettings(const QJsonObject& settings)
 {
 	bool tmp = settings["enabled"].toBool();
@@ -543,43 +565,7 @@ void VoxelGrid::updateVelocity(ID3D11DeviceContext* context)
 	// Map staging texture, write velocity field to it, unmap, copy resource to gpu
 	D3D11_MAPPED_SUBRESOURCE msr;
 	context->Map(m_velocityTextureStaging, 0, D3D11_MAP_WRITE, 0, &msr);
-	const float* velocity = m_simulator.getVelocity().data();
-	if (msr.pData)
-	{
-		int paddedRowPitch = msr.RowPitch / sizeof(float);
-		int paddedDepthPitch = msr.DepthPitch / sizeof(float);
-		int rowPitch = m_resolution.x * 3; // three floats in original buffer
-		int depthPitch = rowPitch * m_resolution.y;
-
-		float* data = static_cast<float*>(msr.pData);
-
-		auto fillVel = [data, velocity, paddedRowPitch, paddedDepthPitch, rowPitch, depthPitch, this](int zStart, int zWork)
-		{
-			for (int z = zStart; z < zStart+zWork; ++z)
-			{
-				for (int y = 0; y < m_resolution.y; ++y)
-				{
-					for (int x = 0; x < m_resolution.x; ++x)
-					{
-						for (int i = 0; i < 3; ++i)
-						{
-							data[(x * 4) + i + y * paddedRowPitch + z * paddedDepthPitch] = velocity[(x * 3) + i + y * rowPitch + z * depthPitch];
-						}
-						data[(x * 4) + 3 + y * paddedRowPitch + z * paddedDepthPitch] = 0;
-					}
-				}
-			}
-		};
-
-		int sizeZ = m_resolution.z / 8;
-		std::vector<std::future<void>> handles;
-		handles.reserve(8);
-		for (int i = 0; i < 8; ++i)
-			handles.push_back(std::async(std::launch::async, fillVel, i * sizeZ, sizeZ));
-
-		for (int i = 0; i < 8; ++i)
-			handles[i].get();
-	}
+	write3DTexture(&msr, m_simulator.getVelocity().data(), sizeof(float) * 4);
 	context->Unmap(m_velocityTextureStaging, 0);
 
 	context->CopyResource(m_velocityTexture, m_velocityTextureStaging);
@@ -619,20 +605,42 @@ void VoxelGrid::read3DTexture(D3D11_MAPPED_SUBRESOURCE* msr, void* outData, int 
 	int rowPitch = m_resolution.x * bytePerElem;
 	int depthPitch = rowPitch * m_resolution.y;
 
+	copyPadded3DTexture(data, rowPitch, depthPitch, tex, paddedRowPitch, paddedDepthPitch);
+}
+
+void VoxelGrid::write3DTexture(D3D11_MAPPED_SUBRESOURCE* msr, const void* inData, int bytePerElem)
+{
+	if (!msr->pData || !inData)
+		return;
+
+	char* tex = static_cast<char*>(msr->pData);
+	const char* data = static_cast<const char*>(inData);
+
+	// Temps
+	int paddedRowPitch = msr->RowPitch; // convert byte size to block resolution
+	int paddedDepthPitch = msr->DepthPitch;
+	int rowPitch = m_resolution.x * bytePerElem;
+	int depthPitch = rowPitch * m_resolution.y;
+
+	copyPadded3DTexture(tex, paddedRowPitch, paddedDepthPitch, data, rowPitch, depthPitch);
+}
+
+void VoxelGrid::copyPadded3DTexture(char* outData, int outRowPitch, int outDepthPitch, const char* inData, int inRowPitch, int inDepthPitch)
+{
 	// Extract the voxel grid from the padded texture block
-	if (paddedRowPitch == rowPitch && paddedDepthPitch == depthPitch)
-		std::memcpy(data, tex, depthPitch * m_resolution.z);
-	else if (paddedRowPitch == rowPitch)
+	if (outRowPitch == inRowPitch && outDepthPitch == inDepthPitch)
+		std::memcpy(outData, inData, inDepthPitch * m_resolution.z);
+	else if (outRowPitch == inRowPitch)
 	{
 		for (int z = 0; z < m_resolution.z; ++z)
-			std::memcpy(data + z * depthPitch, tex + z * paddedDepthPitch, depthPitch);
+			std::memcpy(outData + z * outDepthPitch, inData + z * inDepthPitch, inDepthPitch);
 	}
 	else
 	{
 		for (int z = 0; z < m_resolution.z; ++z)
 		{
 			for (int y = 0; y < m_resolution.y; ++y)
-				std::memcpy(data + y * rowPitch + z * depthPitch, tex + y * paddedRowPitch + z * paddedDepthPitch, rowPitch);
+				std::memcpy(outData + y * outRowPitch + z * outDepthPitch, inData + y * inRowPitch + z * inDepthPitch, inRowPitch);
 		}
 	}
 }

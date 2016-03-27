@@ -17,6 +17,8 @@ MeshActor::MeshActor(Mesh3D& mesh, int id)
 	m_color(PackedVector::XMCOLOR(conf.mesh.dc.r / 255.0f, conf.mesh.dc.g / 255.0f, conf.mesh.dc.b / 255.0f, 1.0f)), // XMCOLOR constructor multiplies by 255.0f and packs color into one uint32_t
 	m_voxelize(true),
 	m_calcDynamics(true),
+	m_simRunning(true),
+	m_showAccelArrow(false),
 	m_hovered(false),
 	m_selected(false),
 	m_modified(false)
@@ -56,9 +58,9 @@ void MeshActor::release()
 
 void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, double elapsedTime)
 {
-	if (m_calcDynamics)
+	if (m_calcDynamics && m_simRunning)
 	{
-		m_dynamics.render(device, context, m_rot, m_pos, view, projection, elapsedTime);
+		m_dynamics.render(device, context, m_rot, m_pos, view, projection, elapsedTime, m_showAccelArrow);
 
 		// Calculate dynamic world matrix, including dynamic rotation
 		// S(world) * T(-com) * R(dyn) * T(com) * RT(world)

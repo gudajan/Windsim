@@ -61,7 +61,7 @@ public:
 	void setGlyphQuantity(const DirectX::XMUINT2& quantity);
 
 	bool changeSimSettings(const QString& settingsFile);
-	void runSimulation(bool enabled) { if (enabled) emit startSimulation(); else emit pauseSimulation(); };
+	void runSimulation(bool enabled);
 	void changeSmokeSettings(const QJsonObject& settings);
 	void changeLineSettings(const QJsonObject& settings);
 	void reinitWindTunnel() { m_simulator.reinitWindTunnel(); m_simAvailable = true; m_updateGrid = true; }
@@ -91,6 +91,8 @@ private:
 	void updateVelocity(ID3D11DeviceContext* context);
 	void copyGrid(ID3D11DeviceContext* context);
 	void read3DTexture(D3D11_MAPPED_SUBRESOURCE* msr, void* outData, int bytePerElem = 1);
+	void write3DTexture(D3D11_MAPPED_SUBRESOURCE* msr, const void* inData, int bytePerElem = 1);
+	void copyPadded3DTexture(char* outData, int outRowPitch, int outDepthPitch, const char* inData, int inRowPitch, int inDepthPitch);
 
 	void renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, bool copyStaging);

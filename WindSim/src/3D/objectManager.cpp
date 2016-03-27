@@ -213,6 +213,7 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setDynamics(data["dynamics"].toInt() == Qt::Checked);
 		act->setDensity(data["density"].toDouble());
 		act->setLocalRotationAxis(localRotationAxis);
+		act->setShowAccelArrow(data["showAccelArrow"].toInt() == Qt::Checked);
 
 		if (mod.testFlag(DynamicsSettings))
 			act->updateInertiaTensor();
