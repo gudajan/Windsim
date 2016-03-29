@@ -2,6 +2,7 @@
 #include "objectManager.h"
 #include "meshActor.h"
 #include "mesh3D.h"
+#include "depthStencil.h"
 #include "dx11renderer.h"
 
 #include <d3d11.h>
@@ -50,6 +51,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, 
 	m_wtRenderer(windTunnelSettings.toStdString()),
 	m_wtSettings(windTunnelSettings),
 	m_lastMod(QFileInfo(windTunnelSettings).lastModified()),
+	m_volumeRenderer(),
 	m_simulator(windTunnelSettings, resolution, voxelSize, m_renderer),
 	m_simulationThread()
 {
@@ -247,7 +249,8 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_gridVelTextureStaging));
 
 	m_wtRenderer.init(device, m_resolution, m_voxelSize);
-	m_wtRenderer.onResizeSwapChain(device, m_renderer->getBackBufferDesc());
+
+	m_volumeRenderer.create(device, m_resolution);
 
 	return S_OK;
 }
@@ -269,6 +272,7 @@ void VoxelGrid::release()
 	SAFE_RELEASE(m_velocityTextureStaging);
 	SAFE_RELEASE(m_velocitySRV);
 	m_wtRenderer.release();
+	m_volumeRenderer.release();
 }
 
 void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, double elapsedTime)
@@ -352,18 +356,19 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	//OutputDebugStringA(("VoxelGrid render lasted " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 }
 
-void VoxelGrid::renderWindTunnel(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime)
+void VoxelGrid::renderVolume(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime)
 {
+
+	DepthStencil::update(context);
+
+	m_volumeRenderer.render(context, m_velocitySRV, DepthStencil::srv(), world, view, projection, m_resolution, m_voxelSize);
+
 	XMFLOAT3 gridPos;
 	XMVECTOR scale, rot, trans;
 	XMMatrixDecompose(&scale, &rot, &trans, XMLoadFloat4x4(&world));
 	XMStoreFloat3(&gridPos, trans);
-	m_wtRenderer.render(device, context, view, projection, gridPos, m_renderer->getCamera()->getCamPos(), m_renderer->getCamera()->getNearZ());
-}
+	m_wtRenderer.render(device, context, DepthStencil::srv(), view, projection, gridPos, m_renderer->getCamera()->getCamPos(), m_renderer->getCamera()->getNearZ());
 
-void VoxelGrid::onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc)
-{
-	m_wtRenderer.onResizeSwapChain(device, backBufferDesc);
 }
 
 bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
@@ -417,13 +422,13 @@ bool VoxelGrid::changeSimSettings(const QString& settingsFile)
 	// Currently simulation settings file also contains rendering settings
 	// -> Create new renderer with new file and initialize properly
 	// Only recreate the wind tunnel if settings have changed
-	QDateTime lastMod;
-	if (settingsFile == m_wtSettings && (lastMod = QFileInfo(settingsFile).lastModified()) <= m_lastMod)
+	QFileInfo info(settingsFile);
+	QDateTime lastMod = info.lastModified();
+	if (settingsFile == m_wtSettings && lastMod <= m_lastMod)
 		return false;
 
 	m_wtRenderer = wtl::WindTunnelRenderer(settingsFile.toStdString());
 	m_wtRenderer.init(m_renderer->getDevice(), m_resolution, m_voxelSize);
-	m_wtRenderer.onResizeSwapChain(m_renderer->getDevice(), m_renderer->getBackBufferDesc());
 	m_wtSettings = settingsFile;
 	m_lastMod = lastMod;
 
@@ -580,11 +585,11 @@ void VoxelGrid::copyGrid(ID3D11DeviceContext* context)
 	read3DTexture(&msr, cellTypes.data(), sizeof(wtl::CellType));
 	context->Unmap(m_gridAllTextureStaging, 0);
 
-	//// Copy grid velocity
-	//std::vector<float>& solidVelocity = m_simulator.getSolidVelocity();
-	//context->Map(m_gridVelTextureStaging, 0, D3D11_MAP_READ, 0, &msr);
-	//read3DTexture(&msr, solidVelocity.data(), 4 * sizeof(float));
-	//context->Unmap(m_gridVelTextureStaging, 0);
+	// Copy grid velocity
+	std::vector<float>& solidVelocity = m_simulator.getSolidVelocity();
+	context->Map(m_gridVelTextureStaging, 0, D3D11_MAP_READ, 0, &msr);
+	read3DTexture(&msr, solidVelocity.data(), 4 * sizeof(float));
+	context->Unmap(m_gridVelTextureStaging, 0);
 }
 
 void VoxelGrid::read3DTexture(D3D11_MAPPED_SUBRESOURCE* msr, void* outData, int bytePerElem)

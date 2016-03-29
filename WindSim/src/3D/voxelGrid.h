@@ -4,6 +4,7 @@
 #include "object3D.h"
 #include "simulator.h"
 #include "common.h"
+#include "volumeRenderer.h"
 
 #include <WindTunnelLib/WindTunnelRenderer.h>
 
@@ -45,9 +46,7 @@ public:
 
 	// Iterate mesh objects and render/voxelize into voxelGrid
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
-	void renderWindTunnel(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime);
-
-	void onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc) override;
+	void renderVolume(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime);
 
 	DirectX::XMUINT3 getResolution() const { return m_resolution; };
 	DirectX::XMFLOAT3 getVoxelSize() const { return m_voxelSize; };
@@ -174,6 +173,8 @@ private:
 	wtl::WindTunnelRenderer m_wtRenderer;
 	QString m_wtSettings;
 	QDateTime m_lastMod;
+
+	VolumeRenderer m_volumeRenderer;
 
 	Simulator m_simulator;
 	QThread m_simulationThread;

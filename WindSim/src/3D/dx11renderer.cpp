@@ -4,9 +4,11 @@
 #include "axes.h"
 #include "marker.h"
 #include "voxelGrid.h"
+#include "volumeRenderer.h"
 #include "voxelGridActor.h"
 #include "simulator.h"
 #include "dynamics.h"
+#include "depthStencil.h"
 #include "settings.h"
 
 
@@ -40,7 +42,6 @@ DX11Renderer::DX11Renderer(WId hwnd, int width, int height, QObject* parent)
 	m_renderTargetView(nullptr),
 	m_depthStencilView(nullptr),
 	m_rasterizerState(nullptr),
-	m_backBufferDesc(),
 	m_width(width),
 	m_height(height),
 	m_containsCursor(false),
@@ -161,7 +162,8 @@ bool DX11Renderer::init()
 	SAFE_RELEASE(dxgiFactory);
 
 	// Initialize rendertargets and set viewport
-	onResize(m_width, m_height);
+	if (!onResize(m_width, m_height))
+		return false;
 
 	m_transformer.initDX11(m_device);
 
@@ -202,8 +204,8 @@ void DX11Renderer::issueVoxelization()
 void DX11Renderer::execute()
 {
 	m_elapsedTimer.start();
-	m_renderTimer.start(8); // Rendering happens with 125 FPS at max
-	m_voxelizationTimer.start(125); // Voxelization happens 40 times per second at maximum
+	m_renderTimer.start(17); // 125 Rendering events generated per second
+	m_voxelizationTimer.start(250); // Voxelization happens every x milliseconds
 }
 
 void DX11Renderer::stop()
@@ -224,7 +226,7 @@ void DX11Renderer::pause()
 	m_renderingPaused = true;
 }
 
-void DX11Renderer::onResize(int width, int height)
+bool DX11Renderer::onResize(int width, int height)
 {
 	m_width = width;
 	m_height = height;
@@ -241,16 +243,25 @@ void DX11Renderer::onResize(int width, int height)
 	SAFE_RELEASE(m_depthStencilView);
 	SAFE_RELEASE(m_depthStencilBuffer);
 
-	m_swapChain->ResizeBuffers(1, m_width, m_height, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
+	if (FAILED(m_swapChain->ResizeBuffers(1, m_width, m_height, DXGI_FORMAT_R8G8B8A8_UNORM, 0)))
+	{
+		OutputDebugStringA("Failed to resize buffers of swapchain\n");
+		return false;
+	}
 
 	ID3D11Texture2D* pBackBuffer = nullptr;
-	m_swapChain->GetBuffer(0, __uuidof(*pBackBuffer), reinterpret_cast<LPVOID*>(&pBackBuffer));
-	IDXGISurface* pSurface = nullptr;
-	pBackBuffer->QueryInterface(__uuidof(pSurface), reinterpret_cast<LPVOID*>(&pSurface));
-	pSurface->GetDesc(&m_backBufferDesc);
-	m_device->CreateRenderTargetView(pBackBuffer, nullptr, &m_renderTargetView);
+	if(FAILED(m_swapChain->GetBuffer(0, __uuidof(*pBackBuffer), reinterpret_cast<LPVOID*>(&pBackBuffer))))
+	{
+		OutputDebugStringA("Failed to get backbuffer of swapchain\n");
+		return false;
+	}
+
+	if (FAILED(m_device->CreateRenderTargetView(pBackBuffer, nullptr, &m_renderTargetView)))
+	{
+		OutputDebugStringA("Failed to create render target view\n");
+		return false;
+	}
 	SAFE_RELEASE(pBackBuffer);
-	SAFE_RELEASE(pSurface);
 
 	D3D11_TEXTURE2D_DESC descDepth;
 	descDepth.Width = m_width;
@@ -265,7 +276,11 @@ void DX11Renderer::onResize(int width, int height)
 	descDepth.CPUAccessFlags = 0;
 	descDepth.MiscFlags = 0;
 
-	m_device->CreateTexture2D(&descDepth, 0, &m_depthStencilBuffer);
+	if(FAILED(m_device->CreateTexture2D(&descDepth, 0, &m_depthStencilBuffer)))
+	{
+		OutputDebugStringA("Failed to create depth stencil buffer\n");
+		return false;
+	}
 
 	// Create the depth stencil view
 	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
@@ -274,7 +289,11 @@ void DX11Renderer::onResize(int width, int height)
 	descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	descDSV.Texture2D.MipSlice = 0;
 
-	m_device->CreateDepthStencilView(m_depthStencilBuffer, &descDSV, &m_depthStencilView);
+	if(FAILED(m_device->CreateDepthStencilView(m_depthStencilBuffer, &descDSV, &m_depthStencilView)))
+	{
+		OutputDebugStringA("Failed to create depth stencil view\n");
+		return false;
+	}
 
 	// Bind to pipeline
 	m_context->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencilView);
@@ -290,7 +309,13 @@ void DX11Renderer::onResize(int width, int height)
 
 	m_context->RSSetViewports(1, &vp);
 
-	m_manager.onResizeSwapChain(m_device, &m_backBufferDesc);
+	if (FAILED(DepthStencil::create(m_device, m_width, m_height)))
+	{
+		OutputDebugStringA("Failed to create depth stencil shader resource\n");
+		return false;
+	}
+
+	return true;
 }
 
 void DX11Renderer::onMouseMove(QPoint localPos, QPoint globalPos, int modifiers)
@@ -511,6 +536,13 @@ bool DX11Renderer::reloadShaders()
 		reloaded = false;
 	}
 
+	if (FAILED(VolumeRenderer::createShaderFromFile(L"src\\3D\\shaders\\volume.fx", m_device, true)))
+	{
+		m_logger.logit("WARNING: Failed to reload shader file 'src\\3D\\shaders\\volume.fx'! Stopped rendering.");
+		m_state = State::ShaderError;
+		reloaded = false;
+	}
+
 	if (FAILED(Dynamics::createShaderFromFile(L"src\\3D\\shaders\\dynamics.fx", m_device, true)))
 	{
 		m_logger.logit("WARNING: Failed to reload shader file 'src\\3D\\shaders\\dynamics.fx'! Stopped rendering.");
@@ -566,6 +598,10 @@ bool DX11Renderer::createShaders()
 	if (FAILED(VoxelGrid::createShaderFromFile(fxoPath.toStdWString(), m_device)))
 		return false;
 
+	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("volume.fxo");
+	if (FAILED(VolumeRenderer::createShaderFromFile(fxoPath.toStdWString(), m_device)))
+		return false;
+
 	fxoPath = QDir(QCoreApplication::applicationDirPath()).filePath("dynamics.fxo");
 	if (FAILED(Dynamics::createShaderFromFile(fxoPath.toStdWString(), m_device)))
 		return false;
@@ -575,6 +611,8 @@ bool DX11Renderer::createShaders()
 
 void DX11Renderer::destroy()
 {
+	DepthStencil::release();
+
 	SAFE_RELEASE(m_depthStencilBuffer);
 	SAFE_RELEASE(m_depthStencilView);
 	SAFE_RELEASE(m_renderTargetView);
@@ -596,6 +634,7 @@ void DX11Renderer::destroy()
 	Axes::releaseShader();
 	Marker::releaseShader();
 	VoxelGrid::releaseShader();
+	VolumeRenderer::releaseShader();
 	Dynamics::releaseShader();
 
 	// Release all objects
@@ -603,6 +642,7 @@ void DX11Renderer::destroy()
 	m_manager.release(true);
 
 	Simulator::shutdownOpenCL();
+
 
 	if (m_device)
 	{

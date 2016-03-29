@@ -35,7 +35,6 @@ public:
 	// Render ALL objects at their current transformation
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime);
 	// Release the DirectX objects of ALL objects
-	void onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc);
 	void release(bool withAccessories);
 
 	// VoxelGrid access

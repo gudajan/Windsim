@@ -1,3 +1,22 @@
+
+
+//enum CellType : char
+//{
+//	CELL_TYPE_FLUID = 0,
+//	CELL_TYPE_INFLOW, // 1
+//	CELL_TYPE_OUTFLOW, // 2
+//	CELL_TYPE_SOLID_SLIP, // 3
+//	CELL_TYPE_SOLID_NO_SLIP, // 4
+//  CELL_TYPE_SOLID_BOUNDARY // 5
+//};
+
+#define CELL_TYPE_FLUID 0
+#define CELL_TYPE_INFLOW 1
+#define CELL_TYPE_OUTFLOW 2
+#define CELL_TYPE_SOLID_SLIP 3
+#define CELL_TYPE_SOLID_NO_SLIP 4
+#define CELL_TYPE_SOLID_BOUNDARY 5
+
 RasterizerState CullNone
 {
 	CullMode = None;
@@ -20,6 +39,12 @@ DepthStencilState DepthDefault
 DepthStencilState DepthDisable
 {
 	DEPTHENABLE = FALSE;
+};
+
+DepthStencilState DepthWriteDisable
+{
+	DEPTHENABLE = FALSE;
+	DEPTHWRITEMASK = 0;
 };
 
 DepthStencilState DepthEqual
@@ -73,4 +98,23 @@ float4 BlinnPhongIllumination(in float3 n, in float3 v, in float3 col, in float 
 bool equal(float a, float b, float epsilon)
 {
 	return abs(a - b) <= epsilon;
+}
+
+bool intersectAlignedBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 boxMax, out float t0, out float t1)
+{
+	float3 invDir = 1.0f / dir;
+	float3 tbot = (boxMin - origin) * invDir;
+	float3 ttop = (boxMax - origin) * invDir;
+
+	t0 = (dir.x >= 0) ? tbot.x : ttop.x;
+	t1 = (dir.x >= 0) ? ttop.x : tbot.x;
+
+	t0 = max((dir.y >= 0) ? tbot.y : ttop.y, t0);
+	t1 = min((dir.y >= 0) ? ttop.y : tbot.y, t1);
+
+	t0 = max((dir.z >= 0) ? tbot.z : ttop.z, t0);
+	t1 = min((dir.z >= 0) ? ttop.z : tbot.z, t1);
+
+	// Avoid intersections behind the ray origin (i.e. if t1 is negative)
+	return t0 <= t1 && t1 >= 0.0f; // this has numerical errors if t0 and t1 are almost equal
 }

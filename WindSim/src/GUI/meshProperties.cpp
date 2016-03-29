@@ -241,7 +241,7 @@ void MeshProperties::localRotAxisChanged()
 void MeshProperties::showAccelArrowChanged(int state)
 {
 	m_properties["showAccelArrow"] = state;
-	emit propertiesChanged(m_properties, DynamicsSettings);
+	emit propertiesChanged(m_properties, ShowAccelArrow);
 }
 
 void MeshProperties::buttonClicked(QAbstractButton* button)
@@ -250,7 +250,7 @@ void MeshProperties::buttonClicked(QAbstractButton* button)
 	QDialogButtonBox::StandardButton sb = ui.buttonBox->standardButton(button);
 	if (sb == QDialogButtonBox::Apply || sb == QDialogButtonBox::Ok)
 	{
-		emit propertiesChanged(m_properties, Position|Scaling|Rotation|Voxelization|Visibility|Shading|Name|DynamicsSettings);
+		emit propertiesChanged(m_properties, All);
 	}
 }
 

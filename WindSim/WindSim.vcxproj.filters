@@ -226,6 +226,12 @@
     <ClCompile Include="src\GUI\textOverlay.cpp">
       <Filter>GUI</Filter>
     </ClCompile>
+    <ClCompile Include="src\3D\volumeRenderer.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\depthStencil.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\ui\windsim.ui">
@@ -380,6 +386,12 @@
     <ClInclude Include="src\3D\actor.h">
       <Filter>3D\Actors</Filter>
     </ClInclude>
+    <ClInclude Include="src\3D\volumeRenderer.h">
+      <Filter>3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\depthStencil.h">
+      <Filter>3D</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\3D\shaders\axes.fx">
@@ -401,6 +413,9 @@
       <Filter>3D\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\3D\shaders\dynamics.fx">
+      <Filter>3D\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\3D\shaders\volume.fx">
       <Filter>3D\Shaders</Filter>
     </FxCompile>
   </ItemGroup>

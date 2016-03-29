@@ -165,7 +165,7 @@ void Simulator::updateGrid()
 	// Skip if currently windTunnels not available
 	if (!checkContinue()) return;
 
-	m_windTunnel.updateGrid(m_cellTypes); // , m_solidVelocity);
+	m_windTunnel.updateGrid(m_cellTypes, m_solidVelocity);
 	emit simUpdated();
 }
 
@@ -180,10 +180,6 @@ void Simulator::setGridDimension(const XMUINT3& resolution, const XMFLOAT3& voxe
 
 		m_windTunnel.setGridDimension(resolution, voxelSize);
 
-		// Reinitialize settings from GUI
-		changeSmokeSettings(m_smokeSettingsGUI);
-		changeLineSettings(m_lineSettingsGUI);
-
 		int lineBufferSize = m_windTunnel.getLineBufferSize();
 
 		int size = resolution.x * resolution.y * resolution.z;
@@ -191,7 +187,6 @@ void Simulator::setGridDimension(const XMUINT3& resolution, const XMFLOAT3& voxe
 		m_cellTypes.resize(size);
 		m_solidVelocity.resize(size * 4); // float4
 
-		//m_velocityXYZW.resize(size * 4);
 		m_velocity.resize(size * 4); // float3 + 1 padding
 		m_density.resize(size);
 		m_densitySum.resize(size);
@@ -202,6 +197,10 @@ void Simulator::setGridDimension(const XMUINT3& resolution, const XMFLOAT3& voxe
 		emit simulatorReady(); // Set sim availbale
 		emit simUpdated(); // Enable grid updates
 	}
+
+	// Reinitialize settings from GUI
+	changeSmokeSettings(m_smokeSettingsGUI);
+	changeLineSettings(m_lineSettingsGUI);
 
 	QMutexLocker lock(&m_simMutex);
 	m_skipSteps = false; // Steps were skipped during resize

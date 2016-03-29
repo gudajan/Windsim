@@ -39,7 +39,6 @@ public:
 	int getHeight(){ return m_height; };
 	Camera* getCamera() { return &m_camera; };
 	Logger* getLogger() { return &m_logger; };
-	const DXGI_SURFACE_DESC* getBackBufferDesc() const { return &m_backBufferDesc; };
 	ID3D11Device* getDevice() { return m_device; };
 
 	void drawInfo(const QString& info);
@@ -55,7 +54,7 @@ public slots:
 	void pause(); // Pause Render loop
 
 	// Arbitrary Events
-	void onResize(int width, int height); // Resize viewport
+	bool onResize(int width, int height); // Resize viewport
 	void onMouseMove(QPoint localPos, QPoint globalPos, int modifiers);
 	void onMousePress(QPoint globalPos, int button, int modifiers);
 	void onMouseRelease(QPoint globalPos, int button, int modifiers);
@@ -97,7 +96,6 @@ private:
 	ID3D11RenderTargetView* m_renderTargetView;
 	ID3D11DepthStencilView* m_depthStencilView;
 	ID3D11RasterizerState* m_rasterizerState;
-	DXGI_SURFACE_DESC m_backBufferDesc;
 
 	// Viewport resolution
 	int m_width;

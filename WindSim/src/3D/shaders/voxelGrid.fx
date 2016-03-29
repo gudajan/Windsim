@@ -1,22 +1,5 @@
 #include "common.fx"
 
-//enum VoxelType : char
-//{
-//	CELL_TYPE_FLUID = 0,
-//	CELL_TYPE_INFLOW, // 1
-//	CELL_TYPE_OUTFLOW, // 2
-//	CELL_TYPE_SOLID_SLIP, // 3
-//	CELL_TYPE_SOLID_NO_SLIP, // 4
-//  CELL_TYPE_SOLID_BOUNDARY // 5
-//};
-
-#define CELL_TYPE_FLUID 0
-#define CELL_TYPE_INFLOW 1
-#define CELL_TYPE_OUTFLOW 2
-#define CELL_TYPE_SOLID_SLIP 3
-#define CELL_TYPE_SOLID_NO_SLIP 4
-#define CELL_TYPE_SOLID_BOUNDARY 5
-
 #define XY_PLANE 0
 #define XZ_PLANE 1
 #define YZ_PLANE 2
@@ -131,24 +114,6 @@ uint getValue(in float3 posVS, out bool posInGrid)
 	uint n = posVS.x - x * 4;
 	uint val = g_gridAllSRV[uint3(x, posVS.yz)];
 	return getVoxelValue(val, n);
-}
-
-bool intersectBox(in float3 origin, in float3 dir, in float3 boxMin, in float3 boxMax, out float t0, out float t1)
-{
-	float3 invDir = 1.0f / dir;
-	float3 tbot = (boxMin - origin) * invDir;
-	float3 ttop = (boxMax - origin) * invDir;
-
-	t0 = (dir.x >= 0) ? tbot.x : ttop.x;
-	t1 = (dir.x >= 0) ? ttop.x : tbot.x;
-
-	t0 = max((dir.y >= 0) ? tbot.y : ttop.y, t0);
-	t1 = min((dir.y >= 0) ? ttop.y : tbot.y, t1);
-
-	t0 = max((dir.z >= 0) ? tbot.z : ttop.z, t0);
-	t1 = min((dir.z >= 0) ? ttop.z : tbot.z, t1);
-
-	return t0 <= t1; // this has numerical errors if t0 and t1 are almost equal
 }
 
 // =============================================================================
@@ -384,7 +349,7 @@ void gsArrowGlyph(point uint input[1] : VertexID, inout LineStream<PSColIn> stre
 	float3 posTS = slicePlanePos + slicePlaneVec1 * (index.x + 0.5) + slicePlaneVec2 * (index.y + 0.5); // In texture space [0, 1]
 	float3 posOS = posTS * float3(g_vResolution) * g_vVoxelSize; // In object space
 
-	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, posTS, 0).xyz;
+	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, posTS, 0.0).xyz;
 
 	float3 x = float3(0, -1, 0) * 0.01f;
 	float3 y = float3(1, 0, 0) * 0.01f;
@@ -476,7 +441,7 @@ PSOut psVolume(PSVoxelIn psIn)
 	float tmax = -1.0;
 	// Add/Subtract small value because of numerical inaccuracies, which would lead to discarded pixels later
 	// (i.e. the intersection position may lie just outside the grid and therefore the raycasting is immediately stopped)
-	if (!intersectBox(g_vCamPos.xyz, rayDir, float3(0.001f, 0.001f, 0.001f), float3(g_vResolution - 0.001), tmin, tmax))
+	if (!intersectAlignedBox(g_vCamPos.xyz, rayDir, float3(0.001f, 0.001f, 0.001f), float3(g_vResolution - 0.001), tmin, tmax))
 	{
 		discard;
 		return psOut;
@@ -524,7 +489,7 @@ PSOut psVolume(PSVoxelIn psIn)
 		tmax = -1.0f;
 		float3 boxMin = floor(currentPos);
 		float3 boxMax = ceil(currentPos);
-		intersectBox(g_vCamPos.xyz, rayDir, boxMin, boxMax, tmin, tmax); // Get intersection point of voxel and ray
+		intersectAlignedBox(g_vCamPos.xyz, rayDir, boxMin, boxMax, tmin, tmax); // Get intersection point of voxel and ray
 
 		float3 voxelPos = g_vCamPos.xyz + tmin * rayDir;
 		float4 pos = mul(float4(voxelPos, 1.0f), g_mVoxelWorldViewProj);

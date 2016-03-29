@@ -150,23 +150,9 @@ void ObjectManager::modify(const QJsonObject& data)
 		throw std::runtime_error("Failed to modify object with id '" + std::to_string(id) + "' as the id was not found!");
 	}
 
-	// Check if, according to the modifications, which are made, a update of the simulation is necessary
-	bool updateSim = false;
 	Modifications mod = All;
-	if (!data.contains("modifications"))
-		updateSim = true;
-	else
-	{
+	if (data.contains("modifications"))
 		mod = Modifications(data["modifications"].toInt());
-		for (auto m : { Position, Scaling, Rotation, Voxelization, Resolution, VoxelSize, WindTunnelSettings , All })
-		{
-			if (mod.testFlag(m))
-			{
-				updateSim = true;
-				break;
-			}
-		}
-	}
 
 	// Modify general data
 	bool render = data["disabled"].toInt() == Qt::Unchecked;
@@ -210,13 +196,18 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setFlatShading(flatShading);
 		act->setColor(col);
 		act->setVoxelize(data["voxelize"].toInt() == Qt::Checked);
-		act->setDynamics(data["dynamics"].toInt() == Qt::Checked);
-		act->setDensity(data["density"].toDouble());
-		act->setLocalRotationAxis(localRotationAxis);
-		act->setShowAccelArrow(data["showAccelArrow"].toInt() == Qt::Checked);
+
 
 		if (mod.testFlag(DynamicsSettings))
+		{
+			act->setDynamics(data["dynamics"].toInt() == Qt::Checked);
+			act->setDensity(data["density"].toDouble());
+			act->setLocalRotationAxis(localRotationAxis);
 			act->updateInertiaTensor();
+		}
+
+		if (mod.testFlag(ShowAccelArrow))
+			act->setShowAccelArrow(data["showAccelArrow"].toInt() == Qt::Checked);
 
 		if (render != oldRender && !render)
 		{
@@ -275,18 +266,7 @@ void ObjectManager::render(ID3D11Device* device, ID3D11DeviceContext* context, c
 	for (const auto& actor : m_actors)
 	{
 		if (actor.second->getType() == ObjectType::VoxelGrid)
-			std::dynamic_pointer_cast<VoxelGridActor>(actor.second)->renderWindTunnel(device, context, view, projection, elapsedTime);
-	}
-}
-void ObjectManager::onResizeSwapChain(ID3D11Device* device, const DXGI_SURFACE_DESC* backBufferDesc)
-{
-	for (const auto& actor : m_actors)
-	{
-		actor.second->getObject()->onResizeSwapChain(device, backBufferDesc);
-	}
-	for (const auto& actor : m_accessoryActors)
-	{
-		actor.second->getObject()->onResizeSwapChain(device, backBufferDesc);
+			std::dynamic_pointer_cast<VoxelGridActor>(actor.second)->renderVolume(device, context, view, projection, elapsedTime);
 	}
 }
 

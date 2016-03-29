@@ -288,8 +288,8 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			QJsonObject tmp{ { "x", object["resolution"].toObject()["x"].toInt() }, { "y", object["resolution"].toObject()["y"].toInt() } };
 			object["glyphs"] = QJsonObject{ { "enabled", false }, { "orientation", XY_PLANE }, { "position", 0.5}, {"quantity", tmp} };
 		}
-		if (!object.contains("windtunnelSettings"))
-			object["windtunnelSettings"] = ""; // Simulation uses default values
+		if (!object.contains("windTunnelSettings"))
+			object["windTunnelSettings"] = ""; // Simulation uses default values
 		if (!object.contains("runSimulation"))
 			object["runSimulation"] = Qt::Unchecked;
 		if (!object.contains("smoke"))

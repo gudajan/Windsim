@@ -53,22 +53,23 @@ enum Orientation {XY_PLANE, XZ_PLANE, YZ_PLANE};
 
 enum Modification
 {
-	Position = 0x1,
-	Scaling = 0x2,
-	Rotation = 0x4,
-	Visibility = 0x8, // disabled/renderVoxel
-	Voxelization = 0x10, // voxelize
-	Shading = 0x20,
-	Name = 0x40,
-	Color = 0x80,
-	Resolution = 0x100,
-	VoxelSize = 0x200,
+	Position           = 0x1,
+	Scaling            = 0x2,
+	Rotation           = 0x4,
+	Visibility         = 0x8, // disabled/renderVoxel
+	Voxelization       = 0x10, // voxelize
+	Shading            = 0x20,
+	Name               = 0x40,
+	Color              = 0x80,
+	Resolution         = 0x100,
+	VoxelSize          = 0x200,
 	WindTunnelSettings = 0x400,
-	GlyphSettings = 0x800,
-	DynamicsSettings = 0x1000,
-	RunSimulation = 0x2000,
-	SmokeSettings = 0x4000,
-	LineSettings = 0x8000,
+	GlyphSettings      = 0x800,
+	DynamicsSettings   = 0x1000,
+	ShowAccelArrow     = 0x2000,
+	RunSimulation      = 0x4000,
+	SmokeSettings      = 0x8000,
+	LineSettings       = 0x10000,
 
 	All = UINT_MAX
 };
