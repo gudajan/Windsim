@@ -10,6 +10,8 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	m_properties(properties)
 {
 	ui.setupUi(this);
+	ui.gradient->setColorSpinBoxes(ui.spR, ui.spG, ui.spB, ui.spA);
+	ui.gradient->setRangeSpinBoxes(ui.dspRangeMin, ui.dspRangeMax);
 
 	updateProperties(m_properties);
 
@@ -51,6 +53,11 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	connect(ui.sbOriX, SIGNAL(valueChanged(int)), this, SLOT(glyphSettingsChanged()));
 	connect(ui.sbOriY, SIGNAL(valueChanged(int)), this, SLOT(glyphSettingsChanged()));
 
+	// Volume settings
+	connect(ui.cmbMetric, SIGNAL(currentTextChanged(const QString&)), ui.gradient, SLOT(switchToMetric(const QString&)));
+	connect(ui.gbVolume, SIGNAL(toggled(bool)), this, SLOT(volumeTxFunctionChanged()));
+	connect(ui.gradient, SIGNAL(transferFunctionChanged()), this, SLOT(volumeTxFunctionChanged()));
+
 	// WindTunnel
 
 	// Run Simulation
@@ -91,7 +98,7 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 
 	// We just update the dialog with the changes, made outside of it. So we do not want to create any signals because of these changes
 	// Doing so, would create annother invalid modify command
-	blockSignals();
+	blockSignals(true);
 	{
 		// Name
 		ui.nameEdit->setText(properties["name"].toString());
@@ -131,6 +138,20 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		ui.sbOriX->setValue(quant["x"].toInt());
 		ui.sbOriY->setValue(quant["y"].toInt());
 
+		// Volume settings
+		const QJsonObject& volume = properties.find("volume")->toObject();
+		ui.gbVolume->setChecked(volume["enabled"].toBool());
+		const QString& metric = volume["metric"].toString();
+		ui.cmbMetric->setCurrentText(metric);
+		ui.gradient->switchToMetric(metric);
+		const QJsonObject& fcntns = volume["transferFunction"].toObject();
+		for (auto jit = fcntns.begin(); jit != fcntns.end(); ++jit)
+		{
+			TransferFunction txfn = TransferFunction::fromJson(jit->toObject());
+			ui.gradient->setTransferFunction(jit.key(), txfn);
+		}
+
+
 		// WindTunnel Settings
 
 		// Run Simulation
@@ -157,7 +178,7 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 
 		m_properties = properties; // Copy properties
 	}
-	enableSignals();
+	blockSignals(false);
 }
 
 void VoxelGridProperties::nameChanged(const QString& text)
@@ -288,6 +309,26 @@ void VoxelGridProperties::glyphSettingsChanged()
 	emit propertiesChanged( m_properties, GlyphSettings);
 }
 
+void VoxelGridProperties::volumeTxFunctionChanged()
+{
+	const QString& currentMetric = ui.cmbMetric->currentText();
+
+	// Only update modified transfer function
+	QJsonObject functions = m_properties["volume"].toObject()["transferFunctions"].toObject();
+	functions[currentMetric] = ui.gradient->getTransferFunction(currentMetric).toJson();
+
+	QJsonObject volume
+	{
+		{ "enabled", ui.gbVolume->isChecked() },
+		{ "metric", currentMetric },
+		{ "transferFunctions", functions }
+	};
+
+	m_properties["volume"] = volume;
+
+	emit propertiesChanged(m_properties, VolumeSettings);
+}
+
 void VoxelGridProperties::runSimulationChanged(int state)
 {
 	m_properties["runSimulation"] = state;
@@ -343,110 +384,67 @@ void VoxelGridProperties::buttonClicked(QAbstractButton* button)
 	}
 }
 
-void VoxelGridProperties::blockSignals()
+void VoxelGridProperties::blockSignals(bool b)
 {
-	ui.nameEdit->blockSignals(true);
+	ui.nameEdit->blockSignals(b);
 
 	// Visibility
-	ui.cbDisabled->blockSignals(true);
-	ui.cbShowVoxel->blockSignals(true);
+	ui.cbDisabled->blockSignals(b);
+	ui.cbShowVoxel->blockSignals(b);
 
 	// Position
-	ui.xP->blockSignals(true);
-	ui.yP->blockSignals(true);
-	ui.zP->blockSignals(true);
+	ui.xP->blockSignals(b);
+	ui.yP->blockSignals(b);
+	ui.zP->blockSignals(b);
 
 	// Resolution
-	ui.spResX->blockSignals(true);
-	ui.spResY->blockSignals(true);
-	ui.spResZ->blockSignals(true);
+	ui.spResX->blockSignals(b);
+	ui.spResY->blockSignals(b);
+	ui.spResZ->blockSignals(b);
 
 	// VoxelSize
-	ui.dspSizeX->blockSignals(true);
-	ui.dspSizeY->blockSignals(true);
-	ui.dspSizeZ->blockSignals(true);
+	ui.dspSizeX->blockSignals(b);
+	ui.dspSizeY->blockSignals(b);
+	ui.dspSizeZ->blockSignals(b);
 
 	// GlyphSettings
-	ui.gbGlyph->blockSignals(true);
-	ui.rbOriX->blockSignals(true);
-	ui.rbOriY->blockSignals(true);
-	ui.rbOriZ->blockSignals(true);
-	ui.hsPos->blockSignals(true);
-	ui.sbOriX->blockSignals(true);
-	ui.sbOriY->blockSignals(true);
+	ui.gbGlyph->blockSignals(b);
+	ui.rbOriX->blockSignals(b);
+	ui.rbOriY->blockSignals(b);
+	ui.rbOriZ->blockSignals(b);
+	ui.hsPos->blockSignals(b);
+	ui.sbOriX->blockSignals(b);
+	ui.sbOriY->blockSignals(b);
+
+	// VolumeSettings
+	ui.gbVolume->blockSignals(b);
+	ui.cmbMetric->blockSignals(b);
+
+	// Use disconnect because we do not want to block signals WITHIN the widget
+	if (b)
+		disconnect(ui.gradient);
+	else
+		connect(ui.gradient, SIGNAL(transferFunctionChanged()), this, SLOT(volumeTxFunctionChanged()));
+
 
 	// WindTunnel
 
 	// Simulator
-	ui.leSim->blockSignals(true);
+	ui.leSim->blockSignals(b);
 
 	// Run Simulation
-	ui.cbRunSim->blockSignals(true);
+	ui.cbRunSim->blockSignals(b);
 
 	// Smoke
-	ui.gbSmoke->blockSignals(true);
-	ui.hsRadius->blockSignals(true);
-	ui.hsSmokePosX->blockSignals(true);
-	ui.hsSmokePosY->blockSignals(true);
-	ui.hsSmokePosZ->blockSignals(true);
+	ui.gbSmoke->blockSignals(b);
+	ui.hsRadius->blockSignals(b);
+	ui.hsSmokePosX->blockSignals(b);
+	ui.hsSmokePosY->blockSignals(b);
+	ui.hsSmokePosZ->blockSignals(b);
 
 	// Lines
-	ui.gbLines->blockSignals(true);
-	ui.cbLineOri->blockSignals(true);
-	ui.cbLineType->blockSignals(true);
-	ui.hsLinePos->blockSignals(true);
-}
-
-void VoxelGridProperties::enableSignals()
-{
-	ui.nameEdit->blockSignals(false);
-
-	// Visibility
-	ui.cbDisabled->blockSignals(false);
-	ui.cbShowVoxel->blockSignals(false);
-
-	// Position
-	ui.xP->blockSignals(false);
-	ui.yP->blockSignals(false);
-	ui.zP->blockSignals(false);
-
-	// Resolution
-	ui.spResX->blockSignals(false);
-	ui.spResY->blockSignals(false);
-	ui.spResZ->blockSignals(false);
-
-	// VoxelSize
-	ui.dspSizeX->blockSignals(false);
-	ui.dspSizeY->blockSignals(false);
-	ui.dspSizeZ->blockSignals(false);
-
-	// GlyphSettings
-	ui.gbGlyph->blockSignals(false);
-	ui.rbOriX->blockSignals(false);
-	ui.rbOriY->blockSignals(false);
-	ui.rbOriZ->blockSignals(false);
-	ui.hsPos->blockSignals(false);
-	ui.sbOriX->blockSignals(false);
-	ui.sbOriY->blockSignals(false);
-
-	// WindTunnel
-
-	// Simulator
-	ui.leSim->blockSignals(false);
-
-	// Run Simulation
-	ui.cbRunSim->blockSignals(false);
-
-	// Smoke
-	ui.gbSmoke->blockSignals(false);
-	ui.hsRadius->blockSignals(false);
-	ui.hsSmokePosX->blockSignals(false);
-	ui.hsSmokePosY->blockSignals(false);
-	ui.hsSmokePosZ->blockSignals(false);
-
-	// Lines
-	ui.gbLines->blockSignals(false);
-	ui.cbLineOri->blockSignals(false);
-	ui.cbLineType->blockSignals(false);
-	ui.hsLinePos->blockSignals(false);
+	ui.gbLines->blockSignals(b);
+	ui.cbLineOri->blockSignals(b);
+	ui.cbLineType->blockSignals(b);
+	ui.hsLinePos->blockSignals(b);
 }

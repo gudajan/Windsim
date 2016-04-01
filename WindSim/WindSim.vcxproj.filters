@@ -232,6 +232,18 @@
     <ClCompile Include="src\3D\depthStencil.cpp">
       <Filter>3D</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_transferFunctionEditor.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_transferFunctionEditor.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\transferFunctionEditor.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\transferFunction.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\ui\windsim.ui">
@@ -286,6 +298,9 @@
       <Filter>GUI\Dialogs</Filter>
     </CustomBuild>
     <CustomBuild Include="src\GUI\textOverlay.h">
+      <Filter>GUI</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\GUI\transferFunctionEditor.h">
       <Filter>GUI</Filter>
     </CustomBuild>
   </ItemGroup>
@@ -391,6 +406,9 @@
     </ClInclude>
     <ClInclude Include="src\3D\depthStencil.h">
       <Filter>3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\transferFunction.h">
+      <Filter>util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

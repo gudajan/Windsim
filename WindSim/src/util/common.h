@@ -51,6 +51,9 @@ enum class Shading{ Smooth, Flat }; // Mesh Shading type
 
 enum Orientation {XY_PLANE, XZ_PLANE, YZ_PLANE};
 
+enum class VolumeMetric{ Magnitude, Vorticity };
+
+
 enum Modification
 {
 	Position           = 0x1,
@@ -70,6 +73,7 @@ enum Modification
 	RunSimulation      = 0x4000,
 	SmokeSettings      = 0x8000,
 	LineSettings       = 0x10000,
+	VolumeSettings     = 0x20000,
 
 	All = UINT_MAX
 };

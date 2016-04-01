@@ -5,6 +5,7 @@
 #include "simulator.h"
 #include "common.h"
 #include "volumeRenderer.h"
+#include "transferFunction.h"
 
 #include <WindTunnelLib/WindTunnelRenderer.h>
 
@@ -64,6 +65,8 @@ public:
 	void changeSmokeSettings(const QJsonObject& settings);
 	void changeLineSettings(const QJsonObject& settings);
 	void reinitWindTunnel() { m_simulator.reinitWindTunnel(); m_simAvailable = true; m_updateGrid = true; }
+
+	void changeVolumeSettings(const QJsonObject& txfn);
 
 	void restartSimulation();
 	void runSimulationSync(bool enabled);

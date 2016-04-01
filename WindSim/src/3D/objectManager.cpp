@@ -242,6 +242,8 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
 		if (mod.testFlag(GlyphSettings))
 			act->setGlyphSettings(renderGlyphs, orientation, position, quantity);
+		if (mod.testFlag(VolumeSettings))
+			act->getObject()->changeVolumeSettings(data["volume"].toObject());
 		if (mod.testFlag(WindTunnelSettings))
 			act->getObject()->changeSimSettings(data["windTunnelSettings"].toString());
 		if (mod.testFlag(RunSimulation))

@@ -28,6 +28,7 @@ private slots:
 	void resolutionChanged();
 	void voxelSizeChanged();
 	void glyphSettingsChanged();
+	void volumeTxFunctionChanged();
 
 	// WindTunnel Properties
 	void simulatorSettingsChanged();
@@ -44,8 +45,7 @@ signals:
 	void triggerFunction(const QJsonObject& data); // Triggers a function for the given object and provides necessary data
 
 private:
-	void blockSignals();
-	void enableSignals();
+	void blockSignals(bool b);
 
 	float sliderFloatValue(const QSlider* slider) const { return static_cast<float>(slider->value()) / static_cast<float>(slider->maximum()); };
 	void setSliderValue(QSlider* slider, float value) { slider->setValue(value * slider->maximum()); };

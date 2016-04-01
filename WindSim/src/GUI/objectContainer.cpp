@@ -5,6 +5,7 @@
 #include "commands.h"
 #include "settings.h"
 #include "../3D/simulator.h"
+#include "transferFunction.h"
 
 #include <QUndoStack>
 #include <QUndoCommand>
@@ -287,6 +288,13 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		{
 			QJsonObject tmp{ { "x", object["resolution"].toObject()["x"].toInt() }, { "y", object["resolution"].toObject()["y"].toInt() } };
 			object["glyphs"] = QJsonObject{ { "enabled", false }, { "orientation", XY_PLANE }, { "position", 0.5}, {"quantity", tmp} };
+		}
+		if (!object.contains("volume"))
+		{
+			QJsonObject functions;
+			for (const auto& metric : Metric::names)
+				functions[metric] = TransferFunction().toJson();
+			object["volume"] = QJsonObject{ { "enabled", false }, { "metric", Metric::toString(Metric::Magnitude)}, { "transferFunctions", functions } };
 		}
 		if (!object.contains("windTunnelSettings"))
 			object["windTunnelSettings"] = ""; // Simulation uses default values

@@ -7,14 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>514</width>
-    <height>471</height>
+    <height>690</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Voxel Grid Properties:</string>
-  </property>
-  <property name="toolTip">
-   <string>Link the voxel size to the grid resolution, so the overall size of the voxel grid remains unchanged.</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -80,13 +77,13 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tabVoxelGrid">
       <attribute name="title">
        <string>Voxel Grid</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
         <widget class="QCheckBox" name="cbShowVoxel">
          <property name="text">
@@ -324,6 +321,9 @@
           </item>
           <item>
            <widget class="QToolButton" name="tbLink">
+            <property name="toolTip">
+             <string>Link the voxel size to the grid resolution, so the overall size of the voxel grid remains unchanged.</string>
+            </property>
             <property name="text">
              <string>...</string>
             </property>
@@ -478,6 +478,277 @@
             <property name="value">
              <double>0.100000000000000</double>
             </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="gbWindTunnel">
+         <property name="title">
+          <string>WindTunnel</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="leSim">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>1</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="pbSim">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lSim">
+            <property name="text">
+             <string>Settings file:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="cbRunSim">
+            <property name="text">
+             <string>Run</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pbReinit">
+            <property name="toolTip">
+             <string>The simulator is recreated, the settings file is reloaded.</string>
+            </property>
+            <property name="text">
+             <string>Restart</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabWindTunnel">
+      <attribute name="title">
+       <string>Visualization</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QGroupBox" name="gbSmoke">
+         <property name="title">
+          <string>Smoke</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QFormLayout" name="formLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lRadius">
+            <property name="text">
+             <string>Seed Radius:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSlider" name="hsRadius">
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>125</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <widget class="QGroupBox" name="gbSmokePos">
+            <property name="title">
+             <string>Seed Position</string>
+            </property>
+            <layout class="QFormLayout" name="formLayout_2">
+             <item row="0" column="0">
+              <widget class="QLabel" name="lSmokePosX">
+               <property name="text">
+                <string>x:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSlider" name="hsSmokePosX">
+               <property name="maximum">
+                <number>1000</number>
+               </property>
+               <property name="value">
+                <number>125</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="lSmokePosY">
+               <property name="text">
+                <string>y:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QSlider" name="hsSmokePosY">
+               <property name="maximum">
+                <number>1000</number>
+               </property>
+               <property name="value">
+                <number>500</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="lSmokePosZ">
+               <property name="text">
+                <string>z:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QSlider" name="hsSmokePosZ">
+               <property name="maximum">
+                <number>1000</number>
+               </property>
+               <property name="value">
+                <number>500</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="gbLines">
+         <property name="title">
+          <string>Lines</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lLineOri">
+            <property name="text">
+             <string>Orientation:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="cbLineOri">
+            <property name="currentIndex">
+             <number>2</number>
+            </property>
+            <item>
+             <property name="text">
+              <string>X</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Y</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Z</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lLinePos">
+            <property name="text">
+             <string>Position:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="3">
+           <widget class="QSlider" name="hsLinePos">
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>500</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lLineType">
+            <property name="text">
+             <string>Type:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="cbLineType">
+            <item>
+             <property name="text">
+              <string>Streakline</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Streamline</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
@@ -677,223 +948,9 @@
         </widget>
        </item>
        <item>
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tabWindTunnel">
-      <attribute name="title">
-       <string>Wind Tunnel</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_4">
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="cbRunSim">
-         <property name="text">
-          <string>Run Simulation</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0" colspan="2">
-        <widget class="QFrame" name="fSim">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_4">
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="lSim">
-            <property name="text">
-             <string>Simulator settings file:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="leSim">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>1</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pbSim">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>40</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>...</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0" colspan="2">
-        <widget class="QGroupBox" name="gbSmoke">
+        <widget class="QGroupBox" name="gbVolume">
          <property name="title">
-          <string>Smoke</string>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-         <layout class="QFormLayout" name="formLayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="lRadius">
-            <property name="text">
-             <string>Seed Radius:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSlider" name="hsRadius">
-            <property name="maximum">
-             <number>1000</number>
-            </property>
-            <property name="value">
-             <number>125</number>
-            </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QGroupBox" name="gbSmokePos">
-            <property name="title">
-             <string>Seed Position</string>
-            </property>
-            <layout class="QFormLayout" name="formLayout_2">
-             <item row="0" column="0">
-              <widget class="QLabel" name="lSmokePosX">
-               <property name="text">
-                <string>x:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QSlider" name="hsSmokePosX">
-               <property name="maximum">
-                <number>1000</number>
-               </property>
-               <property name="value">
-                <number>125</number>
-               </property>
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="lSmokePosY">
-               <property name="text">
-                <string>y:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QSlider" name="hsSmokePosY">
-               <property name="maximum">
-                <number>1000</number>
-               </property>
-               <property name="value">
-                <number>500</number>
-               </property>
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="lSmokePosZ">
-               <property name="text">
-                <string>z:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="QSlider" name="hsSmokePosZ">
-               <property name="maximum">
-                <number>1000</number>
-               </property>
-               <property name="value">
-                <number>500</number>
-               </property>
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="0" column="1">
-        <widget class="QPushButton" name="pbReinit">
-         <property name="toolTip">
-          <string>The simulator is recreated, the settings file is reloaded.</string>
-         </property>
-         <property name="text">
-          <string>Restart simulator</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0" colspan="2">
-        <widget class="QGroupBox" name="gbLines">
-         <property name="title">
-          <string>Lines</string>
+          <string>Direct volume rendering</string>
          </property>
          <property name="checkable">
           <bool>true</bool>
@@ -901,75 +958,223 @@
          <property name="checked">
           <bool>false</bool>
          </property>
-         <layout class="QGridLayout" name="gridLayout_3">
+         <layout class="QGridLayout" name="gridLayout_6">
           <item row="0" column="0">
-           <widget class="QLabel" name="lLineOri">
+           <widget class="QLabel" name="lMetric">
             <property name="text">
-             <string>Orientation:</string>
+             <string>Metric:</string>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QComboBox" name="cbLineOri">
-            <property name="currentIndex">
-             <number>2</number>
-            </property>
+           <widget class="QComboBox" name="cmbMetric">
             <item>
              <property name="text">
-              <string>X</string>
+              <string>Magnitude</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Y</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Z</string>
+              <string>Vorticity</string>
              </property>
             </item>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="lLinePos">
-            <property name="text">
-             <string>Position:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1" colspan="3">
-           <widget class="QSlider" name="hsLinePos">
-            <property name="maximum">
-             <number>1000</number>
-            </property>
-            <property name="value">
-             <number>500</number>
-            </property>
+          <item row="0" column="2">
+           <spacer name="horizontalSpacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lLineType">
-            <property name="text">
-             <string>Type:</string>
+            <property name="sizeType">
+             <enum>QSizePolicy::Expanding</enum>
             </property>
-           </widget>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
           </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="cbLineType">
-            <item>
-             <property name="text">
-              <string>Streakline</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Streamline</string>
-             </property>
-            </item>
+          <item row="1" column="0" colspan="3">
+           <widget class="QGroupBox" name="gbTxFunction">
+            <property name="title">
+             <string>Transfer function</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_5">
+             <item row="9" column="6">
+              <widget class="QLabel" name="lA">
+               <property name="text">
+                <string>A:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="3">
+              <widget class="QSpinBox" name="spG">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximum">
+                <number>255</number>
+               </property>
+               <property name="value">
+                <number>128</number>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="2">
+              <widget class="QLabel" name="lG">
+               <property name="text">
+                <string>G:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="1">
+              <widget class="QSpinBox" name="spR">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximum">
+                <number>255</number>
+               </property>
+               <property name="value">
+                <number>128</number>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="4">
+              <widget class="QLabel" name="lB">
+               <property name="text">
+                <string>B:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="5">
+              <widget class="QSpinBox" name="spB">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximum">
+                <number>255</number>
+               </property>
+               <property name="value">
+                <number>128</number>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="0">
+              <widget class="QLabel" name="lR">
+               <property name="text">
+                <string>R:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="7">
+              <widget class="QSpinBox" name="spA">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximum">
+                <number>255</number>
+               </property>
+               <property name="value">
+                <number>128</number>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0" rowspan="4" colspan="8">
+              <widget class="TransferFunctionEditor" name="gradient" native="true">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>1</horstretch>
+                 <verstretch>1</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>19</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:medium; font-weight:600;&quot;&gt;Controls:&lt;/span&gt;&lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left:10px; margin-right: 0px; -qt-list-indent: 0;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Leftclick: Select Control Point or create new Control Point&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Rightclick: Delete Control Point (except marked ones)&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Double Leftclick: Open Color Picker dialog&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Mousedrag: Move clicked Control Point&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="lRangeMin">
+               <property name="text">
+                <string>Range min:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="4">
+              <widget class="QLabel" name="lRangeMax">
+               <property name="text">
+                <string>Range max:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1" colspan="3">
+              <widget class="QDoubleSpinBox" name="dspRangeMin">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimum">
+                <double>-1000000000000000044885712678075916785549312.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>100000000000000004384584304507619735463404765184.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="5" colspan="3">
+              <widget class="QDoubleSpinBox" name="dspRangeMax">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimum">
+                <double>-1000000000000000044885712678075916785549312.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>100000000000000004384584304507619735463404765184.000000000000000</double>
+               </property>
+               <property name="value">
+                <double>1000.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -991,6 +1196,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TransferFunctionEditor</class>
+   <extends>QWidget</extends>
+   <header>transferFunctionEditor.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../../../windsim.qrc"/>
  </resources>

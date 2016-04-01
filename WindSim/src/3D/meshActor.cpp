@@ -138,7 +138,7 @@ bool MeshActor::intersect(XMFLOAT3 origin, XMFLOAT3 direction, float& distance) 
 	XMVECTOR dir = XMLoadFloat3(&direction);
 	dir = XMVectorSetW(dir, 0.0f);
 
-	XMMATRIX world = XMLoadFloat4x4(&m_dynRenderWorld);
+	XMMATRIX world = m_calcDynamics ? XMLoadFloat4x4(&m_dynRenderWorld) : XMLoadFloat4x4(&m_world);
 
 	XMMATRIX invWorld = XMMatrixInverse(nullptr, world);
 	if (XMMatrixIsInfinite(invWorld) || XMMatrixIsNaN(invWorld)) // Matrix not invertible or arithmetric errors occured

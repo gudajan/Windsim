@@ -11,6 +11,7 @@
 
 #include <QElapsedTimer>
 #include <QFileInfo>
+#include <QPropertyAnimation>
 
 #include <mutex>
 #include <future>
@@ -480,6 +481,11 @@ void VoxelGrid::changeLineSettings(const QJsonObject& settings)
 	bool tmp = settings["enabled"].toBool();
 	m_wtRenderer.lineRendering(tmp ? wtl::Line::Enabled : wtl::Line::Disabled);
 	emit lineSettingsChanged(settings);
+}
+
+void VoxelGrid::changeVolumeSettings(const QJsonObject& settings)
+{
+	m_volumeRenderer.changeSettings(m_renderer->getDevice(), settings);
 }
 
 void VoxelGrid::restartSimulation()

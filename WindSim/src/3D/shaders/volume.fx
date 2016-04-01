@@ -4,6 +4,7 @@ RWTexture3D<float> g_scalarGridUAV;
 Texture3D<float> g_scalarGridSRV;
 Texture3D<float4> g_vectorGrid;
 Texture2D<float> g_depthTex;
+Texture1D<float4> g_txfnTex;
 
 cbuffer cb
 {
@@ -17,7 +18,12 @@ cbuffer cb
 
 	// Vectors
 	uint3 g_vDimensions;
-	float3 g_vCamPosTS; // Camera position in texture space [0, 1]^3
+	float3 g_vVoxelSize;
+	float3 g_vCamPosOS; // Camera position in grid object space
+
+	// Scalars
+	float g_sRangeMin;
+	float g_sRangeMax;
 };
 
 // =============================================================================
@@ -26,7 +32,7 @@ cbuffer cb
 struct PSIn
 {
 	float4 pos : SV_POSITION; // Position in homogenous coordinates
-	float3 uvw : TEXCOORD; // Position in texture coordinates
+	float3 posOS : POSITION; // Position in object space (of grid)
 };
 
 // =============================================================================
@@ -113,68 +119,58 @@ PSIn vsScreenTri(uint vid : SV_VertexID)
 	v.pos = float4 (x, y, 0, 1);
 
 	// Compute "position" in texture space of volume
-	float4 texCoord = mul(mul(v.pos, g_mWorldViewProjInv), g_mTexToGridInv);
+	float4 gridPos = mul(v.pos, g_mWorldViewProjInv);
 	// Dehomogenize
-	v.uvw = texCoord.xyz / texCoord.w;
+	v.posOS = gridPos.xyz / gridPos.w;
 	return v;
 }
 
 // =============================================================================
 // PIXEL SHADER
 // =============================================================================
+// Ray casting in grid object space with simple alpha blending
 float4 psDirect(PSIn frag) : SV_Target
 {
-	float stepSize = 0.5f / max(g_vDimensions.x, max(g_vDimensions.y, g_vDimensions.z));
+	float stepSize = 0.5f * max(g_vVoxelSize.x, max(g_vVoxelSize.y, g_vVoxelSize.z));
 
-	float maxScalar = 1000.0f;
-	float minScalar = 100.0f;
-
-	float3 color = float3(0.4, 0.7, 0.3);
-
-	float3 rayDir = normalize(frag.uvw - g_vCamPosTS); // In texture space
+	float3 rayDir = normalize(frag.posOS - g_vCamPosOS); // In texture space
 
 	float tmin = 0.0;
 	float tmax = -1.0;
 
-	// Add/Subtract small value because of numerical inaccuracies, which would lead to discarded pixels later
-	// (i.e. the intersection position may lie just outside the grid and therefore the raycasting is immediately stopped)
-	if (!intersectAlignedBox(frag.uvw, rayDir, float3(0.0f, 0.0f, 0.0f), float3(1.0f, 1.0f, 1.0f), tmin, tmax))
+	if (!intersectAlignedBox(frag.posOS, rayDir, float3(0.0f, 0.0f, 0.0f), g_vVoxelSize * g_vDimensions, tmin, tmax))
 	{
 		discard;
 		return float4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
-	//return float4(0.1, 0.0, 0.0, tmax - tmin);
-
-	float maxViewDepth = sampleDepth(frag.pos);
+	float maxDepthVS = sampleDepth(frag.pos);
 
 	// Start variables
-	float texDepth = (tmin > 0.0f ? tmin : 0.0f);
-	float3 rayPos = frag.uvw + rayDir * texDepth;
-	float viewDepth = mul(mul(float4(rayPos, 1), g_mTexToGrid), g_mWorldView).z; // tex space -> grid space -> world space -> view space
+	float depthOS = (tmin > 0.0f ? tmin : 0.0f); // In object space
+	float3 rayPos = frag.posOS + rayDir * depthOS;
+	float depthVS = mul(float4(rayPos, 1), g_mWorldView).z; // grid space -> world space -> view space
 
 	// Increments
 	float3 rayInc = stepSize * rayDir;
-	float viewDepthInc = mul(mul(float4(rayInc, 0), g_mTexToGrid), g_mWorldView).z;
+	float depthVSInc = mul(float4(rayInc, 0), g_mWorldView).z;
 
 	float4 accCol = float4(0.0f, 0.0f, 0.0f, 0.0f);
-	int i = 0;
-	while (accCol.a < 0.99f && texDepth <= tmax && viewDepth <= maxViewDepth && i < 1024)
+	while (accCol.a < 0.99f && depthOS <= tmax && depthVS <= maxDepthVS)
 	{
-		float scalar = g_scalarGridSRV.SampleLevel(SamLinear, rayPos, 0.0);
+		float scalar = g_scalarGridSRV.SampleLevel(SamLinear, mul(float4(rayPos, 1.0f), g_mTexToGridInv).xyz, 0.0);
 
-		float val = saturate((scalar - minScalar) / (maxScalar - minScalar));
+		float val = saturate((scalar - g_sRangeMin) / (g_sRangeMax - g_sRangeMin));
 
-		float4 col = float4(color, val);
+		float4 col = g_txfnTex.SampleLevel(SamLinear, val, 0.0);
 
 		// Alpha blending
 		accCol.rgb = saturate(accCol.rgb + (1 - accCol.a) * col.rgb * col.a);
 		accCol.a = saturate(accCol.a + (1 - accCol.a) * col.a);
 
 		rayPos += rayInc;
-		viewDepth += viewDepthInc;
-		texDepth += stepSize;
-		i++;
+		depthVS += depthVSInc;
+		depthOS += stepSize;
 	}
 
 	if (accCol.a == 0)

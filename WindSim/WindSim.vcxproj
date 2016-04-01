@@ -119,6 +119,9 @@
     <ClCompile Include="GeneratedFiles\Debug\moc_textOverlay.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_transferFunctionEditor.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_voxelGrid.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -133,6 +136,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_textOverlay.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_transferFunctionEditor.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_voxelGrid.cpp">
@@ -202,6 +208,7 @@
     </ClCompile>
     <ClCompile Include="src\GUI\staticLogger.cpp" />
     <ClCompile Include="src\GUI\textOverlay.cpp" />
+    <ClCompile Include="src\GUI\transferFunctionEditor.cpp" />
     <ClCompile Include="src\GUI\voxelGridInputDialog.cpp" />
     <ClCompile Include="src\GUI\voxelGridProperties.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -221,6 +228,7 @@
     <ClCompile Include="src\3D\sky.cpp" />
     <ClCompile Include="src\3D\skyActor.cpp" />
     <ClCompile Include="src\GUI\windsim.cpp" />
+    <ClCompile Include="src\util\transferFunction.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\GUI\windsim.h">
@@ -257,6 +265,7 @@
     <ClInclude Include="src\3D\dynamics.h" />
     <ClInclude Include="src\3D\marker.h" />
     <ClInclude Include="src\3D\markerActor.h" />
+    <ClInclude Include="src\util\transferFunction.h" />
     <CustomBuild Include="src\3D\simulator.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing simulator.h...</Message>
@@ -280,6 +289,16 @@
     </CustomBuild>
     <ClInclude Include="src\3D\volumeRenderer.h" />
     <ClInclude Include="src\3D\voxelGridActor.h" />
+    <CustomBuild Include="src\GUI\transferFunctionEditor.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing transferFunctionEditor.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\..\..\WindTunnelSource" "-I.\src\util" "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(SolutionDir)\FX11\inc"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing transferFunctionEditor.h...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB "-I.\..\..\WindTunnelSource" "-I.\src\util" "-I.\GeneratedFiles" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtWidgets" "-I$(SolutionDir)\FX11\inc"</Command>
+    </CustomBuild>
     <ClInclude Include="src\GUI\commands.h" />
     <CustomBuild Include="src\GUI\voxelGridInputDialog.h">
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
