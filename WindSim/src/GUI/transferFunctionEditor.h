@@ -14,6 +14,7 @@
 #include <string>
 
 class Gradient;
+class RangeRuler;
 class TransferFunctionEditor : public QWidget
 {
 	Q_OBJECT
@@ -36,7 +37,8 @@ signals:
 private slots:
 	void changeColor(); // Change color of currently selected control point in current metric
 	void changeRange(); // Change range of current metric
-	void changeControlPoint(const QColor& col); // Change color spinboxes to the values of the selected control point
+	void changeColorPoint(const QColor& col); // Change color spinboxes to the values of the selected control point on the color gradient
+	void changeAlphaPoint(const QColor& alpha); // for the alpha gradient
 
 private:
 	void blockColorSignals(bool block);
@@ -50,7 +52,10 @@ private:
 	QDoubleSpinBox* m_rangeMin;
 	QDoubleSpinBox* m_rangeMax;
 
-	Gradient* m_gradient;
+	RangeRuler* m_rangeRuler;
+
+	Gradient* m_colorGradient;
+	Gradient* m_alphaGradient;
 
 	std::map<QString, TransferFunction> m_metricFunctions;
 	QString m_currentMetric;
@@ -60,14 +65,14 @@ class Gradient : public QWidget
 {
 	Q_OBJECT
 public:
-	Gradient(QWidget *parent);
+	Gradient(QWidget *parent, bool colorPicker = true);
 
-	void setTransferFunction(TransferFunction* fn);
+	void setFunction(QGradientStops* fn);
 
 	void changeColor(const QColor& col);
 
 signals:
-	void controlPointChanged(const QColor& col); // Emitted if selected control point changed
+	void pointChanged(const QColor& col); // Emitted if selected color point changed
 	void gradientChanged(); // Emitted if control point moved
 
 protected:
@@ -92,8 +97,29 @@ private:
 	QPoint m_mousePos;
 	qreal m_pointPos;
 
-	TransferFunction* m_function;
-	QGradientStops::iterator m_currentControlPoint;
+	QGradientStops* m_function;
+	QGradientStops::iterator m_currentPoint;
+
+	bool m_colorPicker; // Indicates if color picking is enabled for the gradient
+};
+
+
+class RangeRuler : public QWidget
+{
+	Q_OBJECT
+public:
+	RangeRuler(QWidget* parent = nullptr);
+
+protected:
+	void paintEvent(QPaintEvent* event) override;
+
+public slots:
+	void setRangeMin(double min) { m_min = min; };
+	void setRangeMax(double max) { m_max = max; };
+
+private:
+	double m_min;
+	double m_max;
 };
 
 

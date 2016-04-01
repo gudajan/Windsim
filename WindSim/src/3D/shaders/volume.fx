@@ -131,7 +131,7 @@ PSIn vsScreenTri(uint vid : SV_VertexID)
 // Ray casting in grid object space with simple alpha blending
 float4 psDirect(PSIn frag) : SV_Target
 {
-	float stepSize = 0.5f * max(g_vVoxelSize.x, max(g_vVoxelSize.y, g_vVoxelSize.z));
+	float stepSize = 0.1f * max(g_vVoxelSize.x, max(g_vVoxelSize.y, g_vVoxelSize.z));
 
 	float3 rayDir = normalize(frag.posOS - g_vCamPosOS); // In texture space
 

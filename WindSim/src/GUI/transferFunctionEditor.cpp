@@ -18,19 +18,26 @@ TransferFunctionEditor::TransferFunctionEditor(QWidget* parent)
 	, m_alpha(nullptr)
 	, m_rangeMin(nullptr)
 	, m_rangeMax(nullptr)
-	, m_gradient(nullptr)
+	, m_rangeRuler(new RangeRuler(this))
+	, m_colorGradient(new Gradient(this))
+	, m_alphaGradient(new Gradient(this, false))
 	, m_metricFunctions()
 	, m_currentMetric(Metric::toString(Metric::Magnitude))
 {
-	m_gradient = new Gradient(this);
-	m_gradient->setMinimumHeight(19);
+	m_rangeRuler->setMinimumHeight(25);
+	m_colorGradient->setMinimumHeight(19);
+	m_alphaGradient->setMinimumHeight(19);
 
-	QHBoxLayout *layout = new QHBoxLayout(this);
+	QVBoxLayout *layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
-	layout->addWidget(m_gradient);
+	layout->addWidget(m_rangeRuler);
+	layout->addWidget(m_alphaGradient);
+	layout->addWidget(m_colorGradient);
 
-	connect(m_gradient, SIGNAL(controlPointChanged(const QColor&)), this, SLOT(changeControlPoint(const QColor&)));
-	connect(m_gradient, SIGNAL(gradientChanged()), this, SIGNAL(transferFunctionChanged()));
+	connect(m_colorGradient, SIGNAL(pointChanged(const QColor&)), this, SLOT(changeColorPoint(const QColor&)));
+	connect(m_colorGradient, SIGNAL(gradientChanged()), this, SIGNAL(transferFunctionChanged()));
+	connect(m_alphaGradient, SIGNAL(pointChanged(const QColor&)), this, SLOT(changeAlphaPoint(const QColor&)));
+	connect(m_alphaGradient, SIGNAL(gradientChanged()), this, SIGNAL(transferFunctionChanged()));
 
 	for (const auto& name : Metric::names)
 		m_metricFunctions.emplace(name, TransferFunction());
@@ -59,6 +66,9 @@ void TransferFunctionEditor::setRangeSpinBoxes(QDoubleSpinBox* min, QDoubleSpinB
 
 	connect(m_rangeMin, SIGNAL(valueChanged(double)), this, SLOT(changeRange()));
 	connect(m_rangeMax, SIGNAL(valueChanged(double)), this, SLOT(changeRange()));
+
+	connect(m_rangeMin, SIGNAL(valueChanged(double)), m_rangeRuler, SLOT(setRangeMin(double)));
+	connect(m_rangeMax, SIGNAL(valueChanged(double)), m_rangeRuler, SLOT(setRangeMax(double)));
 }
 
 void TransferFunctionEditor::switchToMetric(const QString& metric)
@@ -70,12 +80,14 @@ void TransferFunctionEditor::switchToMetric(const QString& metric)
 	m_rangeMin->setValue(txfn.rangeMin);
 	m_rangeMax->setValue(txfn.rangeMax);
 
-	m_gradient->setTransferFunction(&txfn); // Selects first control point, which emits signals for updating color spinboxes
+	m_colorGradient->setFunction(&txfn.colorPoints); // Selects first control point, which emits signals for updating color spinboxes
+	m_alphaGradient->setFunction(&txfn.alphaPoints);
 }
 
 void TransferFunctionEditor::changeColor()
 {
-	m_gradient->changeColor(QColor(m_red->value(), m_green->value(), m_blue->value(), m_alpha->value()));
+	m_colorGradient->changeColor(QColor(m_red->value(), m_green->value(), m_blue->value(), 255));
+	m_alphaGradient->changeColor(QColor(255, 255, 255, m_alpha->value()));
 }
 
 void TransferFunctionEditor::changeRange()
@@ -85,22 +97,26 @@ void TransferFunctionEditor::changeRange()
 	emit transferFunctionChanged();
 }
 
-void TransferFunctionEditor::changeControlPoint(const QColor& col)
+void TransferFunctionEditor::changeColorPoint(const QColor& col)
 {
 	blockColorSignals(true);
-
-	int d1 = col.red();
-	int d2 = col.green();
-	int d3 = col.blue();
-	int d4 = col.alpha();
 
 	m_red->setValue(col.red());
 	m_green->setValue(col.green());
 	m_blue->setValue(col.blue());
+
+	blockColorSignals(false);
+}
+
+void TransferFunctionEditor::changeAlphaPoint(const QColor& col)
+{
+	blockColorSignals(true);
+
 	m_alpha->setValue(col.alpha());
 
 	blockColorSignals(false);
 }
+
 
 void TransferFunctionEditor::blockColorSignals(bool block)
 {
@@ -110,27 +126,28 @@ void TransferFunctionEditor::blockColorSignals(bool block)
 	m_alpha->blockSignals(block);
 }
 
-Gradient::Gradient(QWidget* parent)
+Gradient::Gradient(QWidget* parent, bool colorPicker)
 	: QWidget(parent)
 	, m_mousePos(0, 0)
 	, m_function(nullptr)
-	, m_currentControlPoint()
+	, m_currentPoint()
+	, m_colorPicker(colorPicker)
 {
 }
 
-void Gradient::setTransferFunction(TransferFunction* fn)
+void Gradient::setFunction(QGradientStops* fn)
 {
 	m_function = fn;
 
-	m_currentControlPoint = fn->controlPoints.begin();
-	emit controlPointChanged(m_currentControlPoint->second);
+	m_currentPoint = fn->begin();
+	emit pointChanged(m_currentPoint->second);
 	emit gradientChanged();
 	repaint();
 }
 
 void Gradient::changeColor(const QColor& col)
 {
-	m_currentControlPoint->second = col;
+	m_currentPoint->second = col;
 	emit gradientChanged();
 	repaint();
 }
@@ -157,7 +174,7 @@ void Gradient::paintEvent(QPaintEvent* event)
 	QLinearGradient g(0,0, rect().width(), 0);
 	g.setInterpolationMode(QGradient::ComponentInterpolation); // NOT DOCUMENTED ON WEBSITE!!!: Perform component-wise interpolation instead of using premultiplied alpha
 
-	for (const auto& point : m_function->controlPoints)
+	for (const auto& point : *m_function)
 		g.setColorAt(point.first, point.second);
 
 	p.setBrush(g);
@@ -174,7 +191,7 @@ void Gradient::paintEvent(QPaintEvent* event)
 	{
 		QPoint pos = toPixelPos(it->first);
 		QRect bounds(pos - pointSize * 0.5, pos + pointSize * 0.5);
-		if (it == m_currentControlPoint)
+		if (it == m_currentPoint)
 			p.setBrush(QBrush(QColor(255, 191, 191, 197)));
 		else
 			p.setBrush(pointBrush);
@@ -200,7 +217,7 @@ void Gradient::mouseMoveEvent(QMouseEvent * event)
 	if (event->buttons() == Qt::LeftButton)
 	{
 		// Move current control point
-		m_currentControlPoint->first = std::max(0.0, std::min(m_pointPos + toLogicalPos(event->pos() - m_mousePos), 1.0));
+		m_currentPoint->first = std::max(0.0, std::min(m_pointPos + toLogicalPos(event->pos() - m_mousePos), 1.0));
 		emit gradientChanged();
 	}
 
@@ -213,25 +230,25 @@ void Gradient::mousePressEvent(QMouseEvent * event)
 	{
 		QGradientStops::iterator point = getPointClicked(event->pos());
 		// If clicked on point and its different to current one -> Set current control point
-		if (point != m_function->end() && m_currentControlPoint != point)
+		if (point != m_function->end() && m_currentPoint != point)
 		{
-			m_currentControlPoint = point;
-			emit controlPointChanged(m_currentControlPoint->second);
+			m_currentPoint = point;
+			emit pointChanged(m_currentPoint->second);
 		}
 		// If not clicked on any point -> create new one and make it current
 		else if(point == m_function->end())
 		{
 			// Not in vicinity, create new control point
 			qreal t = toLogicalPos(event->pos());
-			m_function->push_back(QGradientStop(t, m_function->colorAt(t))); // Does NOT change the gradient, because new color is interpolated
-			m_currentControlPoint = std::prev(m_function->end());
-			emit controlPointChanged(m_currentControlPoint->second);
+			m_function->push_back(QGradientStop(t, TransferFunction::interpolate(*m_function, t))); // Does NOT change the gradient, because new color is interpolated
+			m_currentPoint = std::prev(m_function->end());
+			emit pointChanged(m_currentPoint->second);
 		}
 		// Otherwise, clicked on current control point -> do nothing else
 
 		// Set variables for possible move events
 		m_mousePos = event->pos();
-		m_pointPos = m_currentControlPoint->first;
+		m_pointPos = m_currentPoint->first;
 	}
 	else if (event->button() == Qt::RightButton)
 	{
@@ -240,15 +257,15 @@ void Gradient::mousePressEvent(QMouseEvent * event)
 		if (point != m_function->end() && point != m_function->begin() && point != std::next(m_function->begin()))
 		{
 			// If clicked on current point -> change current point to first one, because clicked point will be erased
-			if (m_currentControlPoint == point)
+			if (m_currentPoint == point)
 			{
-				m_currentControlPoint = m_function->begin();
-				emit controlPointChanged(m_currentControlPoint->second);
+				m_currentPoint = m_function->begin();
+				emit pointChanged(m_currentPoint->second);
 			}
 			// Erase operation invalidates iterators -> Store value and find it after erase
-			QGradientStop tmp = *m_currentControlPoint;
+			QGradientStop tmp = *m_currentPoint;
 			m_function->erase(point);
-			m_currentControlPoint = std::find(m_function->begin(), m_function->end(), tmp);
+			m_currentPoint = std::find(m_function->begin(), m_function->end(), tmp);
 			emit gradientChanged(); // Gradient may have changed by erasing a control point
 		}
 	}
@@ -258,18 +275,20 @@ void Gradient::mousePressEvent(QMouseEvent * event)
 
 void Gradient::mouseDoubleClickEvent(QMouseEvent* event)
 {
+	if (!m_colorPicker) return;
+
 	if (event->button() == Qt::LeftButton)
 	{
 		// Should always hit current point, as first click of doubleClick generated point if none existed
 		QGradientStops::iterator point = getPointClicked(event->pos());
-		if (point != m_currentControlPoint)
+		if (point != m_currentPoint)
 			StaticLogger::logit("WARNING: Double clicked point not equal to current control point!");
 
-		QColor col = QColorDialog::getColor(m_currentControlPoint->second, this, QString(), QColorDialog::ShowAlphaChannel); // Open color dialog
-		if (col != m_currentControlPoint->second && col.isValid())
+		QColor col = QColorDialog::getColor(m_currentPoint->second, this); // Open color dialog
+		if (col != m_currentPoint->second && col.isValid())
 		{
-			m_currentControlPoint->second = col;
-			emit controlPointChanged(col);
+			m_currentPoint->second = col;
+			emit pointChanged(col);
 			emit gradientChanged(); // Color of control point changed
 		}
 	}
@@ -297,4 +316,15 @@ QGradientStops::iterator Gradient::getPointClicked(QPoint click)
 		}
 	}
 	return m_function->end();
+}
+
+RangeRuler::RangeRuler(QWidget* parent)
+	: QWidget(parent)
+	, m_min(0.0)
+	, m_max(1000.0)
+{
+}
+
+void RangeRuler::paintEvent(QPaintEvent* event)
+{
 }

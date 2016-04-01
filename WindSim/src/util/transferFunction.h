@@ -19,6 +19,7 @@ namespace Metric
 struct TransferFunction
 {
 	static TransferFunction fromJson(const QJsonObject& json);
+	static QColor interpolate(const QGradientStops& points, float t);
 
 	TransferFunction();
 
@@ -27,13 +28,8 @@ struct TransferFunction
 
 	QColor colorAt(float t) const;
 
-	// Helper functions to facilitate controlpoint access
-	QGradientStops::iterator begin() { return controlPoints.begin(); };
-	QGradientStops::iterator end() { return controlPoints.end(); };
-	void push_back(const QGradientStop& point) { controlPoints.push_back(point); };
-	QGradientStops::iterator erase(QGradientStops::iterator it) { return controlPoints.erase(it); };
-
-	QGradientStops controlPoints;
+	QGradientStops alphaPoints;
+	QGradientStops colorPoints;
 	qreal rangeMin;
 	qreal rangeMax;
 };

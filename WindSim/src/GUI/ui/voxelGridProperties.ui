@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>514</width>
-    <height>690</height>
+    <height>718</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1117,7 +1117,7 @@
                <property name="minimumSize">
                 <size>
                  <width>0</width>
-                 <height>19</height>
+                 <height>44</height>
                 </size>
                </property>
                <property name="toolTip">

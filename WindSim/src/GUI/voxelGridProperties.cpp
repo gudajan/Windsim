@@ -13,6 +13,8 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	ui.gradient->setColorSpinBoxes(ui.spR, ui.spG, ui.spB, ui.spA);
 	ui.gradient->setRangeSpinBoxes(ui.dspRangeMin, ui.dspRangeMax);
 
+	ui.buttonBox->button(QDialogButtonBox::Apply)->setDefault(true);
+
 	updateProperties(m_properties);
 
 	// Name
@@ -421,7 +423,7 @@ void VoxelGridProperties::blockSignals(bool b)
 	ui.cmbMetric->blockSignals(b);
 
 	// Use disconnect because we do not want to block signals WITHIN the widget
-	if (b)
+	if (!b)
 		disconnect(ui.gradient);
 	else
 		connect(ui.gradient, SIGNAL(transferFunctionChanged()), this, SLOT(volumeTxFunctionChanged()));
