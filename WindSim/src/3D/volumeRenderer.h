@@ -59,6 +59,7 @@ private:
 
 		ID3DX11EffectScalarVariable* rangeMin;
 		ID3DX11EffectScalarVariable* rangeMax;
+		ID3DX11EffectScalarVariable* stepSize;
 	};
 	static ShaderVariables s_shaderVariables;
 	static ID3DX11Effect* s_effect;
@@ -76,6 +77,7 @@ private:
 	Metric::Volume m_metric;
 	double m_rangeMin;
 	double m_rangeMax;
+	double m_stepSize;
 };
 
 

@@ -24,6 +24,7 @@ cbuffer cb
 	// Scalars
 	float g_sRangeMin;
 	float g_sRangeMax;
+	float g_sStepSize;
 };
 
 // =============================================================================
@@ -131,7 +132,7 @@ PSIn vsScreenTri(uint vid : SV_VertexID)
 // Ray casting in grid object space with simple alpha blending
 float4 psDirect(PSIn frag) : SV_Target
 {
-	float stepSize = 0.1f * max(g_vVoxelSize.x, max(g_vVoxelSize.y, g_vVoxelSize.z));
+	float stepSize = g_sStepSize * max(g_vVoxelSize.x, max(g_vVoxelSize.y, g_vVoxelSize.z));
 
 	float3 rayDir = normalize(frag.posOS - g_vCamPosOS); // In texture space
 
@@ -156,11 +157,12 @@ float4 psDirect(PSIn frag) : SV_Target
 	float depthVSInc = mul(float4(rayInc, 0), g_mWorldView).z;
 
 	float4 accCol = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	float range = (g_sRangeMax - g_sRangeMin);
 	while (accCol.a < 0.99f && depthOS <= tmax && depthVS <= maxDepthVS)
 	{
 		float scalar = g_scalarGridSRV.SampleLevel(SamLinear, mul(float4(rayPos, 1.0f), g_mTexToGridInv).xyz, 0.0);
 
-		float val = saturate((scalar - g_sRangeMin) / (g_sRangeMax - g_sRangeMin));
+		float val = saturate((scalar - g_sRangeMin) / range);
 
 		float4 col = g_txfnTex.SampleLevel(SamLinear, val, 0.0);
 

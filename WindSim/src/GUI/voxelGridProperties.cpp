@@ -57,8 +57,9 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 
 	// Volume settings
 	connect(ui.cmbMetric, SIGNAL(currentTextChanged(const QString&)), ui.gradient, SLOT(switchToMetric(const QString&)));
-	connect(ui.gbVolume, SIGNAL(toggled(bool)), this, SLOT(volumeTxFunctionChanged()));
-	connect(ui.gradient, SIGNAL(transferFunctionChanged()), this, SLOT(volumeTxFunctionChanged()));
+	connect(ui.gbVolume, SIGNAL(toggled(bool)), this, SLOT(volumeSettingsChanged()));
+	connect(ui.hsStepSize, SIGNAL(valueChanged(int)), this, SLOT(volumeSettingsChanged()));
+	connect(ui.gradient, SIGNAL(transferFunctionChanged()), this, SLOT(volumeSettingsChanged()));
 
 	// WindTunnel
 
@@ -143,10 +144,11 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		// Volume settings
 		const QJsonObject& volume = properties.find("volume")->toObject();
 		ui.gbVolume->setChecked(volume["enabled"].toBool());
+		setSliderValue(ui.hsStepSize, volume["stepSize"].toDouble());
 		const QString& metric = volume["metric"].toString();
 		ui.cmbMetric->setCurrentText(metric);
 		ui.gradient->switchToMetric(metric);
-		const QJsonObject& fcntns = volume["transferFunction"].toObject();
+		const QJsonObject& fcntns = volume["transferFunctions"].toObject();
 		for (auto jit = fcntns.begin(); jit != fcntns.end(); ++jit)
 		{
 			TransferFunction txfn = TransferFunction::fromJson(jit->toObject());
@@ -311,7 +313,7 @@ void VoxelGridProperties::glyphSettingsChanged()
 	emit propertiesChanged( m_properties, GlyphSettings);
 }
 
-void VoxelGridProperties::volumeTxFunctionChanged()
+void VoxelGridProperties::volumeSettingsChanged()
 {
 	const QString& currentMetric = ui.cmbMetric->currentText();
 
@@ -322,6 +324,7 @@ void VoxelGridProperties::volumeTxFunctionChanged()
 	QJsonObject volume
 	{
 		{ "enabled", ui.gbVolume->isChecked() },
+		{ "stepSize", sliderFloatValue(ui.hsStepSize) },
 		{ "metric", currentMetric },
 		{ "transferFunctions", functions }
 	};

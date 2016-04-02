@@ -28,6 +28,10 @@ TransferFunctionEditor::TransferFunctionEditor(QWidget* parent)
 	m_colorGradient->setMinimumHeight(19);
 	m_alphaGradient->setMinimumHeight(60);
 
+	QSizePolicy policy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+	policy.setVerticalStretch(2);
+	m_alphaGradient->setSizePolicy(policy);
+
 	QVBoxLayout *layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->addWidget(m_rangeRuler);
@@ -427,13 +431,16 @@ void RangeRuler::paintEvent(QPaintEvent* event)
 {
 	int w = width();
 
-	float pixelToRange = (m_max - m_min) / w;
+	float range = m_max - m_min;
+
+	float rangeToPixel = w / range;
 
 	int nBig = 5;
 	int nSmall = 3;
 
-	int distBig = w / (nBig - 1);
-	int distSmall = distBig / (nSmall + 1);
+	float distBig = range / (nBig - 1);
+	float distSmall = distBig / (nSmall + 1);
+
 	int lineHeightBig = 10;
 	int lineHeightSmall = 5;
 
@@ -443,15 +450,17 @@ void RangeRuler::paintEvent(QPaintEvent* event)
 	std::vector<QLine> lines(nBig + (nBig - 1) * nSmall);
 	for (int i = 0; i < nBig; ++i)
 	{
-		int x = i * distBig;
-		QString text = QString::number(pixelToRange * x + m_min, 'f', 2);
-		if (i == nBig - 1) // Fake last number, so it always displays the maximum range despite the different pixel position
+		float x = i * distBig;
+		QString text = QString::number(x + m_min, 'f', 2);
+		int pixel = x * rangeToPixel;
+		if (i == nBig - 1) // Fake last number and line, so the last line always is drawn at the last pixel and shows the correct number despite different pixel position
 		{
-			x = w - 1;
+			pixel = w - 1;
 			text = QString::number(m_max, 'f', 2);
 		}
-		lines[i * (nSmall + 1)] = QLine(x, height(), x, height() - lineHeightBig);
-		QRect r(QPoint(x - fm.width(text), height() - lineHeightBig - 2 - fm.height()), QPoint(x + fm.width(text), height() - lineHeightBig - 2));
+
+		lines[i * (nSmall + 1)] = QLine(pixel, height(), pixel, height() - lineHeightBig);
+		QRect r(QPoint(pixel - fm.width(text), height() - lineHeightBig - 2 - fm.height()), QPoint(pixel + fm.width(text), height() - lineHeightBig - 2));
 		if (i == 0)
 			p.drawText(r, Qt::AlignRight, text);
 		else if (i == nBig - 1)
@@ -463,7 +472,8 @@ void RangeRuler::paintEvent(QPaintEvent* event)
 		for (int j = 1; j <= nSmall; ++j)
 		{
 			x = i * distBig + j * distSmall;
-			lines[i * (nSmall + 1) + j] = QLine(x, height(), x, height() - lineHeightSmall);
+			pixel = x * rangeToPixel;
+			lines[i * (nSmall + 1) + j] = QLine(pixel, height(), pixel, height() - lineHeightSmall);
 		}
 	}
 

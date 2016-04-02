@@ -26,6 +26,8 @@ namespace Metric
 TransferFunction TransferFunction::fromJson(const QJsonObject& json)
 {
 	TransferFunction txfn;
+	txfn.colorPoints.clear();
+	txfn.alphaPoints.clear();
 
 	txfn.rangeMin = json["range"].toObject()["min"].toDouble();
 	txfn.rangeMax = json["range"].toObject()["max"].toDouble();

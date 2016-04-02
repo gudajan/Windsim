@@ -959,6 +959,13 @@
           <bool>false</bool>
          </property>
          <layout class="QGridLayout" name="gridLayout_6">
+          <item row="0" column="2">
+           <widget class="QLabel" name="lStepSize">
+            <property name="text">
+             <string>Step size:</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="lMetric">
             <property name="text">
@@ -980,23 +987,23 @@
             </item>
            </widget>
           </item>
-          <item row="0" column="2">
-           <spacer name="horizontalSpacer">
+          <item row="0" column="3">
+           <widget class="QSlider" name="hsStepSize">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>500</number>
+            </property>
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Expanding</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
+           </widget>
           </item>
-          <item row="1" column="0" colspan="3">
+          <item row="1" column="0" colspan="4">
            <widget class="QGroupBox" name="gbTxFunction">
             <property name="title">
              <string>Transfer function</string>

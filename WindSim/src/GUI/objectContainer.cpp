@@ -294,7 +294,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			QJsonObject functions;
 			for (const auto& metric : Metric::names)
 				functions[metric] = TransferFunction().toJson();
-			object["volume"] = QJsonObject{ { "enabled", false }, { "metric", Metric::toString(Metric::Magnitude)}, { "transferFunctions", functions } };
+			object["volume"] = QJsonObject{ { "enabled", false }, { "stepSize", 0.5 }, { "metric", Metric::toString(Metric::Magnitude)}, { "transferFunctions", functions } };
 		}
 		if (!object.contains("windTunnelSettings"))
 			object["windTunnelSettings"] = ""; // Simulation uses default values

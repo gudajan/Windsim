@@ -61,6 +61,7 @@ HRESULT VolumeRenderer::createShaderFromFile(const std::wstring& shaderPath, ID3
 
 	s_shaderVariables.rangeMin         = s_effect->GetVariableByName("g_sRangeMin")->AsScalar();
 	s_shaderVariables.rangeMax         = s_effect->GetVariableByName("g_sRangeMax")->AsScalar();
+	s_shaderVariables.stepSize         = s_effect->GetVariableByName("g_sStepSize")->AsScalar();
 
 	return S_OK;
 }
@@ -80,6 +81,7 @@ VolumeRenderer::VolumeRenderer()
 	, m_metric(Metric::Magnitude)
 	, m_rangeMin(0.0)
 	, m_rangeMax(1000.0)
+	, m_stepSize(0.5)
 {
 }
 
@@ -179,6 +181,7 @@ void VolumeRenderer::render(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 
 	s_shaderVariables.rangeMin->SetFloat(static_cast<float>(m_rangeMin));
 	s_shaderVariables.rangeMax->SetFloat(static_cast<float>(m_rangeMax));
+	s_shaderVariables.stepSize->SetFloat(static_cast<float>(m_stepSize));
 
 	s_effect->GetTechniqueByName("Render")->GetPassByName("Direct")->Apply(0, context);
 
@@ -210,6 +213,8 @@ void VolumeRenderer::changeSettings(ID3D11Device* device, const QJsonObject& set
 
 	m_rangeMin = txfn.rangeMin;
 	m_rangeMax = txfn.rangeMax;
+
+	m_stepSize = max(0.001, settings["stepSize"].toDouble());
 }
 
 HRESULT VolumeRenderer::createTxFn(ID3D11Device* device, const TransferFunction& txfn)

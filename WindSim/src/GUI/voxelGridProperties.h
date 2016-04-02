@@ -28,7 +28,7 @@ private slots:
 	void resolutionChanged();
 	void voxelSizeChanged();
 	void glyphSettingsChanged();
-	void volumeTxFunctionChanged();
+	void volumeSettingsChanged();
 
 	// WindTunnel Properties
 	void simulatorSettingsChanged();
