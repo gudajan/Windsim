@@ -76,19 +76,18 @@ signals:
 	void gradientChanged(); // Emitted if control point moved
 
 protected:
-	void paintEvent(QPaintEvent* event) override; // Paint color gradient and control points
+	virtual void paintEvent(QPaintEvent* event) override; // Paint color gradient and control points
 
-	void mouseMoveEvent(QMouseEvent * event) override; // If mouse clicked, move current control point
+	virtual void mouseMoveEvent(QMouseEvent * event) override; // If mouse clicked, move current control point
 	// LeftClick -> if in vicinity of control point, select it, otherwise create new control point
 	// Rightclick -> if in vicinity of control point, delete it
-	void mousePressEvent(QMouseEvent * event) override;
+	virtual void mousePressEvent(QMouseEvent * event) override;
 	// DoubleClick left -> if in vicinity of control point, open color picker
 	void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 	void mouseReleaseEvent(QMouseEvent * event) override {};
 
-private:
-	QPoint toPixelPos(qreal t); // t is position of control point -> between 0.0 and 1.0, returns pixel position within widget
+	virtual QPoint toPixelPos(qreal t, const QColor& color); // t is position of control point -> between 0.0 and 1.0, returns pixel position within widget
 	qreal toLogicalPos(QPoint p);
 
 	QGradientStops::iterator getPointClicked(QPoint click);
@@ -100,7 +99,26 @@ private:
 	QGradientStops* m_function;
 	QGradientStops::iterator m_currentPoint;
 
+private:
 	bool m_colorPicker; // Indicates if color picking is enabled for the gradient
+};
+
+class AlphaFunction : public Gradient
+{
+public:
+	AlphaFunction(QWidget* parent = nullptr);
+
+protected:
+	void paintEvent(QPaintEvent* event) override;
+	void mouseMoveEvent(QMouseEvent * event) override;
+	void mousePressEvent(QMouseEvent * event) override;
+
+	QPoint toPixelPos(qreal t, const QColor& color) override;
+
+private:
+	int toAlpha(QPoint pos);
+
+	int m_pointAlpha;
 };
 
 
@@ -114,8 +132,8 @@ protected:
 	void paintEvent(QPaintEvent* event) override;
 
 public slots:
-	void setRangeMin(double min) { m_min = min; };
-	void setRangeMax(double max) { m_max = max; };
+	void setRangeMin(double min) { m_min = min; repaint(); };
+	void setRangeMax(double max) { m_max = max; repaint(); };
 
 private:
 	double m_min;

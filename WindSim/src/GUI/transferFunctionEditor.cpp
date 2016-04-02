@@ -20,13 +20,13 @@ TransferFunctionEditor::TransferFunctionEditor(QWidget* parent)
 	, m_rangeMax(nullptr)
 	, m_rangeRuler(new RangeRuler(this))
 	, m_colorGradient(new Gradient(this))
-	, m_alphaGradient(new Gradient(this, false))
+	, m_alphaGradient(new AlphaFunction(this))
 	, m_metricFunctions()
 	, m_currentMetric(Metric::toString(Metric::Magnitude))
 {
 	m_rangeRuler->setMinimumHeight(25);
 	m_colorGradient->setMinimumHeight(19);
-	m_alphaGradient->setMinimumHeight(19);
+	m_alphaGradient->setMinimumHeight(60);
 
 	QVBoxLayout *layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
@@ -157,20 +157,6 @@ void Gradient::paintEvent(QPaintEvent* event)
 	QPainter p(this);
 	p.setRenderHint(QPainter::Antialiasing);
 
-	// Paint checker pattern to visualize transparency
-	int checkerSize = 5;
-	QPixmap pm(checkerSize * 2, checkerSize * 2);
-	QPainter pmp(&pm);
-	pmp.fillRect(0, 0, checkerSize, checkerSize, Qt::lightGray);
-	pmp.fillRect(checkerSize, checkerSize, checkerSize, checkerSize, Qt::lightGray);
-	pmp.fillRect(0, checkerSize, checkerSize, checkerSize, Qt::darkGray);
-	pmp.fillRect(checkerSize, 0, checkerSize, checkerSize, Qt::darkGray);
-	pmp.end();
-	QPalette pal = palette();
-	pal.setBrush(backgroundRole(), QBrush(pm));
-	setAutoFillBackground(true);
-	setPalette(pal);
-
 	QLinearGradient g(0,0, rect().width(), 0);
 	g.setInterpolationMode(QGradient::ComponentInterpolation); // NOT DOCUMENTED ON WEBSITE!!!: Perform component-wise interpolation instead of using premultiplied alpha
 
@@ -189,7 +175,7 @@ void Gradient::paintEvent(QPaintEvent* event)
 	QPoint pointSize(11, 11);
 	for (QGradientStops::iterator it = m_function->begin(); it != m_function->end(); ++it)
 	{
-		QPoint pos = toPixelPos(it->first);
+		QPoint pos = toPixelPos(it->first, it->second);
 		QRect bounds(pos - pointSize * 0.5, pos + pointSize * 0.5);
 		if (it == m_currentPoint)
 			p.setBrush(QBrush(QColor(255, 191, 191, 197)));
@@ -216,7 +202,9 @@ void Gradient::mouseMoveEvent(QMouseEvent * event)
 {
 	if (event->buttons() == Qt::LeftButton)
 	{
-		// Move current control point
+		// Move current control point only if not start or end point
+		if (m_currentPoint == m_function->begin() || m_currentPoint == std::next(m_function->begin()))
+			return;
 		m_currentPoint->first = std::max(0.0, std::min(m_pointPos + toLogicalPos(event->pos() - m_mousePos), 1.0));
 		emit gradientChanged();
 	}
@@ -296,7 +284,7 @@ void Gradient::mouseDoubleClickEvent(QMouseEvent* event)
 	repaint();
 }
 
-QPoint Gradient::toPixelPos(qreal t)
+QPoint Gradient::toPixelPos(qreal t, const QColor& color)
 {
 	return QPoint(rect().width() * t, rect().height() * 0.5);
 }
@@ -310,12 +298,122 @@ QGradientStops::iterator Gradient::getPointClicked(QPoint click)
 {
 	for (QGradientStops::iterator point = m_function->begin(); point != m_function->end(); ++point)
 	{
-		if ((click - toPixelPos(point->first)).manhattanLength() < 10)
+		if ((click - toPixelPos(point->first, point->second)).manhattanLength() < 15)
 		{
 			return point;
 		}
 	}
 	return m_function->end();
+}
+
+AlphaFunction::AlphaFunction(QWidget* parent)
+	: Gradient(parent, false)
+{
+}
+
+void AlphaFunction::paintEvent(QPaintEvent* event)
+{
+	QPainter p(this);
+	p.setRenderHint(QPainter::Antialiasing);
+
+	// Paint checker pattern to visualize transparency
+	int checkerSize = 5;
+	QPixmap pm(checkerSize * 2, checkerSize * 2);
+	QPainter pmp(&pm);
+	pmp.fillRect(0, 0, checkerSize, checkerSize, Qt::lightGray);
+	pmp.fillRect(checkerSize, checkerSize, checkerSize, checkerSize, Qt::lightGray);
+	pmp.fillRect(0, checkerSize, checkerSize, checkerSize, Qt::darkGray);
+	pmp.fillRect(checkerSize, 0, checkerSize, checkerSize, Qt::darkGray);
+	pmp.end();
+	p.setBrush(QBrush(pm));
+	p.setPen(Qt::NoPen);
+	p.drawRect(rect());
+
+	// Draw gradient for alpha visualization
+	QLinearGradient g(0, 0, rect().width(), 0);
+	g.setInterpolationMode(QGradient::ComponentInterpolation); // NOT DOCUMENTED ON WEBSITE!!!: Perform component-wise interpolation instead of using premultiplied alpha
+
+	for (const auto& point : *m_function)
+		g.setColorAt(point.first, point.second);
+
+	p.setBrush(g);
+	p.setPen(Qt::NoPen);
+	p.drawRect(rect());
+
+	// Draw alpha function as connected dots
+
+	// Draw lines
+	std::vector<QPoint> points;
+	points.reserve(m_function->size());
+	for (QGradientStops::iterator it = m_function->begin(); it != m_function->end(); ++it)
+		points.push_back(toPixelPos(it->first, it->second));
+
+	std::sort(points.begin(), points.end(), [](const QPoint& a, const QPoint& b) { return a.x() < b.x(); });
+	p.setPen(QPen(QColor(0, 0, 0, 255), 2));
+	p.drawPolyline(points.data(), points.size());
+
+	// Draw points
+	QBrush pointBrush(QColor(0, 0, 0, 255)); // Black
+	QPen pointPen(QColor(255, 255, 255, 191), 1);
+	p.setPen(pointPen);
+
+	QPoint pointSize(11, 11);
+	for (QGradientStops::iterator it = m_function->begin(); it != m_function->end(); ++it)
+	{
+		QPoint pos = toPixelPos(it->first, it->second);
+		QRect bounds(pos - pointSize * 0.5, pos + pointSize * 0.5);
+		if (it == m_currentPoint)
+			p.setBrush(QBrush(QColor(120, 0, 0, 255)));
+		else
+			p.setBrush(pointBrush);
+		p.drawEllipse(bounds);
+
+		// Mark first two undeletable control points
+		if (it == m_function->begin() || it == std::next(m_function->begin()))
+		{
+			bounds = QRect(pos - pointSize * 0.2, pos + pointSize * 0.2);
+			p.setBrush(QBrush(QColor(130, 100, 100, 255)));
+			p.setPen(Qt::NoPen);
+			p.drawEllipse(bounds);
+			p.setPen(pointPen);
+		}
+	}
+
+	if (!isEnabled())
+		p.fillRect(rect(), QColor(255, 255, 255, 128));
+}
+
+void AlphaFunction::mouseMoveEvent(QMouseEvent* event)
+{
+	if (event->buttons() == Qt::LeftButton)
+	{
+		// Move current control point (horizantally only if not start or end point)
+		if (m_currentPoint != m_function->begin() && m_currentPoint != std::next(m_function->begin()))
+			m_currentPoint->first = std::max(0.0, std::min(m_pointPos + toLogicalPos(event->pos() - m_mousePos), 1.0));
+		m_currentPoint->second = QColor(255, 255, 255, std::max(0, std::min(m_pointAlpha + toAlpha(event->pos() - m_mousePos), 255)));
+		emit pointChanged(m_currentPoint->second);
+		emit gradientChanged();
+	}
+
+	repaint();
+}
+
+void AlphaFunction::mousePressEvent(QMouseEvent* event)
+{
+	Gradient::mousePressEvent(event);
+
+	if (event->button() == Qt::LeftButton)
+		m_pointAlpha = m_currentPoint->second.alpha();
+}
+
+QPoint AlphaFunction::toPixelPos(qreal t, const QColor& color)
+{
+	return QPoint(rect().width() * t, rect().height() * (1.0 - color.alphaF()));
+}
+
+int AlphaFunction::toAlpha(QPoint pos)
+{
+	return - pos.y() / static_cast<float>(rect().height()) * 255;
 }
 
 RangeRuler::RangeRuler(QWidget* parent)
@@ -327,4 +425,47 @@ RangeRuler::RangeRuler(QWidget* parent)
 
 void RangeRuler::paintEvent(QPaintEvent* event)
 {
+	int w = width();
+
+	float pixelToRange = (m_max - m_min) / w;
+
+	int nBig = 5;
+	int nSmall = 3;
+
+	int distBig = w / (nBig - 1);
+	int distSmall = distBig / (nSmall + 1);
+	int lineHeightBig = 10;
+	int lineHeightSmall = 5;
+
+	QPainter p(this);
+	QFontMetrics fm(font());
+
+	std::vector<QLine> lines(nBig + (nBig - 1) * nSmall);
+	for (int i = 0; i < nBig; ++i)
+	{
+		int x = i * distBig;
+		QString text = QString::number(pixelToRange * x + m_min, 'f', 2);
+		if (i == nBig - 1) // Fake last number, so it always displays the maximum range despite the different pixel position
+		{
+			x = w - 1;
+			text = QString::number(m_max, 'f', 2);
+		}
+		lines[i * (nSmall + 1)] = QLine(x, height(), x, height() - lineHeightBig);
+		QRect r(QPoint(x - fm.width(text), height() - lineHeightBig - 2 - fm.height()), QPoint(x + fm.width(text), height() - lineHeightBig - 2));
+		if (i == 0)
+			p.drawText(r, Qt::AlignRight, text);
+		else if (i == nBig - 1)
+			p.drawText(r, Qt::AlignLeft, text);
+		else
+			p.drawText(r, Qt::AlignCenter, text);
+		if (i >= nBig - 1) // Last big line is last overall line -> skip following small lines
+			break;
+		for (int j = 1; j <= nSmall; ++j)
+		{
+			x = i * distBig + j * distSmall;
+			lines[i * (nSmall + 1) + j] = QLine(x, height(), x, height() - lineHeightSmall);
+		}
+	}
+
+	p.drawLines(lines.data(), lines.size());
 }
