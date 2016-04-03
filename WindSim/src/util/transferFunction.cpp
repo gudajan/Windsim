@@ -5,7 +5,7 @@
 
 namespace Metric
 {
-	const std::vector<QString> names{ "Magnitude", "Vorticity" };
+	const std::vector<QString> names{ "Magnitude", "Vorticity", "Divergence", "QCriterion", "DeltaCriterion", "Lambda2Criterion" };
 
 	QString toString(Volume metric)
 	{

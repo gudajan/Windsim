@@ -9,7 +9,7 @@
 
 namespace Metric
 {
-	enum Volume { Magnitude = 0, Vorticity };
+	enum Volume { Magnitude = 0, Vorticity, Divergence, QCriterion, DeltaCriterion, Lambda2Criterion};
 	extern const std::vector<QString> names;
 
 	QString toString(Volume metric);

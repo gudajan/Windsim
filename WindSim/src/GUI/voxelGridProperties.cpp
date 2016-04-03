@@ -1,4 +1,4 @@
-#include "voxelGridProperties.h"
+﻿#include "voxelGridProperties.h"
 
 #include <WindTunnelLib/WindTunnel.h>
 
@@ -56,7 +56,7 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	connect(ui.sbOriY, SIGNAL(valueChanged(int)), this, SLOT(glyphSettingsChanged()));
 
 	// Volume settings
-	connect(ui.cmbMetric, SIGNAL(currentTextChanged(const QString&)), ui.gradient, SLOT(switchToMetric(const QString&)));
+	connect(ui.cmbMetric, SIGNAL(currentTextChanged(const QString&)), this, SLOT(switchVolumeMetric(const QString&)));
 	connect(ui.gbVolume, SIGNAL(toggled(bool)), this, SLOT(volumeSettingsChanged()));
 	connect(ui.hsStepSize, SIGNAL(valueChanged(int)), this, SLOT(volumeSettingsChanged()));
 	connect(ui.gradient, SIGNAL(transferFunctionChanged()), this, SLOT(volumeSettingsChanged()));
@@ -315,7 +315,14 @@ void VoxelGridProperties::glyphSettingsChanged()
 
 void VoxelGridProperties::volumeSettingsChanged()
 {
-	const QString& currentMetric = ui.cmbMetric->currentText();
+	QString currentMetric = ui.cmbMetric->currentText();
+	if (currentMetric == "Q-Criterion")
+		currentMetric = "QCriterion";
+	else if (currentMetric.toUtf8() == QByteArray("\xCE\x94-Criterion"))
+		currentMetric = "DeltaCriterion";
+	else if (currentMetric.toUtf8() == QByteArray("\xCE\xBB\xC2²-Criterion"))
+		currentMetric = "Lambda2Criterion";
+
 
 	// Only update modified transfer function
 	QJsonObject functions = m_properties["volume"].toObject()["transferFunctions"].toObject();
@@ -332,6 +339,19 @@ void VoxelGridProperties::volumeSettingsChanged()
 	m_properties["volume"] = volume;
 
 	emit propertiesChanged(m_properties, VolumeSettings);
+}
+
+void VoxelGridProperties::switchVolumeMetric(const QString& metric)
+{
+	QByteArray a = metric.toUtf8();
+	if (metric == "Q-Criterion")
+		ui.gradient->switchToMetric("QCriterion");
+	else if (metric.toUtf8() == QByteArray("\xCE\x94-Criterion"))
+		ui.gradient->switchToMetric("DeltaCriterion");
+	else if (metric.toUtf8() == QByteArray("\xCE\xBB\xC2²-Criterion"))// Replace lambda by hex
+		ui.gradient->switchToMetric("Lambda2Criterion");
+	else
+		ui.gradient->switchToMetric(metric);
 }
 
 void VoxelGridProperties::runSimulationChanged(int state)

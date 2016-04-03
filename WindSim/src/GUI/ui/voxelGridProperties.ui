@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>514</width>
-    <height>787</height>
+    <height>789</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -983,6 +983,26 @@
             <item>
              <property name="text">
               <string>Vorticity</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Divergence</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Q-Criterion</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Δ-Criterion</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>λ²-Criterion</string>
              </property>
             </item>
            </widget>

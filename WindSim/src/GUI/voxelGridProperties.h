@@ -29,6 +29,7 @@ private slots:
 	void voxelSizeChanged();
 	void glyphSettingsChanged();
 	void volumeSettingsChanged();
+	void switchVolumeMetric(const QString& metric);
 
 	// WindTunnel Properties
 	void simulatorSettingsChanged();
