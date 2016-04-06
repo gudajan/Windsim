@@ -326,6 +326,7 @@ PSIn vsScreenTri(uint vid : SV_VertexID)
 float4 psDirect(PSIn frag) : SV_Target
 {
 	float stepSize = g_sStepSize * max(g_vVoxelSize.x, max(g_vVoxelSize.y, g_vVoxelSize.z));
+	float ocExp = g_sStepSize / 10.0; // Exponent for opacity correction; Make alpha correction quite large, so the transfer function is editable in a more user friendly way
 
 	float3 rayDir = normalize(frag.posOS - g_vCamPosOS); // In texture space
 
@@ -364,9 +365,14 @@ float4 psDirect(PSIn frag) : SV_Target
 
 		float4 col = g_txfnTex.SampleLevel(SamLinear, val, 0.0);
 
+		// Opacity correction
+		col.a = saturate(1.0 - pow(1.0 - col.a, ocExp));
+
 		// Alpha blending
 		accCol.rgb = saturate(accCol.rgb + (1 - accCol.a) * col.rgb * col.a);
 		accCol.a = saturate(accCol.a + (1 - accCol.a) * col.a);
+
+
 
 		rayPos += rayInc;
 		depthVS += depthVSInc;

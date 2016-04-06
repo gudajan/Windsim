@@ -39,8 +39,7 @@ signals:
 	void propertiesChanged(const QJsonObject& data, Modifications mod);
 
 private:
-	void blockSignals();
-	void enableSignals();
+	void blockSignals(bool b);
 	void setColorButton(int r, int g, int b);
 
 	Ui::meshProperties ui;

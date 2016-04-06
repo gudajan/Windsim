@@ -40,7 +40,8 @@ private slots:
 	bool actionCreateVoxelGridTriggered();
 	bool actionCreateSkyTriggered(QString name = QString());
 	bool actionCreateAxesTriggered(QString name = QString());
-	// void actionRemoveObjectTriggered();
+
+	void actionRemoveTriggered();
 
 	// Propagate changes from the 3D view to the object view (set -> QItemSelection); sets selection via QItemSelectionModel
 	void on3DSelectionChanged(std::unordered_set<int> ids);
@@ -65,6 +66,7 @@ private:
 
 	void projectActionsEnable(bool newAct, bool open, bool close, bool save, bool saveAs);
 	void createActionEnable(bool mesh, bool grid);
+	void removeActionEnable(bool enabled);
 
 	Ui::WindSimClass ui;
 

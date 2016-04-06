@@ -81,8 +81,14 @@ void TransferFunctionEditor::switchToMetric(const QString& metric)
 
 	TransferFunction& txfn = m_metricFunctions[m_currentMetric];
 
+	m_rangeMin->blockSignals(true);
+	m_rangeMax->blockSignals(true);
+
 	m_rangeMin->setValue(txfn.rangeMin);
 	m_rangeMax->setValue(txfn.rangeMax);
+
+	m_rangeMin->blockSignals(false);
+	m_rangeMax->blockSignals(false);
 
 	m_colorGradient->setFunction(&txfn.colorPoints); // Selects first control point, which emits signals for updating color spinboxes
 	m_alphaGradient->setFunction(&txfn.alphaPoints);
@@ -300,14 +306,18 @@ qreal Gradient::toLogicalPos(QPoint p)
 
 QGradientStops::iterator Gradient::getPointClicked(QPoint click)
 {
+	int distMin = std::numeric_limits<int>::max();
+	QGradientStops::iterator clicked = m_function->end();
 	for (QGradientStops::iterator point = m_function->begin(); point != m_function->end(); ++point)
 	{
-		if ((click - toPixelPos(point->first, point->second)).manhattanLength() < 15)
+		int dist = (click - toPixelPos(point->first, point->second)).manhattanLength();
+		if (dist < 15 && dist < distMin)
 		{
-			return point;
+			distMin = dist;
+			clicked = point;
 		}
 	}
-	return m_function->end();
+	return clicked;
 }
 
 AlphaFunction::AlphaFunction(QWidget* parent)

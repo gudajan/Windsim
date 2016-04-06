@@ -197,6 +197,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	// The mesh is rendered from all three main directions: for X,Y,Z direction: 1. Set Viewport 2. Create and bind ViewProjection matrix 3. Render
 
+	float factor = 8.0f; // The higher, the more accurate is the force calculation
 	D3D11_VIEWPORT vp;
 	vp.TopLeftX = 10.0f;
 	vp.TopLeftY = 10.0f;
@@ -204,12 +205,11 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	vp.MaxDepth = 1.0f;
 
 	// Along X
-	vp.Width = static_cast<float>(texResolution.z);
-	vp.Height = static_cast<float>(texResolution.y);
+	vp.Width = static_cast<float>(texResolution.z * factor);
+	vp.Height = static_cast<float>(texResolution.y * factor);
 	context->RSSetViewports(1, &vp);
-	// Perform rotation and mirroring to enforce orthographic rendering along x-instead of z-axis
-	// Effectively switches x and z axis
-	XMMATRIX view = XMMatrixRotationNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), degToRad(90)) * XMMatrixScaling(1.0f, 1.0f, -1.0f);
+	// Perform rotation and translation to enforce orthographic rendering along x-instead of z-axis
+	XMMATRIX view = XMMatrixRotationNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), degToRad(-90)) * XMMatrixTranslation(1.0f, 0.0f, 0.0f);
 	s_shaderVariables.texToProj->SetMatrix(reinterpret_cast<float*>((view * proj).r));
 	s_shaderVariables.renderDirection->SetInt(0); // 0 -> X direction
 	s_effect->GetTechniqueByName("Torque")->GetPassByName("Accumulate")->Apply(0, context);
@@ -217,12 +217,11 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	// Along Y
 	vp.TopLeftX = 10.0f + 10.0f + static_cast<float>(texResolution.z);
-	vp.Width = static_cast<float>(texResolution.x);
-	vp.Height = static_cast<float>(texResolution.z);
+	vp.Width = static_cast<float>(texResolution.x * factor);
+	vp.Height = static_cast<float>(texResolution.z * factor);
 	context->RSSetViewports(1, &vp);
-	// Perform rotation and mirroring to enforce orthographic rendering along y-instead of z-axis
-	// Effectively switches y and z axis
-	view = XMMatrixRotationNormal(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), degToRad(-90)) * XMMatrixScaling(1.0f, 1.0f, -1.0f);
+	// Perform rotation and translation to enforce orthographic rendering along y-instead of z-axis
+	view = XMMatrixRotationNormal(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), degToRad(90)) * XMMatrixTranslation(0.0f, 1.0f, 0.0f);
 	s_shaderVariables.texToProj->SetMatrix(reinterpret_cast<const float*>((view * proj).r));
 	s_shaderVariables.renderDirection->SetInt(1); // 1 -> Y direction
 	s_effect->GetTechniqueByName("Torque")->GetPassByName("Accumulate")->Apply(0, context);
@@ -230,11 +229,11 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	// Along Z
 	vp.TopLeftX = 10.0f + 10.0f + static_cast<float>(texResolution.z) + 10.0f + static_cast<float>(texResolution.x);
-	vp.Width = static_cast<float>(texResolution.x);
-	vp.Height = static_cast<float>(texResolution.y);
+	vp.Width = static_cast<float>(texResolution.x * factor);
+	vp.Height = static_cast<float>(texResolution.y * factor);
 	context->RSSetViewports(1, &vp);
 	// No view transformation necessary
-	s_shaderVariables.texToProj->SetMatrix(reinterpret_cast<const float*>(proj.r));
+	s_shaderVariables.texToProj->SetMatrix(reinterpret_cast<const float*>((proj).r));
 	s_shaderVariables.renderDirection->SetInt(2); // 2 -> Z direction
 	s_effect->GetTechniqueByName("Torque")->GetPassByName("Accumulate")->Apply(0, context);
 	context->DrawIndexed(m_mesh.getNumIndices(), 0, 0);

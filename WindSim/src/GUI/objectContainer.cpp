@@ -38,7 +38,6 @@ void ObjectContainer::clear()
 {
 	m_model.clear();
 	m_ids.clear();
-	//m_meshProperties->close();
 	m_voxelGridAdded = false;
 	emit removeAllObject3DTriggered(); // Remove objects in renderer
 }
@@ -259,7 +258,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		if (!object.contains("localRotAxis"))
 			object["localRotAxis"] = QJsonObject{ { "enabled", Qt::Unchecked }, { "x", 0.0f }, { "y", 0.0f }, { "z", 0.0f } };
 		if (!object.contains("showAccelArrow"))
-			object["showAccellArrow"] = Qt::Unchecked;
+			object["showAccelArrow"] = Qt::Unchecked;
 	}
 	if (type == ObjectType::VoxelGrid)
 	{

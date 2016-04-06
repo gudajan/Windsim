@@ -63,6 +63,9 @@ WindSim::WindSim(QWidget *parent)
 	connect(ui.actionCreateMesh, SIGNAL(triggered()), this, SLOT(actionCreateMeshTriggered()));
 	connect(ui.actionCreateVoxelGrid, SIGNAL(triggered()), this, SLOT(actionCreateVoxelGridTriggered()));
 
+	// Remove
+	connect(ui.actionRemove, SIGNAL(triggered()), this, SLOT(actionRemoveTriggered()));
+
 	// Dialog actions
 	connect(ui.actionSettings, SIGNAL(triggered()), this, SLOT(showSettingsDialog()));
 	connect(ui.objectView, SIGNAL(activated(const QModelIndex&)), &m_container, SLOT(showPropertiesDialog(const QModelIndex&)));
@@ -350,6 +353,18 @@ bool WindSim::actionCreateAxesTriggered(QString name)
 	return true;
 }
 
+void WindSim::actionRemoveTriggered()
+{
+	QItemSelection currentSelection = ui.objectView->selectionModel()->selection();
+	for (auto& index : currentSelection.indexes())
+	{
+		const QJsonObject json = m_container.getModel().itemFromIndex(index)->data().toJsonObject();
+		m_container.removeCmd(json["id"].toInt());
+
+		StaticLogger::logit("INFO: Removed object '" + json["name"].toString() + "'");
+	}
+}
+
 void WindSim::on3DSelectionChanged(std::unordered_set<int> ids)
 {
 	QItemSelection selection;
@@ -369,6 +384,12 @@ void WindSim::onGUISelectionChanged()
 	{
 		ids.insert(m_container.getModel().itemFromIndex(index)->data().toJsonObject()["id"].toInt());
 	}
+
+	if (!ids.empty())
+		removeActionEnable(true);
+	else
+		removeActionEnable(false);
+
 	emit selectionChanged(ids);
 }
 
@@ -452,4 +473,9 @@ void WindSim::createActionEnable(bool mesh, bool grid)
 {
 	ui.actionCreateMesh->setEnabled(mesh);
 	ui.actionCreateVoxelGrid->setEnabled(grid);
+}
+
+void WindSim::removeActionEnable(bool enabled)
+{
+	ui.actionRemove->setEnabled(enabled);
 }

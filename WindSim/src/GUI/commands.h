@@ -65,7 +65,6 @@ public:
 
 	void undo() override;
 	void redo() override;
-	bool mergeWith(const QUndoCommand* cmd) override;
 
 private:
 	QJsonObject m_oldData;

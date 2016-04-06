@@ -23,6 +23,9 @@ public:
 	const QString& getFilename() const { return m_path; };
 
 private:
+	QString relativePath(const QString& projectFile, const QString& dataFile); // Return relative path of dataFile wrt to the directory of the projectFile
+	QString absolutePath(const QString& projectFile, const QString& dataFile); // Return absolute path of dataFile, which is given as relative path wrt to the directory of the project file
+
 	QString m_path;
 	bool m_empty;
 

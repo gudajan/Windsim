@@ -425,6 +425,21 @@ void psVoxelize(PSVoxelIn psIn)
 	}
 }
 
+void psConservative(PSVoxelIn psIn)
+{
+	if (!inGrid(float3(psIn.voxelPos.zyx)))
+		return;
+
+	uint3 index = uint3(psIn.voxelPos - float3(0, 0, 0.5)); // Adjust for the half voxel shift
+
+	uint cellId = index.z / 4;
+	uint n = index.z - cellId * 4;
+
+	// Set voxel with index n within cell to CELL_TYPE_SOLID_NO_SLIP
+	uint orVal = CELL_TYPE_SOLID_NO_SLIP << 8 * n;
+	InterlockedOr(g_gridUAV[uint3(cellId, index.yx)], orVal);
+}
+
 // Ray casting into voxel grid -> render first voxel
 PSOut psVolume(PSVoxelIn psIn)
 {
@@ -542,6 +557,17 @@ technique11 Voxel
 		SetDepthStencilState(DepthDisable, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
+
+	pass Conservative
+	{
+		SetVertexShader(CompileShader(vs_5_0, vsVoxelize()));
+		SetGeometryShader(NULL);
+		SetPixelShader(CompileShader(ps_5_0, psConservative()));
+		SetRasterizerState(CullNone);
+		SetDepthStencilState(DepthDisable, 0);
+		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+
 	pass RenderGridBox
 	{
 		SetVertexShader(CompileShader(vs_5_0, vsGridBox()));
@@ -551,6 +577,7 @@ technique11 Voxel
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
+
 	pass RenderVoxel
 	{
 		SetVertexShader(CompileShader(vs_5_0, vsVolume()));
@@ -560,6 +587,7 @@ technique11 Voxel
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
+
 	pass VelocityGlyph
 	{
 		SetVertexShader(CompileShader(vs_5_0, vsPassId()));
@@ -569,10 +597,12 @@ technique11 Voxel
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
+
 	pass Combine
 	{
 		SetComputeShader(CompileShader(cs_5_0, csCombine()));
 	}
+
 	pass CellType
 	{
 		SetComputeShader(CompileShader(cs_5_0, csCellType()));

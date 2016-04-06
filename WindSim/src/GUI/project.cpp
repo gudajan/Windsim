@@ -5,6 +5,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QFile>
+#include <QFileInfo>
+#include <QDir>
 #include <QByteArray>
 
 
@@ -53,6 +55,10 @@ bool Project::open(ObjectContainer& container, const QString& path)
 	for (auto i : it->toArray())
 	{
 		QJsonObject obj = i.toObject();
+		if (obj.contains("obj-file"))
+			obj["obj-file"] = absolutePath(path, obj["obj-file"].toString());
+		if (obj.contains("windTunnelSettings"))
+			obj["windTunnelSettings"] = absolutePath(path, obj["windTunnelSettings"].toString());
 		container.addCmd(obj);
 	}
 
@@ -83,6 +89,12 @@ bool Project::saveAs(ObjectContainer& container, const QString& path)
 		QJsonObject json = container.getData(id);
 		json.remove("id");
 		json.remove("modifications");
+		// Store file paths relative to project file
+		// -> Move project file together with data files
+		if (json.contains("obj-file"))
+			json["obj-file"] = relativePath(path, json["obj-file"].toString());
+		if (json.contains("windTunnelSettings"))
+			json["windTunnelSettings"] = relativePath(path, json["windTunnelSettings"].toString());
 		objects.append(json);
 	}
 	QJsonDocument doc(QJsonObject{ { "objects", objects } });
@@ -96,4 +108,20 @@ bool Project::saveAs(ObjectContainer& container, const QString& path)
 	return true;
 }
 
+
+QString Project::relativePath(const QString& projectFile, const QString& dataFile)
+{
+	QFileInfo di(dataFile);
+	QFileInfo pi(projectFile);
+	QDir dir = pi.absoluteDir();
+	return dir.relativeFilePath(di.absoluteFilePath());
+}
+
+QString Project::absolutePath(const QString& projectFile, const QString& dataFile)
+{
+	QFileInfo pi(projectFile);
+	QDir dir = pi.absoluteDir();
+	QFileInfo fi(dir.absoluteFilePath(dataFile));
+	return fi.canonicalFilePath();
+}
 

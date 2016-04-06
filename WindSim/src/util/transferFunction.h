@@ -14,6 +14,9 @@ namespace Metric
 
 	QString toString(Volume metric);
 	Volume toMetric(const QString& metric);
+
+	QString toGUI(const QString& metric);
+	QString fromGUI(const QString& metric);
 };
 
 struct TransferFunction

@@ -36,6 +36,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, 
 	m_renderVoxel(false),
 	m_renderGlyphs(false),
 	m_calculateDynamics(true),
+	m_conservative(true),
 	m_gridTextureGPU(nullptr),
 	m_gridAllTextureGPU(nullptr),
 	m_gridAllTextureStaging(nullptr),
@@ -301,7 +302,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		m_dynamicsCounter = 0;
 	}
 	// Calculates dynamics motion of meshes, depending on the current velocity field (wait 2 frames until the staging texture is copied to the GPU)
-	if (m_dynamicsCounter >= 0)
+	if (m_dynamicsCounter >= 2)
 	{
 		calculateDynamics(device, context, world, elapsedTime);
 		m_dynamicsCounter = -1;
@@ -700,14 +701,23 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	// -> The generated fragments have the same size as the voxel sizes
 	// If we increase the resolution, the voxelization is gets more conservative (more (barely) touched voxels are set) as more rays are casted per voxel row
 	float factor = 1.0f;
-	D3D11_VIEWPORT vp;
-	vp.TopLeftX = 0.0f;
-	vp.TopLeftY = 0.0f;
-	vp.Width = static_cast<float>(m_resolution.z * factor);
-	vp.Height = static_cast<float>(m_resolution.y * factor);
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	context->RSSetViewports(1, &vp);
+	D3D11_VIEWPORT vpSolid; // Used for the solid voxelization
+	vpSolid.TopLeftX = 0.0f;
+	vpSolid.TopLeftY = 0.0f;
+	vpSolid.Width = static_cast<float>(m_resolution.z * factor);
+	vpSolid.Height = static_cast<float>(m_resolution.y * factor);
+	vpSolid.MinDepth = 0.0f;
+	vpSolid.MaxDepth = 1.0f;
+
+	factor = 32.0f; // The higher, the more conservative
+	D3D11_VIEWPORT vpCons; // Used for conservative voxelization
+	vpCons.TopLeftX = 0.0f;
+	vpCons.TopLeftY = 0.0f;
+	vpCons.Width = static_cast<float>(m_resolution.z * factor);
+	vpCons.Height = static_cast<float>(m_resolution.y * factor);
+	vpCons.MinDepth = 0.0f;
+	vpCons.MaxDepth = 1.0f;
+
 
 	// Clear combined grid UAV once each voxelization
 	const UINT iniVals[] = { 0, 0, 0, 0 };
@@ -763,13 +773,13 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 			// Clear UAV for each mesh
 			context->ClearUnorderedAccessViewUint(m_gridUAV, iniVals);
 
-
 			// Mesh Object Space -> World Space:
 			XMMATRIX objToWorld = XMLoadFloat4x4(&ma->getDynWorld());
 			s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(objToWorld.r));
 			s_shaderVariables.gridUAV->SetUnorderedAccessView(m_gridUAV);
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
 
+			context->RSSetViewports(1, &vpSolid);
 			ID3D11Buffer* vb = ma->getMesh().getVertexBuffer();
 			ID3D11Buffer* ib = ma->getMesh().getIndexBuffer();
 			context->IASetVertexBuffers(0, 1, &vb, strides, offsets);
@@ -778,6 +788,18 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 			s_shaderVariables.gridUAV->SetUnorderedAccessView(nullptr);
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
+
+			if (m_conservative)
+			{
+				s_shaderVariables.gridUAV->SetUnorderedAccessView(m_gridUAV);
+				s_effect->GetTechniqueByIndex(0)->GetPassByName("Conservative")->Apply(0, context);
+
+				context->RSSetViewports(1, &vpCons);
+				context->DrawIndexed(ma->getMesh().getNumIndices(), 0, 0);
+
+				s_shaderVariables.gridUAV->SetUnorderedAccessView(nullptr);
+				s_effect->GetTechniqueByIndex(0)->GetPassByName("Conservative")->Apply(0, context);
+			}
 
 			// ###################################
 			// COMBINE

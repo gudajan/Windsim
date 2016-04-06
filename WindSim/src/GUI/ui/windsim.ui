@@ -284,6 +284,7 @@
     </widget>
     <addaction name="menuCreate"/>
     <addaction name="separator"/>
+    <addaction name="actionRemove"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -300,6 +301,8 @@
    </attribute>
    <addaction name="actionCreateMesh"/>
    <addaction name="actionCreateVoxelGrid"/>
+   <addaction name="separator"/>
+   <addaction name="actionRemove"/>
    <addaction name="separator"/>
    <addaction name="actionSettings"/>
   </widget>
@@ -379,6 +382,20 @@
    </property>
    <property name="text">
     <string>Create Voxel Grid</string>
+   </property>
+  </action>
+  <action name="actionRemove">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Remove Object</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove the currently selected object(s)</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
    </property>
   </action>
  </widget>

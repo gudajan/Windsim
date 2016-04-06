@@ -72,7 +72,7 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 
 	// We just update the dialog with the changes, made outside of it. So we do not want to create any signals because of these changes
 	// Doing so, would create annother invalid modify command
-	blockSignals();
+	blockSignals(true);
 	{
 		// Name
 		ui.nameEdit->setText(properties["name"].toString());
@@ -119,10 +119,12 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 		ui.dynAxisY->setValue(dynamics.find("y")->toDouble());
 		ui.dynAxisZ->setValue(dynamics.find("z")->toDouble());
 		ui.gbDynAxis->setChecked(dynamics.find("enabled")->toBool());
+		int d = properties.find("showAccelArrow")->toInt();
+		ui.cbShowAccel->setChecked(properties.find("showAccelArrow")->toInt() == Qt::Checked);
 
 		m_properties = properties; // Copy properties
 	}
-	enableSignals();
+	blockSignals(false);
 }
 
 // QJson currently is implemented for read-only. So it is not possible to get a reference to nested Json values
@@ -254,81 +256,43 @@ void MeshProperties::buttonClicked(QAbstractButton* button)
 	}
 }
 
-void MeshProperties::blockSignals()
+void MeshProperties::blockSignals(bool b)
 {
-	ui.nameEdit->blockSignals(true);
+	ui.nameEdit->blockSignals(b);
 
 	// Visibility
-	ui.cbDisabled->blockSignals(true);
-	ui.cbVoxelize->blockSignals(true);
-	ui.cbDynamics->blockSignals(true);
+	ui.cbDisabled->blockSignals(b);
+	ui.cbVoxelize->blockSignals(b);
+	ui.cbDynamics->blockSignals(b);
 
 	// Position
-	ui.xP->blockSignals(true);
-	ui.yP->blockSignals(true);
-	ui.zP->blockSignals(true);
+	ui.xP->blockSignals(b);
+	ui.yP->blockSignals(b);
+	ui.zP->blockSignals(b);
 
 	// Scaling
-	ui.xS->blockSignals(true);
-	ui.yS->blockSignals(true);
-	ui.zS->blockSignals(true);
+	ui.xS->blockSignals(b);
+	ui.yS->blockSignals(b);
+	ui.zS->blockSignals(b);
 
 	// Rotation
-	ui.ax->blockSignals(true);
-	ui.ay->blockSignals(true);
-	ui.az->blockSignals(true);
-	ui.angle->blockSignals(true);
+	ui.ax->blockSignals(b);
+	ui.ay->blockSignals(b);
+	ui.az->blockSignals(b);
+	ui.angle->blockSignals(b);
 
 	//Shading
-	ui.rbSmooth->blockSignals(true);
-	ui.rbFlat->blockSignals(true);
+	ui.rbSmooth->blockSignals(b);
+	ui.rbFlat->blockSignals(b);
 
 	// Dynamics settings
-	ui.dspDensity->blockSignals(true);
-	ui.gbDynAxis->blockSignals(true);
-	ui.dynAxisX->blockSignals(true);
-	ui.dynAxisY->blockSignals(true);
-	ui.dynAxisZ->blockSignals(true);
-	ui.cbShowAccel->blockSignals(true);
+	ui.dspDensity->blockSignals(b);
+	ui.gbDynAxis->blockSignals(b);
+	ui.dynAxisX->blockSignals(b);
+	ui.dynAxisY->blockSignals(b);
+	ui.dynAxisZ->blockSignals(b);
+	ui.cbShowAccel->blockSignals(b);
 
-}
-
-void MeshProperties::enableSignals()
-{
-	ui.nameEdit->blockSignals(false);
-
-	// Visibility
-	ui.cbDisabled->blockSignals(false);
-	ui.cbVoxelize->blockSignals(false);
-	ui.cbDynamics->blockSignals(false);
-
-	// Position
-	ui.xP->blockSignals(false);
-	ui.yP->blockSignals(false);
-	ui.zP->blockSignals(false);
-
-	// Scaling
-	ui.xS->blockSignals(false);
-	ui.yS->blockSignals(false);
-	ui.zS->blockSignals(false);
-
-	// Rotation
-	ui.ax->blockSignals(false);
-	ui.ay->blockSignals(false);
-	ui.az->blockSignals(false);
-	ui.angle->blockSignals(false);
-
-	//Shading
-	ui.rbSmooth->blockSignals(false);
-	ui.rbFlat->blockSignals(false);
-
-	// Dynamics settings
-	ui.dspDensity->blockSignals(false);
-	ui.gbDynAxis->blockSignals(false);
-	ui.dynAxisX->blockSignals(false);
-	ui.dynAxisY->blockSignals(false);
-	ui.dynAxisZ->blockSignals(false);
-	ui.cbShowAccel->blockSignals(false);
 }
 
 void MeshProperties::setColorButton(int r, int g, int b)

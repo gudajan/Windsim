@@ -156,6 +156,7 @@ private:
 	bool m_renderVoxel;
 	bool m_renderGlyphs;
 	bool m_calculateDynamics;
+	bool m_conservative;
 
 	ID3D11Texture3D* m_gridTextureGPU; // Texture in GPU memory, filled in pixel shader
 	ID3D11Texture3D* m_gridAllTextureGPU; // Texture, containing the voxelizations of all meshes

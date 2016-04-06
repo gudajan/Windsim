@@ -21,6 +21,31 @@ namespace Metric
 		}
 		return Magnitude;
 	}
+
+	QString toGUI(const QString& metric)
+	{
+		if (metric == "QCriterion")
+			return "Q-Criterion";
+		else if (metric == "DeltaCriterion")
+			return QString::fromUtf8(QByteArray("\xCE\x94-Criterion"));
+		else if (metric == "Lambda2Criterion")
+			return QString::fromUtf8(QByteArray("\xCE\xBB\xC2²-Criterion"));
+
+		return metric;
+	}
+
+	QString fromGUI(const QString& metric)
+	{
+		QByteArray a = metric.toUtf8();
+		if (metric == "Q-Criterion")
+			return "QCriterion";
+		else if (metric.toUtf8() == QByteArray("\xCE\x94-Criterion"))
+			return "DeltaCriterion";
+		else if (metric.toUtf8() == QByteArray("\xCE\xBB\xC2²-Criterion"))
+			return "Lambda2Criterion";
+
+		return metric;
+	}
 }
 
 TransferFunction TransferFunction::fromJson(const QJsonObject& json)

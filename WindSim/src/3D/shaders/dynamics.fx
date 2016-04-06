@@ -10,6 +10,7 @@ cbuffer cb
 	float3 g_vPosition; // Rotation center in World Space (center of mass)
 	float3 g_vAngVel; // Global angular velocity
 	float3 g_vVoxelSize;
+
 	int g_renderDirection;
 }
 
@@ -57,7 +58,6 @@ PSTexIn vsVoxelTex(VSMeshIn vsIn)
 	float4 posTS = mul(pos, g_mWorldToVoxelTex);
 	vsOut.posTS = posTS.xyz; // Transform to voxel grid texture coordinates
 	vsOut.pos = mul(posTS, g_mTexToProj);
-
 
 	return vsOut;
 }
@@ -116,24 +116,38 @@ void gsArrow(point uint input[1] : VertexID, inout TriangleStream<PSLineIn> stre
 // PIXEL SHADER
 // =============================================================================
 
-void psTorque(PSTexIn psIn)
+float4 psTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
 {
-	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, psIn.posTS, 0).xyz;
+	// Steps to calculate torque:
+	// - Calc pressure from flow velocity
+	// - Calc force on current fragment; p = F/a => F = p * a
+	//      As each fragment is rendered once for each main coordinate axis; use weights for each pass.
+	//      If we accumulate the calculated areas of each pass, the overall objects surface area sums up correctly
+	//      Additionally, if the fragment has a "better"(smaller wrt its normal) angle to the camera , the calculated force has implicitly more influence to
+	//      the total force, which is good because it is more accurate in this case (the position of the fragment is more precise has it does not span a huge area
+	//        -> the sampling of the velocity is more precise)
+	//      The fragment normal is calculated via screenspace derivates of the fragments world space coordinates and than transformed as necessary
+	//      The weight is then given by the dot product of the view direction ((0,0,1) in projection space) and the normal
+	// - Calc torque from force and rotation lever
 
-	// Calc pressure from flow velocity
+	// Calc fragement normal
+	float3 normalWS = normalize(cross(ddx(psIn.posWS), ddy(psIn.posWS)));
+	normalWS = isFrontFace ? normalWS : -normalWS; // Flip normal if back face
+	float3 normalTS = mul(float4(normalWS, 0.0f), g_mWorldToVoxelTex).xyz;
+
+
+	// Sample flow velocity just above the surface
+	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, psIn.posTS + 2 * normalTS, 0.0).xyz;
+
+	// Calc stagnation pressure from flow velocity
 	float airDensity = 1.2256; // kg/m^3
-	float3 p = 0.5 * airDensity * velocity * velocity; // Dynamic pressure
+	float pNorm = -dot(velocity, normalWS); // Normal pressure to surface through velocity
+	float p = 0.5 * airDensity * pNorm; // Dynamic pressure, if velocity directing away from surface -> zero pressure
 
 	// Perpendicular fragment surface area, dependent on the voxel sizes
 	float a[3] = { g_vVoxelSize.z * g_vVoxelSize.y, g_vVoxelSize.x * g_vVoxelSize.z, g_vVoxelSize.x * g_vVoxelSize.y };
-	// Calc force on current fragment; p = F/a => F = p * a
-	//   As each fragment is rendered once for each main coordinate axis, use weights for each pass.
-	//   If we would accumulate the calculated areas of each pass, the overall object area sums up correctly
-	//   Additionally, if the fragment has a "better"(smaller wrt its normal) angle to the camera , the calculated force has implicitly more influence to
-	//   the total force, which is good because it is more accurate in this case (the position of the fragment is more precisely)
-	//   The fragment normal is calculated via screenspace derivates of the texture space coordinates to get a normal in projection space
-	//   The weight is then given by the dot product of the view direction (0,0,1 in projection space) and the normal
-	float3 F = p * a[g_renderDirection] * dot(float3(0.0f, 0.0f, 1.0f), normalize(cross(ddx(psIn.posTS), ddy(psIn.posTS))));
+
+	float3 F =  - p * normalWS * (a[g_renderDirection] * dot(float3(0.0f, 0.0f, 1.0f), normalize(mul(float4(normalTS, 0.0f), g_mTexToProj).xyz)));
 
 	// Calc torque
 	// Rotation arround point (3DOF):
@@ -150,7 +164,8 @@ void psTorque(PSTexIn psIn)
 
 	InterlockedAdd(g_torqueUAV[3], 1);
 
-	//return float4(normalize(torque.xyz), 1);
+	float f = p / 60000.0;
+	return float4(F / 10 , 1);
 }
 
 PSOut psLine(PSLineIn frag)

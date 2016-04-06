@@ -146,15 +146,13 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		ui.gbVolume->setChecked(volume["enabled"].toBool());
 		setSliderValue(ui.hsStepSize, volume["stepSize"].toDouble());
 		const QString& metric = volume["metric"].toString();
-		ui.cmbMetric->setCurrentText(metric);
-		ui.gradient->switchToMetric(metric);
+		ui.cmbMetric->setCurrentText(Metric::toGUI(metric));
 		const QJsonObject& fcntns = volume["transferFunctions"].toObject();
 		for (auto jit = fcntns.begin(); jit != fcntns.end(); ++jit)
 		{
 			TransferFunction txfn = TransferFunction::fromJson(jit->toObject());
 			ui.gradient->setTransferFunction(jit.key(), txfn);
 		}
-
 
 		// WindTunnel Settings
 
@@ -183,6 +181,8 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		m_properties = properties; // Copy properties
 	}
 	blockSignals(false);
+
+	switchVolumeMetric(ui.cmbMetric->currentText());
 }
 
 void VoxelGridProperties::nameChanged(const QString& text)
@@ -315,14 +315,7 @@ void VoxelGridProperties::glyphSettingsChanged()
 
 void VoxelGridProperties::volumeSettingsChanged()
 {
-	QString currentMetric = ui.cmbMetric->currentText();
-	if (currentMetric == "Q-Criterion")
-		currentMetric = "QCriterion";
-	else if (currentMetric.toUtf8() == QByteArray("\xCE\x94-Criterion"))
-		currentMetric = "DeltaCriterion";
-	else if (currentMetric.toUtf8() == QByteArray("\xCE\xBB\xC2²-Criterion"))
-		currentMetric = "Lambda2Criterion";
-
+	QString currentMetric = Metric::fromGUI(ui.cmbMetric->currentText());
 
 	// Only update modified transfer function
 	QJsonObject functions = m_properties["volume"].toObject()["transferFunctions"].toObject();
@@ -343,15 +336,7 @@ void VoxelGridProperties::volumeSettingsChanged()
 
 void VoxelGridProperties::switchVolumeMetric(const QString& metric)
 {
-	QByteArray a = metric.toUtf8();
-	if (metric == "Q-Criterion")
-		ui.gradient->switchToMetric("QCriterion");
-	else if (metric.toUtf8() == QByteArray("\xCE\x94-Criterion"))
-		ui.gradient->switchToMetric("DeltaCriterion");
-	else if (metric.toUtf8() == QByteArray("\xCE\xBB\xC2²-Criterion"))// Replace lambda by hex
-		ui.gradient->switchToMetric("Lambda2Criterion");
-	else
-		ui.gradient->switchToMetric(metric);
+	ui.gradient->switchToMetric(Metric::fromGUI(metric));
 }
 
 void VoxelGridProperties::runSimulationChanged(int state)
@@ -405,7 +390,7 @@ void VoxelGridProperties::buttonClicked(QAbstractButton* button)
 	QDialogButtonBox::StandardButton sb = ui.buttonBox->standardButton(button);
 	if (sb == QDialogButtonBox::Apply || sb == QDialogButtonBox::Ok)
 	{
-		emit propertiesChanged(m_properties, Position | Name | Voxelization | Visibility | Resolution | VoxelSize | WindTunnelSettings | GlyphSettings | RunSimulation | SmokeSettings | LineSettings);
+		emit propertiesChanged(m_properties, All);
 	}
 }
 
@@ -444,13 +429,8 @@ void VoxelGridProperties::blockSignals(bool b)
 	// VolumeSettings
 	ui.gbVolume->blockSignals(b);
 	ui.cmbMetric->blockSignals(b);
-
-	// Use disconnect because we do not want to block signals WITHIN the widget
-	if (!b)
-		disconnect(ui.gradient);
-	else
-		connect(ui.gradient, SIGNAL(transferFunctionChanged()), this, SLOT(volumeTxFunctionChanged()));
-
+	ui.hsStepSize->blockSignals(b);
+	ui.gradient->blockSignals(b);
 
 	// WindTunnel
 
