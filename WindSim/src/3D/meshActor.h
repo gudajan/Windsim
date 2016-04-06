@@ -29,7 +29,7 @@ public:
 
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
 	Mesh3D* getObject() override { return &m_mesh; };
-	void calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& worldToVoxelTex, const DirectX::XMUINT3& texResolution, const DirectX::XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime);
+	void calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& worldToVoxelTex, const DirectX::XMUINT3& texResolution, const DirectX::XMFLOAT3& voxelSize, ID3D11ShaderResourceView* pressureField, double elapsedTime);
 	void updateCalcRotation() { m_dynamics.updateCalcRotation(); };
 	const DirectX::XMFLOAT3 getAngularVelocity() const;
 	const DirectX::XMFLOAT3 getCenterOfMass() const;

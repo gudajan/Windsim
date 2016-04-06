@@ -59,6 +59,7 @@ Simulator::Simulator(const QString& settingsFile, const XMUINT3& resolution, con
 	, m_cellTypes()
 	, m_solidVelocity()
 	, m_velocity()
+	, m_pressure()
 	, m_density()
 	, m_densitySum()
 	, m_lines()
@@ -188,6 +189,7 @@ void Simulator::setGridDimension(const XMUINT3& resolution, const XMFLOAT3& voxe
 		m_solidVelocity.resize(size * 4); // float4
 
 		m_velocity.resize(size * 4); // float3 + 1 padding
+		m_pressure.resize(size);
 		m_density.resize(size);
 		m_densitySum.resize(size);
 		m_lines.resize(lineBufferSize);
@@ -274,6 +276,7 @@ void Simulator::step()
 	m_simMutex.unlock();
 
 	m_windTunnel.fillVelocity(m_velocity);
+	m_windTunnel.fillPressure(m_pressure);
 	if (m_simSmoke)
 		m_windTunnel.fillDensity(m_density, m_densitySum);
 	if (m_simLines)

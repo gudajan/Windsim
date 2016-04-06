@@ -50,6 +50,9 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, 
 	m_velocityTexture(nullptr),
 	m_velocityTextureStaging(nullptr),
 	m_velocitySRV(nullptr),
+	m_pressureTexture(nullptr),
+	m_pressureTextureStaging(nullptr),
+	m_pressureSRV(nullptr),
 	m_wtRenderer(windTunnelSettings.toStdString()),
 	m_wtSettings(windTunnelSettings),
 	m_lastMod(QFileInfo(windTunnelSettings).lastModified()),
@@ -221,7 +224,7 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	td.Height = m_resolution.y;
 	td.Depth = m_resolution.z;
 	td.MipLevels = 1;
-	td.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // 3D velocity vector per voxel, Have to use float4 to sample into the texture
+	td.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // 3D velocity vector per voxel; Copying/Mapping performance is MUCH better for RGBA instead of RGB (~4ms vs ~190ms)
 	td.Usage = D3D11_USAGE_DEFAULT;
 	td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	td.CPUAccessFlags = 0; // No CPU Access for this texture
@@ -234,6 +237,26 @@ HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 	td.BindFlags = 0;
 	td.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_velocityTextureStaging));
+
+	// Create pressure field textures (equivalent to velcity field)
+	// Default texture
+	td.Width = m_resolution.x;
+	td.Height = m_resolution.y;
+	td.Depth = m_resolution.z;
+	td.MipLevels = 1;
+	td.Format = DXGI_FORMAT_R32_FLOAT; // one scalar per voxel
+	td.Usage = D3D11_USAGE_DEFAULT;
+	td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	td.CPUAccessFlags = 0; // No CPU Access for this texture
+	td.MiscFlags = 0;
+	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_pressureTexture));
+	V_RETURN(device->CreateShaderResourceView(m_pressureTexture, nullptr, &m_pressureSRV));
+
+	// Staging texture
+	td.Usage = D3D11_USAGE_STAGING;
+	td.BindFlags = 0;
+	td.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	V_RETURN(device->CreateTexture3D(&td, nullptr, &m_pressureTextureStaging));
 
 	// Create textures for containing the dynamics velocity of each mesh in solid voxel
 
@@ -273,6 +296,9 @@ void VoxelGrid::release()
 	SAFE_RELEASE(m_velocityTexture);
 	SAFE_RELEASE(m_velocityTextureStaging);
 	SAFE_RELEASE(m_velocitySRV);
+	SAFE_RELEASE(m_pressureTexture);
+	SAFE_RELEASE(m_pressureTextureStaging);
+	SAFE_RELEASE(m_pressureSRV);
 	m_wtRenderer.release();
 	m_volumeRenderer.release();
 }
@@ -287,7 +313,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	{
 		QElapsedTimer t2;
 		t2.start();
-		updateVelocity(context);
+		updateVelocityPressure(context);
 		OutputDebugStringA(("Update velocity lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 		t2.restart();
 		m_wtRenderer.updateDensity(context, m_simulator.getDensity(), m_simulator.getDensitySum());
@@ -572,7 +598,7 @@ void VoxelGrid::createGridData()
 
 }
 
-void VoxelGrid::updateVelocity(ID3D11DeviceContext* context)
+void VoxelGrid::updateVelocityPressure(ID3D11DeviceContext* context)
 {
 	// Map staging texture, write velocity field to it, unmap, copy resource to gpu
 	D3D11_MAPPED_SUBRESOURCE msr;
@@ -581,6 +607,13 @@ void VoxelGrid::updateVelocity(ID3D11DeviceContext* context)
 	context->Unmap(m_velocityTextureStaging, 0);
 
 	context->CopyResource(m_velocityTexture, m_velocityTextureStaging);
+
+	// Map staging texture, write pressure field to it, unmap, copy resource to gpu
+	context->Map(m_pressureTextureStaging, 0, D3D11_MAP_WRITE, 0, &msr);
+	write3DTexture(&msr, m_simulator.getPressure().data(), sizeof(float));
+	context->Unmap(m_pressureTextureStaging, 0);
+
+	context->CopyResource(m_pressureTexture, m_pressureTextureStaging);
 }
 
 void VoxelGrid::copyGrid(ID3D11DeviceContext* context)
@@ -947,7 +980,7 @@ void VoxelGrid::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* con
 		if (act.second->getType() == ObjectType::Mesh)
 		{
 			std::shared_ptr<MeshActor> ma = std::dynamic_pointer_cast<MeshActor>(act.second);
-			ma->calculateDynamics(device, context, worldToVoxelTex, m_resolution, m_voxelSize, m_velocitySRV, elapsedTime);
+			ma->calculateDynamics(device, context, worldToVoxelTex, m_resolution, m_voxelSize, m_pressureSRV, elapsedTime);
 		}
 	}
 }

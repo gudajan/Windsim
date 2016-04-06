@@ -216,7 +216,7 @@ void csMagnitude(uint3 threadID : SV_DispatchThreadID)
 
 	uint3 id = clampEdges(threadID);
 
-	g_scalarGridUAV[threadID] = length(g_vectorGrid[id]);
+	g_scalarGridUAV[threadID] = length(g_vectorGrid[id].xyz);
 }
 
 [numthreads(16, 8, 8)]
@@ -366,13 +366,11 @@ float4 psDirect(PSIn frag) : SV_Target
 		float4 col = g_txfnTex.SampleLevel(SamLinear, val, 0.0);
 
 		// Opacity correction
-		col.a = saturate(1.0 - pow(1.0 - col.a, ocExp));
+		col.a = saturate(1.0 - pow(1.0 - saturate(col.a), ocExp));
 
 		// Alpha blending
 		accCol.rgb = saturate(accCol.rgb + (1 - accCol.a) * col.rgb * col.a);
 		accCol.a = saturate(accCol.a + (1 - accCol.a) * col.a);
-
-
 
 		rayPos += rayInc;
 		depthVS += depthVSInc;

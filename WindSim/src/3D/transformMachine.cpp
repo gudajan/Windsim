@@ -517,14 +517,24 @@ void TransformMachine::rotate(QPoint currentMousePos, Qt::KeyboardModifiers mods
 	angle = degToRad(angle);
 
 	XMVECTOR axis;
+	XMVECTOR viewAxis = XMLoadFloat3(&m_renderer->getCamera()->getCamPos()) - XMLoadFloat3(&m_oldObjWorldPos); // Perpendicular to view plane
 	if (m_state == Rotate)
-		axis = XMVector3Normalize(XMLoadFloat3(&m_renderer->getCamera()->getCamPos()) - XMLoadFloat3(&m_oldObjWorldPos)); // Perpendicular to view plane
+		axis = XMVector3Normalize(viewAxis);
 	else if (m_state == RotateX)
+	{
 		axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+		axis = XMVectorGetX(XMVector3Dot(viewAxis, axis)) > XMVectorGetX(XMVector3Dot(viewAxis, -axis)) ? axis : -axis;
+	}
 	else if (m_state == RotateY)
+	{
 		axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		axis = XMVectorGetX(XMVector3Dot(viewAxis, axis)) > XMVectorGetX(XMVector3Dot(viewAxis, -axis)) ? axis : -axis;
+	}
 	else if (m_state == RotateZ)
+	{
 		axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+		axis = XMVectorGetX(XMVector3Dot(viewAxis, axis)) > XMVectorGetX(XMVector3Dot(viewAxis, -axis)) ? axis : -axis;
+	}
 	else
 		throw std::runtime_error("Invalid rotating state!");
 

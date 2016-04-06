@@ -43,7 +43,7 @@ struct PSOut
 };
 
 RWStructuredBuffer<int> g_torqueUAV;
-Texture3D<float4> g_velocitySRV;
+Texture3D<float> g_pressureSRV;
 
 // =============================================================================
 // VERTEX SHADER
@@ -119,13 +119,13 @@ void gsArrow(point uint input[1] : VertexID, inout TriangleStream<PSLineIn> stre
 float4 psTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
 {
 	// Steps to calculate torque:
-	// - Calc pressure from flow velocity
+	// - Sample pressure from pressure field
 	// - Calc force on current fragment; p = F/a => F = p * a
 	//      As each fragment is rendered once for each main coordinate axis; use weights for each pass.
 	//      If we accumulate the calculated areas of each pass, the overall objects surface area sums up correctly
 	//      Additionally, if the fragment has a "better"(smaller wrt its normal) angle to the camera , the calculated force has implicitly more influence to
 	//      the total force, which is good because it is more accurate in this case (the position of the fragment is more precise has it does not span a huge area
-	//        -> the sampling of the velocity is more precise)
+	//        -> the sampling of the pressure is more precise)
 	//      The fragment normal is calculated via screenspace derivates of the fragments world space coordinates and than transformed as necessary
 	//      The weight is then given by the dot product of the view direction ((0,0,1) in projection space) and the normal
 	// - Calc torque from force and rotation lever
@@ -136,18 +136,13 @@ float4 psTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
 	float3 normalTS = mul(float4(normalWS, 0.0f), g_mWorldToVoxelTex).xyz;
 
 
-	// Sample flow velocity just above the surface
-	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, psIn.posTS + 2 * normalTS, 0.0).xyz;
-
-	// Calc stagnation pressure from flow velocity
-	float airDensity = 1.2256; // kg/m^3
-	float pNorm = -dot(velocity, normalWS); // Normal pressure to surface through velocity
-	float p = 0.5 * airDensity * pNorm; // Dynamic pressure, if velocity directing away from surface -> zero pressure
+	// Sample pressure just above the surface
+	float p = g_pressureSRV.SampleLevel(SamLinear, psIn.posTS + normalTS, 0.0);
 
 	// Perpendicular fragment surface area, dependent on the voxel sizes
 	float a[3] = { g_vVoxelSize.z * g_vVoxelSize.y, g_vVoxelSize.x * g_vVoxelSize.z, g_vVoxelSize.x * g_vVoxelSize.y };
 
-	float3 F =  - p * normalWS * (a[g_renderDirection] * dot(float3(0.0f, 0.0f, 1.0f), normalize(mul(float4(normalTS, 0.0f), g_mTexToProj).xyz)));
+	float3 F = - p * normalWS * (a[g_renderDirection] * dot(float3(0.0f, 0.0f, 1.0f), normalize(mul(float4(normalTS, 0.0f), g_mTexToProj).xyz)));
 
 	// Calc torque
 	// Rotation arround point (3DOF):
@@ -164,8 +159,8 @@ float4 psTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
 
 	InterlockedAdd(g_torqueUAV[3], 1);
 
-	float f = p / 60000.0;
-	return float4(F / 10 , 1);
+	float f = p / 50;
+	return float4(f, f, f, 1);
 }
 
 PSOut psLine(PSLineIn frag)

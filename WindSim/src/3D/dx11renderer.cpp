@@ -204,7 +204,7 @@ void DX11Renderer::issueVoxelization()
 void DX11Renderer::execute()
 {
 	m_elapsedTimer.start();
-	m_renderTimer.start(17); // 125 Rendering events generated per second
+	m_renderTimer.start(17);
 	m_voxelizationTimer.start(500); // Voxelization happens every x milliseconds
 }
 

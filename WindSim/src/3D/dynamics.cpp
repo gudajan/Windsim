@@ -41,7 +41,7 @@ HRESULT Dynamics::createShaderFromFile(const std::wstring& shaderPath, ID3D11Dev
 	s_shaderVariables.renderDirection = s_effect->GetVariableByName("g_renderDirection")->AsScalar();
 
 	s_shaderVariables.torqueUAV = s_effect->GetVariableByName("g_torqueUAV")->AsUnorderedAccessView();
-	s_shaderVariables.velocitySRV = s_effect->GetVariableByName("g_velocitySRV")->AsShaderResource();
+	s_shaderVariables.pressureSRV = s_effect->GetVariableByName("g_pressureSRV")->AsShaderResource();
 
 	return S_OK;
 }
@@ -110,7 +110,7 @@ Dynamics::Dynamics(Mesh3D& mesh)
 	reset();
 }
 
-void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& objectToWorld, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime)
+void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& objectToWorld, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* pressureField, double elapsedTime)
 {
 	// #############################
 	// Copy calculated torque from last frame to CPU
@@ -191,7 +191,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	s_shaderVariables.worldToVoxelTex->SetMatrix(reinterpret_cast<const float*>(worldToVoxelTex.m));
 	s_shaderVariables.position->SetFloatVector((XMVector3Rotate(XMLoadFloat3(&m_centerOfMass), rot) + trans).m128_f32); // Center of mass already scaled
 	s_shaderVariables.voxelSize->SetFloatVector(reinterpret_cast<const float*>(&voxelSize));
-	s_shaderVariables.velocitySRV->SetResource(velocityField);
+	s_shaderVariables.pressureSRV->SetResource(pressureField);
 	// Create orthogonal projection aligned with voxel grid texture space ([0,1]^3)
 	XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0, 1, 0, 1, 0, 1);
 
@@ -240,7 +240,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	// Unbind resources
 	s_shaderVariables.torqueUAV->SetUnorderedAccessView(nullptr);
-	s_shaderVariables.velocitySRV->SetResource(nullptr);
+	s_shaderVariables.pressureSRV->SetResource(nullptr);
 	s_effect->GetTechniqueByName("Torque")->GetPassByName("Accumulate")->Apply(0, context);
 
 	// Restore old render targets and viewport
@@ -324,7 +324,7 @@ Dynamics::ShaderVariables::ShaderVariables()
 	angVel(nullptr),
 	voxelSize(nullptr),
 	renderDirection(nullptr),
-	velocitySRV(nullptr),
+	pressureSRV(nullptr),
 	torqueUAV(nullptr)
 {
 }

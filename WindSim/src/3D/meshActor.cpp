@@ -84,6 +84,11 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		XMStoreFloat4x4(&m_dynRenderWorld, dynRenderWorld);
 		XMStoreFloat4x4(&m_dynCalcWorld, dynCalcWorld);
 	}
+	else if (!m_simRunning) // Reset world matrices
+	{
+		m_dynRenderWorld = m_world;
+		m_dynCalcWorld = m_world;
+	}
 
 	if (m_render)
 	{
@@ -108,13 +113,13 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	}
 }
 
-void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* velocityField, double elapsedTime)
+void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* pressureField, double elapsedTime)
 {
 	if (m_calcDynamics)
 		if (conf.dyn.useDynWorldForCalc) // Pass the world matrix, which was used for the last grid update
-			m_dynamics.calculate(device, context, m_dynCalcWorld, worldToVoxelTex, texResolution, voxelSize, velocityField, elapsedTime);
+			m_dynamics.calculate(device, context, m_dynCalcWorld, worldToVoxelTex, texResolution, voxelSize, pressureField, elapsedTime);
 		else // Pass original world matrix
-			m_dynamics.calculate(device, context, m_world, worldToVoxelTex, texResolution, voxelSize, velocityField, elapsedTime);
+			m_dynamics.calculate(device, context, m_world, worldToVoxelTex, texResolution, voxelSize, pressureField, elapsedTime);
 }
 
 const XMFLOAT3 MeshActor::getAngularVelocity() const

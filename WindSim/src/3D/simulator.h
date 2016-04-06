@@ -42,6 +42,7 @@ public:
 
 	// Get vectors for reading
 	const std::vector<float>& getVelocity() const { return m_velocity; };
+	const std::vector<float>& getPressure() const { return m_pressure; };
 	const std::vector<float>& getDensity() const { return m_density; };
 	const std::vector<float>& getDensitySum() const { return m_densitySum; };
 	const std::vector<char>& getLines() const { return m_lines; };
@@ -92,6 +93,7 @@ private:
 
 	// WindTunnel output
 	std::vector<float> m_velocity;
+	std::vector<float> m_pressure;
 	std::vector<float> m_density;
 	std::vector<float> m_densitySum;
 	std::vector<char> m_lines;

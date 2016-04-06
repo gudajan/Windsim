@@ -30,7 +30,6 @@ bool ObjLoader::loadObj(const std::string path, std::vector<float>& vertexData, 
 			in >> p.x;
 			in >> p.y;
 			in >> p.z;
-			p.z = -p.z; // Z-forward but obj is saved in -Z-forward
 			position.push_back(p);
 		}
 		else if (temp == "vt") //Texture

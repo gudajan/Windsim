@@ -90,7 +90,7 @@ signals:
 
 private:
 	void createGridData(); // Create cube for line rendering
-	void updateVelocity(ID3D11DeviceContext* context);
+	void updateVelocityPressure(ID3D11DeviceContext* context);
 	void copyGrid(ID3D11DeviceContext* context);
 	void read3DTexture(D3D11_MAPPED_SUBRESOURCE* msr, void* outData, int bytePerElem = 1);
 	void write3DTexture(D3D11_MAPPED_SUBRESOURCE* msr, const void* inData, int bytePerElem = 1);
@@ -173,6 +173,10 @@ private:
 	ID3D11Texture3D* m_velocityTexture;
 	ID3D11Texture3D* m_velocityTextureStaging;
 	ID3D11ShaderResourceView* m_velocitySRV;
+
+	ID3D11Texture3D* m_pressureTexture;
+	ID3D11Texture3D* m_pressureTextureStaging;
+	ID3D11ShaderResourceView* m_pressureSRV;
 
 	wtl::WindTunnelRenderer m_wtRenderer;
 	QString m_wtSettings;

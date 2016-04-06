@@ -90,6 +90,9 @@ void TransferFunctionEditor::switchToMetric(const QString& metric)
 	m_rangeMin->blockSignals(false);
 	m_rangeMax->blockSignals(false);
 
+	m_rangeRuler->setRangeMin(txfn.rangeMin);
+	m_rangeRuler->setRangeMax(txfn.rangeMax);
+
 	m_colorGradient->setFunction(&txfn.colorPoints); // Selects first control point, which emits signals for updating color spinboxes
 	m_alphaGradient->setFunction(&txfn.alphaPoints);
 }
