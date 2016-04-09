@@ -32,8 +32,8 @@ Settings conf = {
 
 	// Dynamics
 	{
-		true,
 		false,
+		Pressure,
 		0.85
 	}
 };
@@ -77,13 +77,15 @@ void loadIni(const std::string& path)
 	conf.gen.sc.g = std::stoi(getIniVal(iniMap, "General", "SelectionColor.green", std::to_string(conf.gen.sc.g)));
 	conf.gen.sc.b = std::stoi(getIniVal(iniMap, "General", "SelectionColor.blue", std::to_string(conf.gen.sc.b)));
 
-	conf.gen.translationStep = std::stof(getIniVal(iniMap, "General", "translationStep", std::to_string(conf.gen.translationStep)));
-	conf.gen.scalingStep = std::stof(getIniVal(iniMap, "General", "scalingStep", std::to_string(conf.gen.scalingStep)));
-	conf.gen.rotationStep = std::stof(getIniVal(iniMap, "General", "rotationStep", std::to_string(conf.gen.rotationStep)));
+	conf.gen.translationStep = std::stof(getIniVal(iniMap, "General", "TranslationStep", std::to_string(conf.gen.translationStep)));
+	conf.gen.scalingStep = std::stof(getIniVal(iniMap, "General", "ScalingStep", std::to_string(conf.gen.scalingStep)));
+	conf.gen.rotationStep = std::stof(getIniVal(iniMap, "General", "RotationStep", std::to_string(conf.gen.rotationStep)));
 
-	conf.dyn.useDynWorldForCalc = std::stoi(getIniVal(iniMap, "Dynamics", "useDynWorldForCalc", std::to_string(conf.dyn.useDynWorldForCalc)));
-	conf.dyn.showDynDuringMod = std::stoi(getIniVal(iniMap, "Dynamics", "showDynDuringMod", std::to_string(conf.dyn.showDynDuringMod)));
-	conf.dyn.frictionCoefficient = std::stof(getIniVal(iniMap, "Dynamics", "frictionCoefficient", std::to_string(conf.dyn.frictionCoefficient)));
+	conf.dyn.showDynDuringMod = std::stoi(getIniVal(iniMap, "Dynamics", "ShowDynDuringMod", std::to_string(conf.dyn.showDynDuringMod)));
+	conf.dyn.frictionCoefficient = std::stof(getIniVal(iniMap, "Dynamics", "FrictionCoefficient", std::to_string(conf.dyn.frictionCoefficient)));
+	std::string method = conf.dyn.method == Pressure ? "Pressure" : "Velocity";
+	method = getIniVal(iniMap, "Dynamics", "Method", method);
+	conf.dyn.method= method == "Pressure" ? Pressure : Velocity;
 }
 
 const std::string& getIniVal(libini::ini_model& map, const std::string& category, const std::string& value, const std::string& default)

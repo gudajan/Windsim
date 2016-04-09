@@ -74,8 +74,8 @@ struct Settings
 
 	struct Dynamics
 	{
-		bool useDynWorldForCalc; // Use dynamic world matrix for torque calculation
 		bool showDynDuringMod; // Show dynamic transformation during object modification (e.g. translation)
+		DynamicsMethod method; // The method, used for calculating dynamics
 		float frictionCoefficient; // The amount of velocity, which remains after one second without further force effect
 	} dyn;
 };

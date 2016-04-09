@@ -55,15 +55,29 @@
      <property name="title">
       <string>Dynamics</string>
      </property>
-     <layout class="QFormLayout" name="formLayout">
-      <item row="0" column="0">
-       <widget class="QCheckBox" name="cbUseDynWorld">
-        <property name="text">
-         <string>Use dynamic world transformation</string>
-        </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="1" column="1">
+       <widget class="QComboBox" name="cmbCalcMethod">
+        <item>
+         <property name="text">
+          <string notr="true">Pressure</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string notr="true">Velocity</string>
+         </property>
+        </item>
        </widget>
       </item>
       <item row="1" column="0">
+       <widget class="QLabel" name="lCalcMethod">
+        <property name="text">
+         <string>Calculation method:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0" colspan="2">
        <widget class="QCheckBox" name="cbShowDynTrans">
         <property name="text">
          <string>Show dynamic transformation during modifications</string>

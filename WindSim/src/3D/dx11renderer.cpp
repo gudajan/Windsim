@@ -205,7 +205,7 @@ void DX11Renderer::execute()
 {
 	m_elapsedTimer.start();
 	m_renderTimer.start(17);
-	m_voxelizationTimer.start(500); // Voxelization happens every x milliseconds
+	m_voxelizationTimer.start(250); // Voxelization happens every x milliseconds
 }
 
 void DX11Renderer::stop()

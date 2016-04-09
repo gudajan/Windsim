@@ -12,9 +12,9 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	: QWidget(parent, flags),
 	m_renderThread(),
 	m_renderer(nullptr),
-	m_overlay(parent)
+	m_overlay(new TextOverlay(this))
 {
-	m_overlay.show();
+	m_overlay->show();
 
 	// Create DirectX Renderer on our widget
 	// Parent MUST NOT be 'this', because we want to move this object to another thread, which is not possible for child objects
@@ -81,7 +81,7 @@ void DX11Widget::cleanUp()
 // Trigger update of current settings
 void DX11Widget::applySettings()
 {
-	m_overlay.showText(conf.opencl.showInfo);
+	m_overlay->showText(conf.opencl.showInfo);
 
 	emit settingsChanged();
 }
@@ -93,16 +93,16 @@ void DX11Widget::logit(const QString& str)
 
 void DX11Widget::drawFps(float fps)
 {
-	m_overlay.setFps(fps);
-	m_overlay.repaint();
+	m_overlay->setFps(fps);
+	m_overlay->repaint();
 }
 
 void DX11Widget::drawText(const QString& str)
 {
 	if (conf.opencl.showInfo)
 	{
-		m_overlay.setText(str);
-		m_overlay.repaint();
+		m_overlay->setText(str);
+		m_overlay->repaint();
 	}
 }
 

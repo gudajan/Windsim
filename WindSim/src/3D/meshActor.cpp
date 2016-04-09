@@ -15,8 +15,8 @@ MeshActor::MeshActor(Mesh3D& mesh, int id)
 	m_boundingBox(),
 	m_flatShading(true),
 	m_color(PackedVector::XMCOLOR(conf.mesh.dc.r / 255.0f, conf.mesh.dc.g / 255.0f, conf.mesh.dc.b / 255.0f, 1.0f)), // XMCOLOR constructor multiplies by 255.0f and packs color into one uint32_t
-	m_voxelize(true),
-	m_calcDynamics(true),
+	m_voxelize(false),
+	m_calcDynamics(false),
 	m_simRunning(true),
 	m_showAccelArrow(false),
 	m_hovered(false),
@@ -113,13 +113,10 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	}
 }
 
-void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* pressureField, double elapsedTime)
+void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* field, double elapsedTime)
 {
 	if (m_calcDynamics)
-		if (conf.dyn.useDynWorldForCalc) // Pass the world matrix, which was used for the last grid update
-			m_dynamics.calculate(device, context, m_dynCalcWorld, worldToVoxelTex, texResolution, voxelSize, pressureField, elapsedTime);
-		else // Pass original world matrix
-			m_dynamics.calculate(device, context, m_world, worldToVoxelTex, texResolution, voxelSize, pressureField, elapsedTime);
+		m_dynamics.calculate(device, context, m_dynCalcWorld, worldToVoxelTex, texResolution, voxelSize, field, elapsedTime);
 }
 
 const XMFLOAT3 MeshActor::getAngularVelocity() const

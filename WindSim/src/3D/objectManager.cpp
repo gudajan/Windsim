@@ -246,12 +246,12 @@ void ObjectManager::modify(const QJsonObject& data)
 			act->getObject()->changeVolumeSettings(data["volume"].toObject());
 		if (mod.testFlag(WindTunnelSettings))
 			act->getObject()->changeSimSettings(data["windTunnelSettings"].toString());
-		if (mod.testFlag(RunSimulation))
-			act->getObject()->runSimulation(data["runSimulation"].toInt() == Qt::Checked);
 		if (mod.testFlag(SmokeSettings))
 			act->getObject()->changeSmokeSettings(data["smoke"].toObject());
 		if (mod.testFlag(LineSettings))
 			act->getObject()->changeLineSettings(data["lines"].toObject());
+		if (mod.testFlag(RunSimulation))
+			act->getObject()->runSimulation(data["runSimulation"].toInt() == Qt::Checked);
 	}
 }
 

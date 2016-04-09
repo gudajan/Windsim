@@ -44,6 +44,7 @@ struct PSOut
 
 RWStructuredBuffer<int> g_torqueUAV;
 Texture3D<float> g_pressureSRV;
+Texture3D<float4> g_velocitySRV;
 
 // =============================================================================
 // VERTEX SHADER
@@ -116,7 +117,7 @@ void gsArrow(point uint input[1] : VertexID, inout TriangleStream<PSLineIn> stre
 // PIXEL SHADER
 // =============================================================================
 
-float4 psTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
+float4 psPressureTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
 {
 	// Steps to calculate torque:
 	// - Sample pressure from pressure field
@@ -135,14 +136,15 @@ float4 psTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
 	normalWS = isFrontFace ? normalWS : -normalWS; // Flip normal if back face
 	float3 normalTS = mul(float4(normalWS, 0.0f), g_mWorldToVoxelTex).xyz;
 
-
 	// Sample pressure just above the surface
-	float p = g_pressureSRV.SampleLevel(SamLinear, psIn.posTS + normalTS, 0.0);
+	float p = g_pressureSRV.SampleLevel(SamLinear, psIn.posTS + 0.5 * normalTS, 0.0);
 
 	// Perpendicular fragment surface area, dependent on the voxel sizes
 	float a[3] = { g_vVoxelSize.z * g_vVoxelSize.y, g_vVoxelSize.x * g_vVoxelSize.z, g_vVoxelSize.x * g_vVoxelSize.y };
 
-	float3 F = - p * normalWS * (a[g_renderDirection] * dot(float3(0.0f, 0.0f, 1.0f), normalize(mul(float4(normalTS, 0.0f), g_mTexToProj).xyz)));
+	float w = abs(dot(float3(0.0f, 0.0f, 1.0f), normalize(mul(float4(normalTS, 0.0f), g_mTexToProj).xyz))); // Weight for this fragment (equivalent to the angle between normal and view ray)
+
+	float3 F = - p * normalWS * a[g_renderDirection] * w;
 
 	// Calc torque
 	// Rotation arround point (3DOF):
@@ -160,7 +162,53 @@ float4 psTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
 	InterlockedAdd(g_torqueUAV[3], 1);
 
 	float f = p / 50;
-	return float4(f, f, f, 1);
+	return float4(F * 50, 1);
+}
+
+// Equivalent to pressure with different pressure calculation
+float4 psVelocityTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
+{
+	// Calc fragement normal
+	float3 normalWS = normalize(cross(ddx(psIn.posWS), ddy(psIn.posWS)));
+	normalWS = isFrontFace ? normalWS : -normalWS; // Flip normal if back face
+	float3 normalTS = mul(float4(normalWS, 0.0f), g_mWorldToVoxelTex).xyz;
+
+	// Sample flow velocity just above the surface
+	float3 velocity = g_velocitySRV.SampleLevel(SamLinear, psIn.posTS + 0.75 * normalTS, 0.0).xyz;
+
+	// Calc stagnation pressure from flow velocity
+	float airDensity = 1.2256; // kg/m^3
+	float g = 9.81; // Gravity
+
+	float pNorm = -dot(velocity, normalWS) * 0.17; // Normal pressure to surface through velocity (This is just an approximation); use magic number to adjust to pressure method
+	float p = 0.5 * airDensity * pNorm; // Dynamic pressure, p may be negative
+
+	//p += airDensity * g * psIn.posWS.y; // Fluid pressure
+
+	// Perpendicular fragment surface area, dependent on the voxel sizes
+	float a[3] = { g_vVoxelSize.z * g_vVoxelSize.y, g_vVoxelSize.x * g_vVoxelSize.z, g_vVoxelSize.x * g_vVoxelSize.y };
+
+	float w = abs(dot(float3(0.0f, 0.0f, 1.0f), normalize(mul(float4(normalTS, 0.0f), g_mTexToProj).xyz)));
+
+	float3 F = - p * normalWS * (a[g_renderDirection] * w);
+
+	// Calc torque
+	// Rotation arround point (3DOF):
+	float3 r = psIn.posWS - g_vPosition;
+
+	float3 torque = cross(r, F);
+
+	// Convert to int
+	int3 intTorque = torque * 100000;
+
+	InterlockedAdd(g_torqueUAV[0], intTorque.x);
+	InterlockedAdd(g_torqueUAV[1], intTorque.y);
+	InterlockedAdd(g_torqueUAV[2], intTorque.z);
+
+	InterlockedAdd(g_torqueUAV[3], 1);
+
+	float f = p / 500;
+	return float4(velocity / 700, 1);
 }
 
 PSOut psLine(PSLineIn frag)
@@ -173,11 +221,20 @@ PSOut psLine(PSLineIn frag)
 
 technique11 Torque
 {
-	pass Accumulate
+	pass PressureCalc
 	{
 		SetVertexShader(CompileShader(vs_5_0, vsVoxelTex()));
 		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0, psTorque()));
+		SetPixelShader(CompileShader(ps_5_0, psPressureTorque()));
+		SetRasterizerState(CullNone);
+		SetDepthStencilState(DepthDisable, 0);
+		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+	pass VelocityCalc
+	{
+		SetVertexShader(CompileShader(vs_5_0, vsVoxelTex()));
+		SetGeometryShader(NULL);
+		SetPixelShader(CompileShader(ps_5_0, psVelocityTorque()));
 		SetRasterizerState(CullNone);
 		SetDepthStencilState(DepthDisable, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);

@@ -47,6 +47,8 @@ static inline ObjectType stringToObjectType(const std::string& str)
 
 enum CameraType { FirstPerson, ModelView };
 
+enum DynamicsMethod { Pressure, Velocity };
+
 enum class Shading{ Smooth, Flat }; // Mesh Shading type
 
 enum Orientation {XY_PLANE, XZ_PLANE, YZ_PLANE};

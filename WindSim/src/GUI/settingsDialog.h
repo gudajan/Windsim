@@ -20,8 +20,8 @@ public slots:
 
 private slots:
 	void cameraTypeToggled(bool b);
-	void useDynWorldToggled(bool b);
 	void showDynTransToggled(bool b);
+	void dynCalcMethodChanged(const QString& text);
 	void plaformChanged();
 	void deviceChanged();
 	void displayCLInfoToggled(bool b);

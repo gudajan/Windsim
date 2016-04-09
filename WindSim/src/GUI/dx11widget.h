@@ -63,7 +63,7 @@ signals:
 private:
 	QThread m_renderThread;
 	QPointer<DX11Renderer> m_renderer;
-	TextOverlay m_overlay;
+	TextOverlay* m_overlay;
 
 };
 

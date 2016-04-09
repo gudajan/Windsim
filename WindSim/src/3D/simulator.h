@@ -38,7 +38,6 @@ public:
 
 	// Get vectors for writing
 	std::vector<wtl::CellType>& getCellTypes() { return m_cellTypes; };
-	std::vector<float>& getSolidVelocity() { return m_solidVelocity; };
 
 	// Get vectors for reading
 	const std::vector<float>& getVelocity() const { return m_velocity; };
@@ -89,7 +88,6 @@ private:
 
 	// WindTunnel input
 	std::vector<wtl::CellType> m_cellTypes;
-	std::vector<float> m_solidVelocity;
 
 	// WindTunnel output
 	std::vector<float> m_velocity;

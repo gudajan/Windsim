@@ -57,7 +57,6 @@ Simulator::Simulator(const QString& settingsFile, const XMUINT3& resolution, con
 	, m_smokeSettingsGUI(getSmokeSettingsDefault())
 	, m_lineSettingsGUI(getLineSettingsDefault())
 	, m_cellTypes()
-	, m_solidVelocity()
 	, m_velocity()
 	, m_pressure()
 	, m_density()
@@ -68,7 +67,7 @@ Simulator::Simulator(const QString& settingsFile, const XMUINT3& resolution, con
 	, m_resolution(resolution)
 	, m_voxelSize(voxelSize)
 	, m_simSmoke(true)
-	, m_simLines(true)
+	, m_simLines(false)
 	, m_elapsedTimer()
 	, m_simTimer(this)
 	, m_simMutex(QMutex::NonRecursive)
@@ -166,7 +165,8 @@ void Simulator::updateGrid()
 	// Skip if currently windTunnels not available
 	if (!checkContinue()) return;
 
-	m_windTunnel.updateGrid(m_cellTypes, m_solidVelocity);
+	m_windTunnel.updateGrid(m_cellTypes);
+	OutputDebugStringA("UPDATE EXECUTED!\n");
 	emit simUpdated();
 }
 
@@ -186,7 +186,6 @@ void Simulator::setGridDimension(const XMUINT3& resolution, const XMFLOAT3& voxe
 		int size = resolution.x * resolution.y * resolution.z;
 
 		m_cellTypes.resize(size);
-		m_solidVelocity.resize(size * 4); // float4
 
 		m_velocity.resize(size * 4); // float3 + 1 padding
 		m_pressure.resize(size);

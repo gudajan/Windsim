@@ -11,6 +11,8 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 	, m_openCLInfo(wtl::getOpenCLInfo())
 {
 	ui.setupUi(this);
+	ui.cmbCalcMethod->setItemData(ui.cmbCalcMethod->findText("Pressure"), "Use pressure field from the simulation to calculate acting forces", Qt::ToolTipRole);
+	ui.cmbCalcMethod->setItemData(ui.cmbCalcMethod->findText("Velocity"), "Use velocity field from the simulation to calculate faked acting forces", Qt::ToolTipRole);
 
 	updateSettings();
 
@@ -18,8 +20,8 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 	connect(ui.rbFirstPerson, SIGNAL(toggled(bool)), this, SLOT(cameraTypeToggled(bool)));
 	connect(ui.rbModelView, SIGNAL(toggled(bool)), this, SLOT(cameraTypeToggled(bool)));
 
-	connect(ui.cbUseDynWorld, SIGNAL(toggled(bool)), this, SLOT(useDynWorldToggled(bool)));
 	connect(ui.cbShowDynTrans, SIGNAL(toggled(bool)), this, SLOT(showDynTransToggled(bool)));
+	connect(ui.cmbCalcMethod, SIGNAL(currentTextChanged(const QString&)), this, SLOT(dynCalcMethodChanged(const QString&)));
 
 	connect(ui.cmbCLPlatform, SIGNAL(currentIndexChanged(int)), this, SLOT(plaformChanged()));
 	connect(ui.cmbCLDevice, SIGNAL(currentIndexChanged(int)), this, SLOT(deviceChanged()));
@@ -49,7 +51,6 @@ void SettingsDialog::updateSettings()
 	else
 		ui.rbFirstPerson->setChecked(true);
 
-	ui.cbUseDynWorld->setChecked(conf.dyn.useDynWorldForCalc);
 	ui.cbShowDynTrans->setChecked(conf.dyn.showDynDuringMod);
 
 	fillOpenCLPlatforms();
@@ -67,16 +68,18 @@ void SettingsDialog::cameraTypeToggled(bool b)
 	emit settingsChanged();
 }
 
-void SettingsDialog::useDynWorldToggled(bool b)
+void SettingsDialog::showDynTransToggled(bool b)
 {
-	conf.dyn.useDynWorldForCalc = b;
+	conf.dyn.showDynDuringMod = b;
 
 	emit settingsChanged();
 }
 
-void SettingsDialog::showDynTransToggled(bool b)
+void SettingsDialog::dynCalcMethodChanged(const QString& text)
 {
-	conf.dyn.showDynDuringMod = b;
+	DynamicsMethod method = text == "Pressure" ? Pressure : Velocity;
+
+	conf.dyn.method = method;
 
 	emit settingsChanged();
 }
