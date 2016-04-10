@@ -1,14 +1,33 @@
 #include "staticLogger.h"
 
 #include <QLayout>
+#include <QMenu>
 
-QPointer<QPlainTextEdit> StaticLogger::m_log = nullptr;
+MessageLog::MessageLog(QWidget* parent)
+	: QPlainTextEdit(parent)
+	, clearAction(new QAction(this))
+{
+	clearAction->setText(tr("Clear"));
+
+	connect(clearAction, SIGNAL(triggered()), this, SLOT(clear()));
+}
+
+void MessageLog::contextMenuEvent(QContextMenuEvent* event)
+{
+	QMenu* menu = createStandardContextMenu(event->pos());
+
+	menu->addAction(clearAction);
+	menu->exec(event->globalPos());
+}
+
+
+QPointer<MessageLog> StaticLogger::m_log = nullptr;
 
 void StaticLogger::Setup(QWidget* parent, QLayout* layout)
 {
 	if (!m_log)
 	{
-		m_log = new QPlainTextEdit(parent);
+		m_log = new MessageLog(parent);
 		m_log->setObjectName(QStringLiteral("log"));
 		QSizePolicy sp(QSizePolicy::Expanding, QSizePolicy::Expanding);
 		sp.setHorizontalStretch(0);

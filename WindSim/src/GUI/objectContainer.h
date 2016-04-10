@@ -43,6 +43,7 @@ public:
 
 public slots:
 	void showPropertiesDialog(const QModelIndex& index);
+	void showPropertiesDialog(int id);
 
 	void addCmd(const QJsonObject& data);
 	void removeCmd(int id);

@@ -36,6 +36,8 @@ public:
 
 	bool intersect(DirectX::XMFLOAT3 origin, DirectX::XMFLOAT3 direction, float& distance) const override;
 
+	void computeWorld() override;
+
 	Mesh3D& getMesh() { return m_mesh; };
 
 	const DirectX::XMFLOAT4X4& getDynWorld() const { return m_calcDynamics ? m_dynRenderWorld : m_world; };

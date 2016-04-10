@@ -26,7 +26,7 @@ private slots:
 	void showVoxelChanged(int state);
 	void positionChanged();
 	void resolutionChanged();
-	void voxelSizeChanged();
+	void gridSizeChanged();
 	void glyphSettingsChanged();
 	void volumeSettingsChanged();
 	void switchVolumeMetric(const QString& metric);

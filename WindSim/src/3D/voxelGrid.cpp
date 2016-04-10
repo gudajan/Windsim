@@ -864,47 +864,25 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 	XMMATRIX w = XMLoadFloat4x4(&world);
 	XMMATRIX v = XMLoadFloat4x4(&view);
 	XMMATRIX p = XMLoadFloat4x4(&projection);
-	XMMATRIX worldViewProj = w * v * p;
-	s_shaderVariables.worldViewProj->SetMatrix(reinterpret_cast<float*>((worldViewProj).r));
-
-	XMMATRIX gridToVoxel = XMMatrixScalingFromVector(XMVectorReciprocal(XMLoadFloat3(&m_voxelSize)));
-	s_shaderVariables.gridToVoxel->SetMatrix(reinterpret_cast<float*>((gridToVoxel).r));
 
 	XMMATRIX voxelToGrid = XMMatrixScalingFromVector(XMLoadFloat3(&m_voxelSize));
 	XMMATRIX voxelWorldView = voxelToGrid * w * v;
 	XMMATRIX voxelWorldViewProj = voxelWorldView * p;
-	XMMATRIX viewInv = XMMatrixInverse(nullptr, v);
-	XMMATRIX worldInv = XMMatrixInverse(nullptr, w);
 	s_shaderVariables.voxelWorldViewProj->SetMatrix(reinterpret_cast<float*>(voxelWorldViewProj.r));
 	s_shaderVariables.voxelWorldView->SetMatrix(reinterpret_cast<float*>(voxelWorldView.r));
-
-	s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(voxelToGrid.r));
-
-	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
-
-	//Calculate camera position in Voxel Space (Texture space of grid texture -> [0, resolution])
-	XMVECTOR camPos = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f); // In camera space
-	camPos = XMVector3Transform(camPos, viewInv); // World Space
-	camPos = XMVector3Transform(camPos, worldInv); // Grid Object Space
-	camPos = XMVector3Transform(camPos, gridToVoxel); // Voxel Space
-	s_shaderVariables.camPos->SetFloatVector(camPos.m128_f32);
-
+	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<const int*>(&m_resolution));
 	s_shaderVariables.gridAllSRV->SetResource(m_gridAllSRV);
-
 	s_effect->GetTechniqueByIndex(0)->GetPassByName("RenderVoxel")->Apply(0, context);
 
-	const unsigned int strides[] = { sizeof(float) * 3 }; // 3 floats postion
-	const unsigned int offsets[] = { 0 };
-	context->IASetVertexBuffers(0, 1, &m_vertexBuffer, strides, offsets);
-	context->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-	context->IASetInputLayout(s_gridInputLayout);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context->DrawIndexed(m_cubeIndices, m_numIndices, 0);
+	UINT stride = 0;
+	UINT offset = 0;
+	context->IASetInputLayout(nullptr);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+	context->IASetVertexBuffers(0, 0, nullptr, &stride, &offset);
+	context->Draw(m_resolution.x * m_resolution.y * m_resolution.z, 0);
 
 	s_shaderVariables.gridAllSRV->SetResource(nullptr);
-
 	s_effect->GetTechniqueByIndex(0)->GetPassByName("RenderVoxel")->Apply(0, context);
-
 }
 
 void VoxelGrid::renderVelocity(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)

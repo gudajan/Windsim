@@ -171,6 +171,13 @@ bool MeshActor::intersect(XMFLOAT3 origin, XMFLOAT3 direction, float& distance) 
 	return true;
 }
 
+void MeshActor::computeWorld()
+{
+	Actor::computeWorld();
+
+	m_dynRenderWorld = m_world;
+}
+
 
 void MeshActor::updateInertiaTensor()
 {

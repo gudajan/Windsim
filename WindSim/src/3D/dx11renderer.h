@@ -57,6 +57,7 @@ public slots:
 	bool onResize(int width, int height); // Resize viewport
 	void onMouseMove(QPoint localPos, QPoint globalPos, int modifiers);
 	void onMousePress(QPoint globalPos, int button, int modifiers);
+	void onMouseDoubleClick(QPoint globalPos, int button, int modifiers);
 	void onMouseRelease(QPoint globalPos, int button, int modifiers);
 	void onKeyPress(int key);
 	void onKeyRelease(int key);
@@ -76,6 +77,7 @@ public slots:
 signals:
 	void updateFPS(int fps);
 	void selectionChanged(std::unordered_set<int> ids);
+	void mouseDoubleClick(int id);
 	void modify(std::vector<QJsonObject> data);
 	void drawText(const QString& str);
 

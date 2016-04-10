@@ -89,6 +89,7 @@ void ObjectContainer::setRenderer(DX11Renderer* renderer)
 
 	// Connect changes from renderer to this container(and the properties dialogs)
 	connect(m_renderer, &DX11Renderer::modify, this, &ObjectContainer::rendererModification);
+	connect(m_renderer, &DX11Renderer::mouseDoubleClick, this, static_cast<void (ObjectContainer::*)(int)>(&ObjectContainer::showPropertiesDialog));
 }
 
 void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
@@ -119,6 +120,11 @@ void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
 		m_voxelGridProperties->show();
 		m_voxelGridProperties->raise();
 	}
+}
+
+void ObjectContainer::showPropertiesDialog(int id)
+{
+	return showPropertiesDialog(m_model.indexFromItem(getItem(id)));
 }
 
 void ObjectContainer::addCmd(const QJsonObject& data)
@@ -268,9 +274,9 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			StaticLogger::logit("WARNING: Found no resolution for Voxel Grid '" + name + "' in project file!");
 			return false;
 		}
-		if (!object.contains("voxelSize"))
+		if (!object.contains("gridSize"))
 		{
-			StaticLogger::logit("WARNING: Found no voxel size for Voxel Grid '" + name + "' in project file!");
+			StaticLogger::logit("WARNING: Found no grid size for Voxel Grid '" + name + "' in project file!");
 			return false;
 		}
 

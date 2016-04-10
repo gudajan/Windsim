@@ -70,13 +70,13 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 		}
 		else if (type == ObjectType::VoxelGrid)
 		{
-			if (!data.contains("resolution") || !data.contains("voxelSize"))
-				throw std::invalid_argument("Failed to create VoxelGrid object '" + name + "' because no resolution or voxelSize was given in 'data' variable!");
+			if (!data.contains("resolution") || !data.contains("gridSize"))
+				throw std::invalid_argument("Failed to create VoxelGrid object '" + name + "' because no resolution or gridSize was given in 'data' variable!");
 
 			QJsonObject resolution = data["resolution"].toObject();
 			XMUINT3 res(resolution["x"].toInt(), resolution["y"].toInt(), resolution["z"].toInt());
-			QJsonObject voxelSize = data["voxelSize"].toObject();
-			XMFLOAT3 vs(voxelSize["x"].toDouble(), voxelSize["y"].toDouble(), voxelSize["z"].toDouble());
+			QJsonObject gridSize = data["gridSize"].toObject();
+			XMFLOAT3 vs(gridSize["x"].toDouble() / res.x, gridSize["y"].toDouble() / res.y, gridSize["z"].toDouble() / res.z);
 
 
 			VoxelGrid* obj = new VoxelGrid(this, data["windTunnelSettings"].toString(), res, vs, m_renderer);
@@ -226,8 +226,8 @@ void ObjectManager::modify(const QJsonObject& data)
 		QJsonObject jRes = data["resolution"].toObject();
 		XMUINT3 res(jRes["x"].toInt(), jRes["y"].toInt(), jRes["z"].toInt());
 
-		QJsonObject jVs = data["voxelSize"].toObject();
-		XMFLOAT3 vs(jVs["x"].toDouble(), jVs["y"].toDouble(), jVs["z"].toDouble());
+		QJsonObject jS = data["gridSize"].toObject();
+		XMFLOAT3 vs(jS["x"].toDouble() / res.x, jS["y"].toDouble() / res.y, jS["z"].toDouble() / res.z); // Calc voxel size from resolution and grid size
 
 		QJsonObject jGs = data["glyphs"].toObject();
 		bool renderGlyphs = jGs["enabled"].toBool();

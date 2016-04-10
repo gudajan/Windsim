@@ -65,6 +65,14 @@ struct PSColIn
 	float4 pos : SV_POSITION;
 	float3 col : COLOR;
 };
+
+struct PSCubeIn
+{
+	float4 pos : SV_POSITION;
+	float3 posView : POSITION;
+	nointerpolation uint type : VOXELTYPE;
+};
+
 struct PSOut
 {
 	float4 col : SV_Target;
@@ -312,7 +320,7 @@ void gsArrowGlyph(point uint input[1] : VertexID, inout LineStream<PSColIn> stre
 	uint2 glyphNumber = g_vGlyphQuantity;
 	int orientation = g_sGlyphOrientation;
 	//float scale = 0.15 * length(g_vVoxelSize) / length(glyphNumber); // Scaling depends on size of voxel and number of glyphs + magic value
-	float scale = 0.012 / length(glyphNumber);
+	float scale = 0.012 / length(glyphNumber); // Use Magic number for glyph scaling so glyph size is comparable for different settings
 	float arrowHeadSize = 0.5f;
 
 	// Glyph plane orientation
@@ -390,6 +398,85 @@ void gsArrowGlyph(point uint input[1] : VertexID, inout LineStream<PSColIn> stre
 	stream.Append(psIn);
 }
 
+static const int3 boxPos[8] =
+{
+	int3 (0, 0, 0),
+	int3 (1, 0, 0),
+	int3 (0, 1, 0),
+	int3 (1, 1, 0),
+	int3 (0, 0, 1),
+	int3 (1, 0, 1),
+	int3 (0, 1, 1),
+	int3 (1, 1, 1)
+};
+#define BEVEL -1.5
+static const float3 boxPosBevel[8] =
+{
+	float3 (0 + BEVEL, 0 + BEVEL, 0 + BEVEL),
+	float3 (1 - BEVEL, 0 + BEVEL, 0 + BEVEL),
+	float3 (0 + BEVEL, 1 - BEVEL, 0 + BEVEL),
+	float3 (1 - BEVEL, 1 - BEVEL, 0 + BEVEL),
+	float3 (0 + BEVEL, 0 + BEVEL, 1 - BEVEL),
+	float3 (1 - BEVEL, 0 + BEVEL, 1 - BEVEL),
+	float3 (0 + BEVEL, 1 - BEVEL, 1 - BEVEL),
+	float3 (1 - BEVEL, 1 - BEVEL, 1 - BEVEL)
+};
+static const int2 boxLines[12] =
+{
+	int2(0, 1), int2(0, 2), int2(0, 4), int2(1, 3), int2(1, 5), int2(2, 3), int2(2, 6), int2(3, 7), int2(4, 5), int2(4, 6), int2(5, 7), int2(6, 7)
+};
+static const int3 boxTris[12] =
+{
+	int3(0, 3, 1), int3(0, 2, 3), int3(0, 4, 2), int3(0, 1, 5), int3(0, 5, 4), int3(1, 3, 7), int3(1, 7, 5), int3(2, 4, 6), int3(2, 7, 3), int3(2, 6, 7), int3(4, 5, 6), int3(5, 7, 6)
+};
+
+[maxvertexcount(36)]
+void gsSolidCube(point uint input[1] : VertexID, inout TriangleStream<PSCubeIn> stream)
+{
+	uint index = input[0];
+
+	uint3 gridPos;
+	gridPos.z = index / (g_vResolution.x * g_vResolution.y);
+	gridPos.y = (index - gridPos.z * g_vResolution.x * g_vResolution.y) / g_vResolution.x;
+	gridPos.x = index - g_vResolution.x * (gridPos.y + gridPos.z * g_vResolution.y);
+
+	uint3 cellId = uint3(gridPos.x / 4, gridPos.yz);
+	uint n = gridPos.x - cellId.x * 4;
+
+	uint voxel = getVoxelValue(g_gridAllSRV[cellId], n);
+
+	if (voxel != CELL_TYPE_SOLID_BOUNDARY)
+		return;
+
+	float4 pos[8];
+	float3 posView[8];
+	for (int i = 0; i < 8; ++i)
+	{
+		pos[i] = mul(float4 ((gridPos + boxPos[i]), 1.0f), g_mVoxelWorldViewProj);
+		posView[i] = mul(float4((gridPos + boxPosBevel[i]), 1.0f), g_mVoxelWorldView).xyz;
+	}
+
+	PSCubeIn v = (PSCubeIn)0;
+	v.type = voxel;
+
+	for (int j = 0; j < 12; ++j)
+	{
+		int3 tri = boxTris[j];
+
+		v.pos = pos[tri.x];
+		v.posView = posView[tri.x];
+		stream.Append(v);
+		v.pos = pos[tri.y];
+		v.posView = posView[tri.y];
+		stream.Append(v);
+		v.pos = pos[tri.z];
+		v.posView = posView[tri.z];
+		stream.Append(v);
+
+		stream.RestartStrip();
+	}
+}
+
 // =============================================================================
 // PIXEL SHADER
 // =============================================================================
@@ -444,107 +531,16 @@ void psConservative(PSVoxelIn psIn)
 	InterlockedOr(g_gridUAV[uint3(cellId, index.yx)], orVal);
 }
 
-// Ray casting into voxel grid -> render first voxel
-PSOut psVolume(PSVoxelIn psIn)
+float4 psSolidCube(PSCubeIn frag) : SV_Target
 {
-	PSOut psOut = (PSOut)0;
+	float3 col = float3(0.7f, 0.2f, 0.2f);
 
-	// Default
-	float3 voxelColor = float3(0.7f, 0.2f, 0.2f);
-	psOut.col = float4(0.0, 0.0f, 0.0f, 1.0f);
-	psOut.depth = 0.0f;
+	float3 n = normalize(cross(ddx_coarse(frag.posView), ddy_coarse(frag.posView)));
 
-	float3 rayDir = normalize(psIn.voxelPos - g_vCamPos.xyz);
+	if (frag.type == CELL_TYPE_SOLID_BOUNDARY)
+		col = float3(0.99f, 0.2f, 0.0f);
 
-	float tmin = 0.0;
-	float tmax = -1.0;
-	// Add/Subtract small value because of numerical inaccuracies, which would lead to discarded pixels later
-	// (i.e. the intersection position may lie just outside the grid and therefore the raycasting is immediately stopped)
-	if (!intersectAlignedBox(g_vCamPos.xyz, rayDir, float3(0.001f, 0.001f, 0.001f), float3(g_vResolution - 0.001), tmin, tmax))
-	{
-		discard;
-		return psOut;
-	}
-
-	float stepSize = 0.1; // In Voxel space, all sides of a voxel are of length 1
-	float3 rayInc = stepSize * rayDir;
-	float3 currentPos = g_vCamPos.xyz + tmin * rayDir; // Start raycasting at the incoming fragment, which corresponds to the border of the voxel grid
-	if (inGrid(g_vCamPos.xyz))
-		currentPos = g_vCamPos.xyz;
-	bool discarded = false;
-	int counter = 0;
-	uint voxel = 0;
-
-	int maxSteps = ceil(length(g_vResolution) / stepSize);
-
-	while (counter < maxSteps)
-	{
-		counter++;
-
-		bool posInGrid = false;
-		voxel = getValue(currentPos, posInGrid);
-		if (!posInGrid)
-		{
-			discarded = true;
-			break;
-		}
-		if (voxel == CELL_TYPE_SOLID_NO_SLIP || voxel == CELL_TYPE_SOLID_BOUNDARY) // Found a voxel
-		//if (voxel == CELL_TYPE_OUTFLOW || voxel == CELL_TYPE_SOLID_BOUNDARY)
-		{
-			break;
-		}
-		currentPos += rayInc; // Next step
-	}
-
-	// discard statement outside of while loop to avoid compiler problems
-	if (discarded)
-	{
-		discard;
-	}
-
-	if (voxel == CELL_TYPE_SOLID_NO_SLIP || voxel == CELL_TYPE_SOLID_BOUNDARY)
-	//if (voxel == CELL_TYPE_OUTFLOW || voxel == CELL_TYPE_SOLID_BOUNDARY)
-	{
-		// Calculate output
-		tmin = 0.0f;
-		tmax = -1.0f;
-		float3 boxMin = floor(currentPos);
-		float3 boxMax = ceil(currentPos);
-		intersectAlignedBox(g_vCamPos.xyz, rayDir, boxMin, boxMax, tmin, tmax); // Get intersection point of voxel and ray
-
-		float3 voxelPos = g_vCamPos.xyz + tmin * rayDir;
-		float4 pos = mul(float4(voxelPos, 1.0f), g_mVoxelWorldViewProj);
-		psOut.depth = pos.z / pos.w;
-
-		// Calculate normal at intersection point
-		float3 nor = float3(0.0f, 0.0f, 0.0f);
-		float epsilon = 0.02f;
-
-		if (equal(voxelPos.x, boxMin.x, epsilon))
-			nor.x = -1.0f; // left
-		else if (equal(voxelPos.x, boxMax.x, epsilon))
-			nor.x = 1.0f; // right
-
-		if (equal(voxelPos.y, boxMin.y, epsilon))
-			nor.y = -1.0f; // bottom
-		else if (equal(voxelPos.y, boxMax.y, epsilon))
-			nor.y = 1.0f; // top
-
-		if (equal(voxelPos.z, boxMin.z, epsilon))
-			nor.z = -1.0f; // near
-		else if (equal(voxelPos.z, boxMax.z, epsilon))
-			nor.z = 1.0f; // far
-
-		// Transform into view space
-		nor = mul(float4(nor, 0.0f), g_mVoxelWorldView).xyz;
-		float3 viewDir = mul(float4(rayDir, 0.0f), g_mVoxelWorldView).xyz;
-
-		if (voxel == CELL_TYPE_SOLID_BOUNDARY)
-			voxelColor = float3(1.0f, 0, 0);
-		psOut.col = BlinnPhongIllumination(nor, -viewDir, voxelColor, 0.3f, 0.6f, 0.1f, 4);
-	}
-
-	return psOut;
+	return BlinnPhongIllumination(n, -normalize(frag.posView), col, 0.3f, 0.6f, 0.1f, 4);
 }
 
 float4 psCol(PSColIn frag) : SV_Target
@@ -586,10 +582,10 @@ technique11 Voxel
 
 	pass RenderVoxel
 	{
-		SetVertexShader(CompileShader(vs_5_0, vsVolume()));
-		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0, psVolume()));
-		SetRasterizerState(CullFront);
+		SetVertexShader(CompileShader(vs_5_0, vsPassId()));
+		SetGeometryShader(CompileShader(gs_5_0, gsSolidCube()));
+		SetPixelShader(CompileShader(ps_5_0, psSolidCube()));
+		SetRasterizerState(CullBack);
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}

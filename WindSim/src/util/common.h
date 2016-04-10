@@ -67,7 +67,7 @@ enum Modification
 	Name               = 0x40,
 	Color              = 0x80,
 	Resolution         = 0x100,
-	VoxelSize          = 0x200,
+	GridSize          = 0x200,
 	WindTunnelSettings = 0x400,
 	GlyphSettings      = 0x800,
 	DynamicsSettings   = 0x1000,

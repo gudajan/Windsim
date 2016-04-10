@@ -41,10 +41,10 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	connect(ui.spResY, SIGNAL(valueChanged(int)), this, SLOT(resolutionChanged()));
 	connect(ui.spResZ, SIGNAL(valueChanged(int)), this, SLOT(resolutionChanged()));
 
-	// Voxel Size
-	connect(ui.dspSizeX, SIGNAL(valueChanged(double)), this, SLOT(voxelSizeChanged()));
-	connect(ui.dspSizeY, SIGNAL(valueChanged(double)), this, SLOT(voxelSizeChanged()));
-	connect(ui.dspSizeZ, SIGNAL(valueChanged(double)), this, SLOT(voxelSizeChanged()));
+	// Grid Size
+	connect(ui.dspSizeX, SIGNAL(valueChanged(double)), this, SLOT(gridSizeChanged()));
+	connect(ui.dspSizeY, SIGNAL(valueChanged(double)), this, SLOT(gridSizeChanged()));
+	connect(ui.dspSizeZ, SIGNAL(valueChanged(double)), this, SLOT(gridSizeChanged()));
 
 	// Glyph settings
 	connect(ui.gbGlyph, SIGNAL(toggled(bool)), this, SLOT(glyphSettingsChanged()));
@@ -123,11 +123,11 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		ui.spResY->setValue(res.find("y")->toDouble());
 		ui.spResZ->setValue(res.find("z")->toDouble());
 
-		// VoxelSize
-		const QJsonObject& vs = properties.find("voxelSize")->toObject();
-		ui.dspSizeX->setValue(vs.find("x")->toDouble());
-		ui.dspSizeY->setValue(vs.find("y")->toDouble());
-		ui.dspSizeZ->setValue(vs.find("z")->toDouble());
+		// GridSize
+		const QJsonObject& s = properties.find("gridSize")->toObject();
+		ui.dspSizeX->setValue(s.find("x")->toDouble());
+		ui.dspSizeY->setValue(s.find("y")->toDouble());
+		ui.dspSizeZ->setValue(s.find("z")->toDouble());
 
 		// Glyph settings
 		const QJsonObject& gs = properties.find("glyphs")->toObject();
@@ -153,6 +153,7 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 			TransferFunction txfn = TransferFunction::fromJson(jit->toObject());
 			ui.gradient->setTransferFunction(jit.key(), txfn);
 		}
+		switchVolumeMetric(ui.cmbMetric->currentText());
 
 		// WindTunnel Settings
 
@@ -181,8 +182,6 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		m_properties = properties; // Copy properties
 	}
 	blockSignals(false);
-
-	switchVolumeMetric(ui.cmbMetric->currentText());
 }
 
 void VoxelGridProperties::nameChanged(const QString& text)
@@ -234,59 +233,16 @@ void VoxelGridProperties::positionChanged()
 
 void VoxelGridProperties::resolutionChanged()
 {
-	// New resolutions
-	int nrx = ui.spResX->value();
-	int nry = ui.spResY->value();
-	int nrz = ui.spResZ->value();
-
-	// If linked to voxel size: recalculate it
-	if (ui.tbLink->isChecked())
-	{
-		// Old resolutions
-		QJsonObject or = m_properties["resolution"].toObject();
-		int orx = or["x"].toInt();
-		int ory = or["y"].toInt();
-		int orz = or["z"].toInt();
-
-		// Calculate new voxel sizes
-		double nvsx = ui.dspSizeX->value() * orx / nrx;
-		double nvsy = ui.dspSizeY->value() * ory / nry;
-		double nvsz = ui.dspSizeZ->value() * orz / nrz;
-
-		// Set new voxel size
-		ui.dspSizeX->blockSignals(true);
-		ui.dspSizeY->blockSignals(true);
-		ui.dspSizeZ->blockSignals(true);
-
-		ui.dspSizeX->setValue(nvsx);
-		ui.dspSizeY->setValue(nvsy);
-		ui.dspSizeZ->setValue(nvsz);
-
-		ui.dspSizeX->blockSignals(false);
-		ui.dspSizeY->blockSignals(false);
-		ui.dspSizeZ->blockSignals(false);
-
-		QJsonObject vs
-		{
-			{ "x", nvsx },
-			{ "y", nvsy },
-			{ "z", nvsz }
-		};
-		m_properties["voxelSize"] = vs;
-	}
-
 	QJsonObject res
 	{
-		{ "x", nrx },
-		{ "y", nry },
-		{ "z", nrz }
+		{ "x", ui.spResX->value() },
+		{ "y", ui.spResY->value() },
+		{ "z", ui.spResZ->value() }
 	};
 	m_properties["resolution"] = res;
-
-
 }
 
-void VoxelGridProperties::voxelSizeChanged()
+void VoxelGridProperties::gridSizeChanged()
 {
 	QJsonObject vs
 	{
@@ -295,7 +251,7 @@ void VoxelGridProperties::voxelSizeChanged()
 		{ "z", ui.dspSizeZ->value() }
 	};
 
-	m_properties["voxelSize"] = vs;
+	m_properties["gridSize"] = vs;
 }
 
 void VoxelGridProperties::glyphSettingsChanged()
@@ -412,7 +368,7 @@ void VoxelGridProperties::blockSignals(bool b)
 	ui.spResY->blockSignals(b);
 	ui.spResZ->blockSignals(b);
 
-	// VoxelSize
+	// GridSize
 	ui.dspSizeX->blockSignals(b);
 	ui.dspSizeY->blockSignals(b);
 	ui.dspSizeZ->blockSignals(b);

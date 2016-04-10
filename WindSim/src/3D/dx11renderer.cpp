@@ -372,6 +372,14 @@ void DX11Renderer::onMousePress(QPoint globalPos, int button, int modifiers)
 		m_pressedId = m_manager.getHoveredId();
 }
 
+void DX11Renderer::onMouseDoubleClick(QPoint globalPos, int button, int modifiers)
+{
+	if (Qt::MouseButton(button) == Qt::LeftButton && Qt::KeyboardModifiers(modifiers) == Qt::NoModifier && m_pressedId)
+	{
+		emit mouseDoubleClick(m_pressedId);
+	}
+}
+
 void DX11Renderer::onMouseRelease(QPoint globalPos, int button, int modifiers)
 {
 	Qt::MouseButton b = Qt::MouseButton(button);

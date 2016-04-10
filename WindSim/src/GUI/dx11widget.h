@@ -39,6 +39,7 @@ protected:
 	void keyReleaseEvent(QKeyEvent * event) override;
 	void mouseMoveEvent(QMouseEvent * event) override;
 	void mousePressEvent(QMouseEvent * event) override;
+	void mouseDoubleClickEvent(QMouseEvent* event) override;
 	void mouseReleaseEvent(QMouseEvent * event) override;
 	void wheelEvent(QWheelEvent * event) override;
 
@@ -50,6 +51,7 @@ signals:
 	void resize(int width, int height);
 	void mouseMove(QPoint localPos, QPoint globalPos, int modifiers);
 	void mousePress(QPoint globalPos, int button, int modifiers);
+	void mouseDoubleClick(QPoint globalPos, int button, int modifiers);
 	void mouseRelease(QPoint globalPos, int button, int modifiers);
 	void keyPress(int key);
 	void keyRelease(int key);

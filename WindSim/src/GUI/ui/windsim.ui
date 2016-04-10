@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1105</width>
-    <height>660</height>
+    <width>1098</width>
+    <height>797</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>WindSim</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QVBoxLayout" name="verticalLayout_4">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
     <property name="spacing">
      <number>0</number>
     </property>
@@ -22,7 +22,7 @@
      <number>0</number>
     </property>
     <property name="topMargin">
-     <number>3</number>
+     <number>0</number>
     </property>
     <property name="rightMargin">
      <number>0</number>
@@ -31,39 +31,33 @@
      <number>0</number>
     </property>
     <item>
-     <widget class="QSplitter" name="splitObjDisp">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
+     <widget class="QSplitter" name="dispSplitter">
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Vertical</enum>
       </property>
       <property name="opaqueResize">
        <bool>false</bool>
       </property>
-      <property name="handleWidth">
-       <number>5</number>
-      </property>
-      <widget class="QGroupBox" name="gbObjects">
+      <widget class="QGroupBox" name="gbViewer">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
          <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
+         <verstretch>2</verstretch>
         </sizepolicy>
        </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="title">
-        <string>Objects</string>
+        <string>Display</string>
        </property>
        <property name="flat">
         <bool>true</bool>
        </property>
-       <property name="checkable">
-        <bool>false</bool>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
+       <layout class="QVBoxLayout" name="verticalLayout">
         <property name="spacing">
          <number>0</number>
         </property>
@@ -80,46 +74,37 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="QListView" name="objectView">
+         <widget class="DX11Widget" name="dx11Viewer" native="true">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="minimumSize">
+           <size>
+            <width>300</width>
+            <height>300</height>
+           </size>
+          </property>
+          <property name="cursor">
+           <cursorShape>ArrowCursor</cursorShape>
+          </property>
           <property name="statusTip">
-           <string>Objects list</string>
-          </property>
-          <property name="editTriggers">
-           <set>QAbstractItemView::NoEditTriggers</set>
-          </property>
-          <property name="alternatingRowColors">
-           <bool>true</bool>
+           <string>DirectX11 Renderer</string>
           </property>
          </widget>
         </item>
        </layout>
       </widget>
       <widget class="QFrame" name="frame">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>2</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
        <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
+        <enum>QFrame::StyledPanel</enum>
        </property>
        <property name="frameShadow">
         <enum>QFrame::Raised</enum>
        </property>
-       <property name="lineWidth">
-        <number>0</number>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0">
-        <property name="spacing">
-         <number>0</number>
-        </property>
+       <layout class="QHBoxLayout" name="horizontalLayout">
         <property name="leftMargin">
          <number>0</number>
         </property>
@@ -133,39 +118,27 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="QSplitter" name="splitDispLog">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+         <widget class="QSplitter" name="logSplitter">
           <property name="orientation">
-           <enum>Qt::Vertical</enum>
+           <enum>Qt::Horizontal</enum>
           </property>
-          <property name="opaqueResize">
-           <bool>false</bool>
-          </property>
-          <widget class="QGroupBox" name="gbViewer">
+          <widget class="QGroupBox" name="gbObjects">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>0</horstretch>
-             <verstretch>2</verstretch>
+             <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
            <property name="title">
-            <string>Display</string>
+            <string>Objects</string>
            </property>
            <property name="flat">
             <bool>true</bool>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout">
+           <property name="checkable">
+            <bool>false</bool>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_3">
             <property name="spacing">
              <number>0</number>
             </property>
@@ -182,27 +155,21 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="DX11Widget" name="dx11Viewer" native="true">
+             <widget class="QListView" name="objectView">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize">
-               <size>
-                <width>300</width>
-                <height>300</height>
-               </size>
-              </property>
-              <property name="cursor">
-               <cursorShape>ArrowCursor</cursorShape>
-              </property>
               <property name="statusTip">
-               <string>DirectX11 Renderer</string>
+               <string>Objects list</string>
               </property>
-              <property name="whatsThis">
-               <string/>
+              <property name="editTriggers">
+               <set>QAbstractItemView::NoEditTriggers</set>
+              </property>
+              <property name="alternatingRowColors">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -211,7 +178,7 @@
           <widget class="QGroupBox" name="gbLog">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
+             <horstretch>1</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
@@ -255,7 +222,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1105</width>
+     <width>1098</width>
      <height>21</height>
     </rect>
    </property>

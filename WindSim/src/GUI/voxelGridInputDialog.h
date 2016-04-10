@@ -13,7 +13,7 @@ public:
 	VoxelGridInputDialog(QWidget* parent = nullptr);
 
 	std::vector<int> getGridResolution();
-	std::vector<double> getVoxelSize();
+	std::vector<double> getGridSize();
 	QString getSimulatorSettings();
 
 private slots:

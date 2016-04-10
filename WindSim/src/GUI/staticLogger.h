@@ -7,6 +7,17 @@
 
 class QLayout;
 
+class MessageLog : public QPlainTextEdit
+{
+public:
+	MessageLog(QWidget* parent = nullptr);
+
+protected:
+	void contextMenuEvent(QContextMenuEvent *e) override;
+private:
+	QAction* clearAction;
+};
+
 class StaticLogger
 {
 public:
@@ -15,7 +26,7 @@ public:
 	static void logit(const QString& msg);
 
 private:
-	static QPointer<QPlainTextEdit> m_log;
+	static QPointer<MessageLog> m_log;
 
 };
 

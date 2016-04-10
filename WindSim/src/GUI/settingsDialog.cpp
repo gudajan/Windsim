@@ -1,6 +1,7 @@
 #include "settingsDialog.h"
 
 #include "settings.h"
+#include "staticLogger.h"
 
 #include <QMessageBox>
 
@@ -175,7 +176,14 @@ void SettingsDialog::fillOpenCLDevices()
 {
 	ui.cmbCLDevice->clear();
 	int i = 0;
-	for (const auto& device : m_openCLInfo[ui.cmbCLPlatform->currentIndex()].second)
+	int index = ui.cmbCLPlatform->currentIndex();
+	if (index >= m_openCLInfo.size())
+	{
+		StaticLogger::logit("WARNING: OpenCL Devices of Settings Dialog not filled correctly!");
+		return;
+	}
+
+	for (const auto& device : m_openCLInfo[index].second)
 	{
 		ui.cmbCLDevice->addItem(QString::fromStdString(device.at("name") + " " + device.at("vendor")));
 

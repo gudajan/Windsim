@@ -19,9 +19,9 @@ std::vector<int> VoxelGridInputDialog::getGridResolution()
 	return{ ui.spResX->value(), ui.spResY->value(), ui.spResZ->value() };
 }
 
-std::vector<double> VoxelGridInputDialog::getVoxelSize()
+std::vector<double> VoxelGridInputDialog::getGridSize()
 {
-	return{ ui.dspSizeX->value(), ui.dspSizeY->value(), ui.dspSizeZ->value() };
+	return{ ui.dspSizeX->value() , ui.dspSizeY->value(), ui.dspSizeZ->value()};
 }
 
 QString VoxelGridInputDialog::getSimulatorSettings()

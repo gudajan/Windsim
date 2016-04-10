@@ -280,7 +280,7 @@ bool WindSim::actionCreateVoxelGridTriggered()
 		return false;
 
 	std::vector<int> res = dialog.getGridResolution();
-	std::vector<double> size = dialog.getVoxelSize();
+	std::vector<double> size = dialog.getGridSize();
 	QString filename = dialog.getSimulatorSettings();
 
 	QJsonObject resolution
@@ -289,7 +289,7 @@ bool WindSim::actionCreateVoxelGridTriggered()
 		{ "y", res[1] },
 		{ "z", res[2] }
 	};
-	QJsonObject voxelSize
+	QJsonObject gridSize
 	{
 		{ "x", size[0] },
 		{ "y", size[1] },
@@ -300,13 +300,13 @@ bool WindSim::actionCreateVoxelGridTriggered()
 		{ "name", name },
 		{ "type", QString::fromStdString(objectTypeToString(ObjectType::VoxelGrid)) },
 		{ "resolution", resolution },
-		{ "voxelSize", voxelSize },
+		{ "gridSize", gridSize },
 		{ "windTunnelSettings", filename }
 	};
 
 	m_container.addCmd(json);
 
-	StaticLogger::logit("INFO: Created new voxel grid '" + name + "' with resolution (" + QString::number(res[0]) + ", " + QString::number(res[1]) + ", " + QString::number(res[2]) + ") and voxel size (" + QString::number(size[0]) + ", " + QString::number(size[1]) + ", " + QString::number(size[2]) + ").");
+	StaticLogger::logit("INFO: Created new voxel grid '" + name + "' with resolution (" + QString::number(res[0]) + ", " + QString::number(res[1]) + ", " + QString::number(res[2]) + ") and grid size (" + QString::number(size[0]) + ", " + QString::number(size[1]) + ", " + QString::number(size[2]) + ").");
 
 	return true;
 }

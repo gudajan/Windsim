@@ -38,6 +38,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	connect(this, &DX11Widget::resize, m_renderer, &DX11Renderer::onResize);
 	connect(this, &DX11Widget::mouseMove, m_renderer, &DX11Renderer::onMouseMove);
 	connect(this, &DX11Widget::mousePress, m_renderer, &DX11Renderer::onMousePress);
+	connect(this, &DX11Widget::mouseDoubleClick, m_renderer, &DX11Renderer::onMouseDoubleClick);
 	connect(this, &DX11Widget::mouseRelease, m_renderer, &DX11Renderer::onMouseRelease);
 	connect(this, &DX11Widget::keyPress, m_renderer, &DX11Renderer::onKeyPress);
 	connect(this, &DX11Widget::keyRelease, m_renderer, &DX11Renderer::onKeyRelease);
@@ -143,6 +144,12 @@ void DX11Widget::mousePressEvent(QMouseEvent * event)
 {
 	emit mousePress(event->globalPos(), event->button(), event->modifiers());
 	return QWidget::mousePressEvent(event);
+}
+
+void DX11Widget::mouseDoubleClickEvent(QMouseEvent* event)
+{
+	emit mouseDoubleClick(event->globalPos(), event->button(), event->modifiers());
+	return QWidget::mouseDoubleClickEvent(event);
 }
 
 void DX11Widget::mouseReleaseEvent(QMouseEvent * event)
