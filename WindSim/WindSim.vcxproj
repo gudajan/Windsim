@@ -76,6 +76,17 @@
       <ShaderModel>5.0</ShaderModel>
       <ObjectFileOutput>$(OutDir)%(Filename).fxo</ObjectFileOutput>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>robocopy $(SolutionDir)\..\WindTunnelSource\TUM3DVirtualWindTunnelLib\bin\$(Platform)\$(Configuration) $(OutDir) TUM3DVirtualWindTunnelLib.dll
+set rce=%errorlevel%
+if not %rce%==1 and not %rce% == 0 exit %rce%
+robocopy $(SolutionDir)\..\WindTunnelSource\TUM3DVirtualWindTunnelLib\bin\$(Platform)\$(Configuration)\Fx $(SolutionDir)\WindSim\Fx LinesD.cso SmokeD.cso
+set rce=%errorlevel%
+if not %rce%==1 and not %rce% == 0 exit %rce%
+robocopy $(SolutionDir)\..\WindTunnelSource\TUM3DVirtualWindTunnelLib\Kernels $(SolutionDir)\WindSim\Kernels FluidSimulation.cl Lines.cl Multigrid.cl Smoke.cl
+set rce=%errorlevel%
+if not %rce%==1 exit %rce% else exit 0</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -108,6 +119,17 @@
       <ShaderModel>5.0</ShaderModel>
       <ObjectFileOutput>$(OutDir)%(Filename).fxo</ObjectFileOutput>
     </FxCompile>
+    <PreBuildEvent>
+      <Command>robocopy $(SolutionDir)\..\WindTunnelSource\TUM3DVirtualWindTunnelLib\bin\$(Platform)\$(Configuration) $(OutDir) TUM3DVirtualWindTunnelLib.dll
+set rce=%errorlevel%
+if not %rce%==1 and not %rce% == 0 exit %rce%
+robocopy $(SolutionDir)\..\WindTunnelSource\TUM3DVirtualWindTunnelLib\bin\$(Platform)\$(Configuration)\Fx $(SolutionDir)\WindSim\Fx Lines.cso Smoke.cso
+set rce=%errorlevel%
+if not %rce%==1 and not %rce% == 0 exit %rce%
+robocopy $(SolutionDir)\..\WindTunnelSource\TUM3DVirtualWindTunnelLib\Kernels $(SolutionDir)\WindSim\Kernels FluidSimulation.cl Lines.cl Multigrid.cl Smoke.cl
+set rce=%errorlevel%
+if not %rce%==1 exit %rce% else exit 0</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="GeneratedFiles\Debug\moc_logger.cpp">
