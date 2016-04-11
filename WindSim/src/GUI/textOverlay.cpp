@@ -10,10 +10,10 @@ const static int g_spacing = 5;
 const static QPoint g_fpsBackPos(g_spacing, g_spacing);
 const static QSize g_fpsBackSize(70, g_textLineHeight);
 const static QPoint g_textBackPos(g_spacing, 2 * g_spacing + g_fpsBackSize.height());
-const static QSize g_textBackSize(190, g_textLineHeight * 5);
+const static QSize g_textBackSize(190, g_textLineHeight * 5); // 5 lines at max
 
 TextOverlay::TextOverlay(QWidget* parent)
-	: QDialog(parent, Qt::FramelessWindowHint)
+	: QDialog(parent, Qt::FramelessWindowHint | Qt::WindowTransparentForInput)
 	, m_text()
 	, m_textBack(g_textBackPos, g_textBackSize)
 	, m_fps("FPS: ")
@@ -36,7 +36,7 @@ void TextOverlay::showText(bool showText)
 
 void TextOverlay::moveToParent()
 {
-	QPoint pos = parentWidget()->mapToGlobal(QPoint(0,10));
+	QPoint pos = parentWidget()->mapToGlobal(QPoint(0,0));
 	move(pos);
 }
 

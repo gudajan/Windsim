@@ -117,7 +117,7 @@ void gsArrow(point uint input[1] : VertexID, inout TriangleStream<PSLineIn> stre
 // PIXEL SHADER
 // =============================================================================
 
-float4 psPressureTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
+void psPressureTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace)
 {
 	// Steps to calculate torque:
 	// - Sample pressure from pressure field
@@ -160,13 +160,10 @@ float4 psPressureTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Ta
 	InterlockedAdd(g_torqueUAV[2], intTorque.z);
 
 	InterlockedAdd(g_torqueUAV[3], 1);
-
-	float f = p / 50;
-	return float4(F * 50, 1);
 }
 
 // Equivalent to pressure with different pressure calculation
-float4 psVelocityTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Target
+void psVelocityTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace)
 {
 	// Calc fragement normal
 	float3 normalWS = normalize(cross(ddx(psIn.posWS), ddy(psIn.posWS)));
@@ -180,10 +177,10 @@ float4 psVelocityTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Ta
 	float airDensity = 1.2256; // kg/m^3
 	float g = 9.81; // Gravity
 
-	float pNorm = -dot(velocity, normalWS) * 0.17; // Normal pressure to surface through velocity (This is just an approximation); use magic number to adjust to pressure method
+	float pNorm = -dot(velocity, normalWS) * 0.4; // Normal pressure to surface through velocity (This is just an approximation); use magic number to adjust to pressure method
 	float p = 0.5 * airDensity * pNorm; // Dynamic pressure, p may be negative
 
-	//p += airDensity * g * psIn.posWS.y; // Fluid pressure
+	p += airDensity * g * psIn.posWS.y; // Fluid pressure
 
 	// Perpendicular fragment surface area, dependent on the voxel sizes
 	float a[3] = { g_vVoxelSize.z * g_vVoxelSize.y, g_vVoxelSize.x * g_vVoxelSize.z, g_vVoxelSize.x * g_vVoxelSize.y };
@@ -206,9 +203,6 @@ float4 psVelocityTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace) : SV_Ta
 	InterlockedAdd(g_torqueUAV[2], intTorque.z);
 
 	InterlockedAdd(g_torqueUAV[3], 1);
-
-	float f = p / 500;
-	return float4(velocity / 700, 1);
 }
 
 PSOut psLine(PSLineIn frag)

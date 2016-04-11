@@ -229,19 +229,13 @@ void ObjectManager::modify(const QJsonObject& data)
 		QJsonObject jS = data["gridSize"].toObject();
 		XMFLOAT3 vs(jS["x"].toDouble() / res.x, jS["y"].toDouble() / res.y, jS["z"].toDouble() / res.z); // Calc voxel size from resolution and grid size
 
-		QJsonObject jGs = data["glyphs"].toObject();
-		bool renderGlyphs = jGs["enabled"].toBool();
-		Orientation orientation = static_cast<Orientation>(jGs["orientation"].toInt());
-		float position = jGs["position"].toDouble();
-		QJsonObject jGq = jGs["quantity"].toObject();
-		XMUINT2 quantity(jGq["x"].toInt(), jGq["y"].toInt());
-
 		act->setPos(pos);
 		act->computeWorld();
-		act->resize(res, vs);
-		act->setRenderVoxel(data["renderVoxel"].toInt() == Qt::Checked);
+		act->getObject()->resize(res, vs);
+		if (mod.testFlag(VoxelSettings))
+			act->getObject()->setVoxelSettings(data["voxel"].toObject());
 		if (mod.testFlag(GlyphSettings))
-			act->setGlyphSettings(renderGlyphs, orientation, position, quantity);
+			act->getObject()->setGlyphSettings(data["glyphs"].toObject());
 		if (mod.testFlag(VolumeSettings))
 			act->getObject()->changeVolumeSettings(data["volume"].toObject());
 		if (mod.testFlag(WindTunnelSettings))
@@ -278,6 +272,8 @@ void ObjectManager::initOpenCL()
 	{
 		if (actor.second->getType() == ObjectType::VoxelGrid)
 			std::dynamic_pointer_cast<VoxelGridActor>(actor.second)->getObject()->reinitWindTunnel();
+		if (actor.second->getType() == ObjectType::Mesh)
+			std::dynamic_pointer_cast<MeshActor>(actor.second)->resetDynamics();
 	}
 }
 
@@ -319,7 +315,7 @@ void ObjectManager::voxelizeNextFrame()
 	for (const auto& act : m_actors)
 	{
 		if (act.second->getType() == ObjectType::VoxelGrid)
-			std::dynamic_pointer_cast<VoxelGridActor>(act.second)->voxelize();
+			std::dynamic_pointer_cast<VoxelGridActor>(act.second)->getObject()->setVoxelize(true);
 	}
 }
 

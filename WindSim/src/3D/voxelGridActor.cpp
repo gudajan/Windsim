@@ -44,25 +44,3 @@ void VoxelGridActor::reCenter()
 	XMStoreFloat3(&m_pos, XMLoadFloat3(&m_pos) - center);
 	computeWorld();
 }
-
-void VoxelGridActor::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
-{
-	m_grid.resize(resolution, voxelSize);
-}
-
-void VoxelGridActor::voxelize()
-{
-	m_grid.setVoxelize(true);
-}
-
-void VoxelGridActor::setRenderVoxel(bool renderVoxel)
-{
-	m_grid.setRenderVoxel(renderVoxel);
-}
-
-void VoxelGridActor::setGlyphSettings(bool render, Orientation orientation, float position, const XMUINT2& quantity)
-{
-	m_grid.setRenderGlyphs(render);
-	m_grid.setGlyphSettings(orientation, position);
-	m_grid.setGlyphQuantity(quantity);
-}

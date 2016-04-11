@@ -21,15 +21,6 @@ Mesh3D::Mesh3D(const std::string& path, DX11Renderer* renderer)
 	m_numIndices = m_indexData.size();
 }
 
-Mesh3D::Mesh3D(Mesh3D&& other)
-	: Object3D(std::move(other))
-{
-}
-
-Mesh3D::~Mesh3D()
-{
-}
-
 HRESULT Mesh3D::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device* device, const bool reload)
 {
 	HRESULT hr;

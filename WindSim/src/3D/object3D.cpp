@@ -18,20 +18,6 @@ Object3D::Object3D(DX11Renderer* renderer)
 {
 }
 
-Object3D::Object3D(Object3D&& other)
-	: m_vertexBuffer(other.m_vertexBuffer),
-	m_indexBuffer(other.m_indexBuffer),
-	m_numIndices(other.m_numIndices),
-	m_vertexData(std::move(other.m_vertexData)),
-	m_indexData(std::move(other.m_indexData)),
-	m_renderer(std::move(other.m_renderer))
-{
-}
-
-Object3D::~Object3D()
-{
-}
-
 HRESULT Object3D::create(ID3D11Device* device, bool clearClientBuffers)
 {
 	HRESULT hr;

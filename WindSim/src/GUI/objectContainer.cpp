@@ -5,6 +5,7 @@
 #include "commands.h"
 #include "settings.h"
 #include "../3D/simulator.h"
+#include "../3D/voxelGrid.h"
 #include "transferFunction.h"
 
 #include <QUndoStack>
@@ -287,12 +288,12 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 			object["Scaling"] = QJsonObject{ { "x", 1.0 }, { "y", 1.0 }, { "z", 1.0 } };
 		if (!object.contains("Rotation"))
 			object["Rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
-		if (!object.contains("renderVoxel"))
-			object["renderVoxel"] = Qt::Unchecked;
+		if (!object.contains("voxel"))
+			object["voxel"] = VoxelGrid::getVoxelSettingsDefault();
 		if (!object.contains("glyphs"))
 		{
-			QJsonObject tmp{ { "x", object["resolution"].toObject()["x"].toInt() }, { "y", object["resolution"].toObject()["y"].toInt() } };
-			object["glyphs"] = QJsonObject{ { "enabled", false }, { "orientation", XY_PLANE }, { "position", 0.5}, {"quantity", tmp} };
+			QJsonObject res = object["resolution"].toObject();
+			object["glyphs"] = VoxelGrid::getGlyphSettingsDefault(DirectX::XMUINT3(res["x"].toInt(), res["y"].toInt(), res["z"].toInt()));
 		}
 		if (!object.contains("volume"))
 		{

@@ -7,7 +7,7 @@
 #include "volumeRenderer.h"
 #include "transferFunction.h"
 
-#include <WindTunnelLib/WindTunnelRenderer.h>
+#include <WindTunnelRenderer.h>
 
 #include <DirectXMath.h>
 
@@ -39,6 +39,9 @@ public:
 	static HRESULT createShaderFromFile(const std::wstring& path, ID3D11Device* device, const bool reload = false);
 	static void releaseShader();
 
+	static QJsonObject getVoxelSettingsDefault();
+	static QJsonObject getGlyphSettingsDefault(DirectX::XMUINT3 resolution);
+
 	VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize, DX11Renderer* renderer, QObject* parent = nullptr);
 	~VoxelGrid();
 
@@ -55,11 +58,8 @@ public:
 	// GUI Settings
 	bool resize(DirectX::XMUINT3 resolution, DirectX::XMFLOAT3 voxelSize);
 	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
-	void setRenderVoxel(bool renderVoxel) { m_renderVoxel = renderVoxel; };
-	void setRenderGlyphs(bool renderGlyphs) { m_renderGlyphs = renderGlyphs; };
-	void setGlyphSettings(Orientation orientation, float position);
-	void setGlyphQuantity(const DirectX::XMUINT2& quantity);
-
+	void setVoxelSettings(const QJsonObject& settings);
+	void setGlyphSettings(const QJsonObject& settings);
 	bool changeSimSettings(const QString& settingsFile);
 	void runSimulation(bool enabled);
 	void changeSmokeSettings(const QJsonObject& settings);
@@ -99,7 +99,7 @@ private:
 	void renderGridBox(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void voxelize(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, bool copyStaging);
 	void renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
-	void renderVelocity(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
+	void renderGlyphs(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection);
 	void calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, double elapsedTime);
 
 	struct ShaderVariables
@@ -138,7 +138,10 @@ private:
 
 	DirectX::XMUINT3 m_resolution; // Resolution of the grid
 	DirectX::XMFLOAT3 m_voxelSize; // Size of one voxel in object space of the grid
+	VoxelType m_voxelType;
 	DirectX::XMUINT2 m_glyphQuantity;
+	Orientation m_glyphOrientation;
+	float m_glyphPosition;
 
 	bool m_updateGrid; // Indicates that the simulation should be updated after next voxelization
 	bool m_processSimResults; // Indicate that we may copy the data from the local simulation vectors to the GPU

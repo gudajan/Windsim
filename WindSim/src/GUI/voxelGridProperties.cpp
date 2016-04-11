@@ -1,7 +1,5 @@
 ﻿#include "voxelGridProperties.h"
 
-#include <WindTunnelLib/WindTunnel.h>
-
 #include <QFileDialog>
 #include <QMessageBox>
 
@@ -28,8 +26,10 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	connect(ui.pbSim, SIGNAL(clicked()), this, SLOT(chooseSimulatorSettings()));
 	connect(ui.pbReinit, SIGNAL(clicked()), this, SLOT(restartSimulation()));
 
-	// Show voxel
-	connect(ui.cbShowVoxel, SIGNAL(stateChanged(int)), this, SLOT(showVoxelChanged(int)));
+	// Voxel settings
+	connect(ui.gbVoxel, SIGNAL(toggled(bool)), this, SLOT(voxelSettingsChanged()));
+	connect(ui.rbSolid, SIGNAL(toggled(bool)), this, SLOT(voxelSettingsChanged()));
+	connect(ui.rbWireframe, SIGNAL(toggled(bool)), this, SLOT(voxelSettingsChanged()));
 
 	// Position
 	connect(ui.xP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
@@ -109,7 +109,13 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 
 		// Visibility
 		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
-		ui.cbShowVoxel->setChecked(properties["renderVoxel"].toInt() == Qt::Checked);
+
+		// Voxel settings
+		const QJsonObject& voxel = properties.find("voxel")->toObject();
+		ui.gbVoxel->setChecked(voxel["enabled"].toBool());
+		VoxelType t = VoxelType(voxel["type"].toInt());
+		if (t == Solid) ui.rbSolid->setChecked(true);
+		else ui.rbWireframe->setChecked(true);
 
 		// Position
 		const QJsonObject& pos = properties.find("Position")->toObject();
@@ -177,7 +183,7 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		ui.gbLines->setChecked(lines["enabled"].toBool());
 		ui.cbLineOri->setCurrentText(lines["orientation"].toString());
 		ui.cbLineType->setCurrentText(lines["type"].toString());
-		setSliderValue(ui.hsLinePos, lines["position"].toDouble());
+		setSliderValue(ui.hsLinePos, lines["position"].toObject()[ui.cbLineOri->currentText()].toDouble());
 
 		m_properties = properties; // Copy properties
 	}
@@ -213,10 +219,16 @@ void VoxelGridProperties::chooseSimulatorSettings()
 	m_properties["windTunnelSettings"] = settings;
 }
 
-void VoxelGridProperties::showVoxelChanged(int state)
+void VoxelGridProperties::voxelSettingsChanged()
 {
-	m_properties["renderVoxel"] = state;
-	emit propertiesChanged(m_properties, Visibility);
+	QJsonObject vs
+	{
+		{ "enabled", ui.gbVoxel->isChecked() },
+		{ "type", ui.rbSolid->isChecked() ? Solid : Wireframe }
+	};
+	m_properties["voxel"] = vs;
+
+	emit propertiesChanged(m_properties, VoxelSettings);
 }
 
 void VoxelGridProperties::positionChanged()
@@ -322,12 +334,24 @@ void VoxelGridProperties::smokeSettingsChanged()
 
 void VoxelGridProperties::lineSettingsChanged()
 {
+	QJsonObject old = m_properties["lines"].toObject();
+	QJsonObject position = old["position"].toObject();
+	QString ori = old["orientation"].toString();
+	if (ui.cbLineOri->currentText() != ori)
+	{
+		setSliderValue(ui.hsLinePos, position[ui.cbLineOri->currentText()].toDouble());
+	}
+	else
+	{
+		position[ui.cbLineOri->currentText()] = sliderFloatValue(ui.hsLinePos);
+	}
+
 	QJsonObject lines
 	{
 		{ "enabled", ui.gbLines->isChecked() },
 		{ "orientation", ui.cbLineOri->currentText() },
 		{ "type", ui.cbLineType->currentText() },
-		{ "position", sliderFloatValue(ui.hsLinePos) }
+		{ "position", position }
 	};
 	m_properties["lines"] = lines;
 
@@ -356,7 +380,11 @@ void VoxelGridProperties::blockSignals(bool b)
 
 	// Visibility
 	ui.cbDisabled->blockSignals(b);
-	ui.cbShowVoxel->blockSignals(b);
+
+	// Voxel settings
+	ui.gbVoxel->blockSignals(b);
+	ui.rbSolid->blockSignals(b);
+	ui.rbWireframe->blockSignals(b);
 
 	// Position
 	ui.xP->blockSignals(b);

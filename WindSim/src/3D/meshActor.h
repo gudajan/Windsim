@@ -44,6 +44,7 @@ public:
 	bool getVoxelize() const { return m_voxelize; };
 	void setVoxelize(bool voxelize) { m_voxelize = voxelize; };
 	void setDynamics(bool dynamics) { m_calcDynamics = dynamics; m_dynamics.reset(); };
+	void resetDynamics() { m_dynamics.reset(); };
 	void setDensity(float density) { m_density = density; };
 	void setLocalRotationAxis(const DirectX::XMFLOAT3& axis) { m_dynamics.setRotationAxis(axis); m_dynamics.reset(); };
 	void setShowAccelArrow(bool showAccelArrow) { m_showAccelArrow = showAccelArrow; };

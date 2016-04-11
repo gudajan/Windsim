@@ -14,15 +14,6 @@ Sky::Sky(DX11Renderer* renderer)
 	m_numIndices = m_indexData.size();
 }
 
-Sky::Sky(Sky&& other)
-	: Object3D(std::move(other))
-{
-}
-
-Sky::~Sky()
-{
-}
-
 HRESULT Sky::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device* device, const bool reload)
 {
 	HRESULT hr;

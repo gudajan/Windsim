@@ -17,16 +17,6 @@ Marker::Marker(DX11Renderer* renderer)
 	m_numIndices = m_indexData.size();
 }
 
-Marker::Marker(Marker&& other)
-	: Object3D(std::move(other)),
-	m_renderPosition(other.m_renderPosition)
-{
-}
-
-Marker::~Marker()
-{
-}
-
 HRESULT Marker::createShaderFromFile(const std::wstring& shaderPath, ID3D11Device* device, const bool reload)
 {
 	HRESULT hr;

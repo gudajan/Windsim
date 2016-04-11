@@ -1,6 +1,6 @@
 #include "voxelGridInputDialog.h"
 
-#include <WindTunnelLib/WindTunnel.h>
+#include <WindTunnel.h>
 
 #include <QFileDialog>
 #include <QMessageBox>

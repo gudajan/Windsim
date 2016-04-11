@@ -14,7 +14,7 @@
 #include <vector>
 #include <mutex>
 
-#include <WindTunnelLib/WindTunnel.h>
+#include <WindTunnel.h>
 
 class DX11Renderer;
 

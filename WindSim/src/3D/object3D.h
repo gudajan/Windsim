@@ -16,13 +16,12 @@ class Object3D
 {
 public:
 	Object3D(DX11Renderer* renderer);
-	Object3D(Object3D&& other);
-	virtual ~Object3D();
+	virtual ~Object3D() = default;
 
 	virtual HRESULT create(ID3D11Device* device, bool clearClientBuffers = false);
 	virtual void release();
 
-	// Depends on shader variables -> must be reimplemented
+	// Depends on shader variables -> pure virtual -> must be reimplemented
 	virtual void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) = 0;
 
 	// Called when render target is resized

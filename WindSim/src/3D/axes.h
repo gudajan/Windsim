@@ -15,15 +15,22 @@ public:
 	static void releaseShader();
 
 	Axes(DX11Renderer* renderer);
-	Axes(Axes&& other);
-	~Axes();
 
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
 
 private:
 	void createAxesData();
 
-	static ID3DX11EffectMatrixVariable* s_worldViewProj;
+	struct ShaderVariables
+	{
+		ID3DX11EffectMatrixVariable* view;
+		ID3DX11EffectMatrixVariable* proj;
+		ID3DX11EffectMatrixVariable* viewProj;
+		ID3DX11EffectMatrixVariable* viewProjInv;
+		ID3DX11EffectMatrixVariable* worldViewProj;
+	};
+
+	static ShaderVariables s_shaderVariables;
 	static ID3DX11Effect* s_effect;
 	static ID3D11InputLayout* s_inputLayout;
 

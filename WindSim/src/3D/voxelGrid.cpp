@@ -26,7 +26,10 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, 
 	m_manager(manager),
 	m_resolution(resolution),
 	m_voxelSize(voxelSize),
+	m_voxelType(Solid),
 	m_glyphQuantity(32, 32),
+	m_glyphOrientation(XY_PLANE),
+	m_glyphPosition(0.5),
 	m_updateGrid(true),
 	m_processSimResults(false),
 	m_simAvailable(true),
@@ -169,6 +172,17 @@ void VoxelGrid::releaseShader()
 	SAFE_RELEASE(s_effect);
 }
 
+QJsonObject VoxelGrid::getVoxelSettingsDefault()
+{
+	return QJsonObject{ { "enabled", false }, { "type", Solid } };
+}
+
+QJsonObject VoxelGrid::getGlyphSettingsDefault(XMUINT3 resolution)
+{
+	QJsonObject tmp{ { "x", static_cast<int>(resolution.x) }, { "y", static_cast<int>(resolution.y) } };
+	return QJsonObject{ { "enabled", false }, { "orientation", XY_PLANE }, { "position", 0.5 }, { "quantity", tmp } };
+}
+
 HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
 {
 	HRESULT hr;
@@ -291,17 +305,15 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		QElapsedTimer t2;
 		t2.start();
 		updateVelocityPressure(context);
-		OutputDebugStringA(("Update velocity lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		OutputDebugStringA(("INFO: Update velocity lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 		t2.restart();
 		m_wtRenderer.updateDensity(context, m_simulator.getDensity(), m_simulator.getDensitySum());
-		OutputDebugStringA(("Update density lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		OutputDebugStringA(("INFO: Update density lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 		t2.restart();
 		m_wtRenderer.updateLines(context, m_simulator.getLines(), m_simulator.getReseedCounter(), m_simulator.getNumLines());
 		m_processSimResults = false;
-		OutputDebugStringA(("Update lines lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
-		t2.restart();
+		OutputDebugStringA(("INFO: Update lines lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 		m_simulator.continueSim();
-		OutputDebugStringA(("Wait for continueSim lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 		m_dynamicsCounter = 0;
 	}
 	// Calculates dynamics motion of meshes, depending on the current velocity field (wait 2 frames until the staging texture is copied to the GPU)
@@ -333,7 +345,6 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	{
 		copyGrid(context);
 
-		OutputDebugStringA("UPDATE\n");
 		m_updateGrid = false;
 		emit gridUpdated();
 
@@ -356,9 +367,9 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		renderVoxel(device, context, world, view, projection);
 
 	if (m_renderGlyphs)
-		renderVelocity(device, context, world, view, projection);
+		renderGlyphs(device, context, world, view, projection);
 
-	//OutputDebugStringA(("VoxelGrid render lasted " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+	OutputDebugStringA(("INFO: VoxelGrid render lasted " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 }
 
 void VoxelGrid::renderVolume(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime)
@@ -410,16 +421,19 @@ bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
 	return true;
 }
 
-void VoxelGrid::setGlyphSettings(Orientation orientation, float position)
+void VoxelGrid::setVoxelSettings(const QJsonObject& settings)
 {
-	s_shaderVariables.glyphOrientation->SetInt(orientation);
-	s_shaderVariables.glyphPosition->SetFloat(position);
+	m_renderVoxel = settings["enabled"].toBool();
+	m_voxelType = VoxelType(settings["type"].toInt());
 }
 
-void VoxelGrid::setGlyphQuantity(const XMUINT2& quantity)
+void VoxelGrid::setGlyphSettings(const QJsonObject& settings)
 {
-	m_glyphQuantity = quantity;
-	s_shaderVariables.glyphQuantity->SetIntVector(reinterpret_cast<int*>(&m_glyphQuantity));
+	m_renderGlyphs = settings["enabled"].toBool();
+	m_glyphOrientation = Orientation(settings["orientation"].toInt());
+	m_glyphPosition = settings["position"].toDouble();
+	QJsonObject json = settings["quantity"].toObject();
+	m_glyphQuantity = XMUINT2(json["x"].toInt(), json["y"].toInt());
 }
 
 bool VoxelGrid::changeSimSettings(const QString& settingsFile)
@@ -865,6 +879,10 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 	XMMATRIX v = XMLoadFloat4x4(&view);
 	XMMATRIX p = XMLoadFloat4x4(&projection);
 
+	std::string passName = "SolidVoxel";
+	if (m_voxelType == Wireframe)
+		passName = "WireframeVoxel";
+
 	XMMATRIX voxelToGrid = XMMatrixScalingFromVector(XMLoadFloat3(&m_voxelSize));
 	XMMATRIX voxelWorldView = voxelToGrid * w * v;
 	XMMATRIX voxelWorldViewProj = voxelWorldView * p;
@@ -872,7 +890,8 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 	s_shaderVariables.voxelWorldView->SetMatrix(reinterpret_cast<float*>(voxelWorldView.r));
 	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<const int*>(&m_resolution));
 	s_shaderVariables.gridAllSRV->SetResource(m_gridAllSRV);
-	s_effect->GetTechniqueByIndex(0)->GetPassByName("RenderVoxel")->Apply(0, context);
+
+	s_effect->GetTechniqueByIndex(0)->GetPassByName(passName.c_str())->Apply(0, context);
 
 	UINT stride = 0;
 	UINT offset = 0;
@@ -882,10 +901,10 @@ void VoxelGrid::renderVoxel(ID3D11Device* device, ID3D11DeviceContext* context, 
 	context->Draw(m_resolution.x * m_resolution.y * m_resolution.z, 0);
 
 	s_shaderVariables.gridAllSRV->SetResource(nullptr);
-	s_effect->GetTechniqueByIndex(0)->GetPassByName("RenderVoxel")->Apply(0, context);
+	s_effect->GetTechniqueByIndex(0)->GetPassByName(passName.c_str())->Apply(0, context);
 }
 
-void VoxelGrid::renderVelocity(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
+void VoxelGrid::renderGlyphs(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection)
 {
 	XMMATRIX w = XMLoadFloat4x4(&world);
 	XMMATRIX v = XMLoadFloat4x4(&view);
@@ -903,6 +922,10 @@ void VoxelGrid::renderVelocity(ID3D11Device* device, ID3D11DeviceContext* contex
 
 	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
 	s_shaderVariables.voxelSize->SetFloatVector(reinterpret_cast<float*>(&m_voxelSize));
+
+	s_shaderVariables.glyphOrientation->SetInt(m_glyphOrientation);
+	s_shaderVariables.glyphPosition->SetFloat(m_glyphPosition);
+	s_shaderVariables.glyphQuantity->SetIntVector(reinterpret_cast<int*>(&m_glyphQuantity));
 
 	s_shaderVariables.velocityField->SetResource(m_velocitySRV);
 

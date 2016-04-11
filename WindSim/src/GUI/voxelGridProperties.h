@@ -23,7 +23,7 @@ private slots:
 	void disabledChanged(int state);
 
 	// Voxel Grid Properties
-	void showVoxelChanged(int state);
+	void voxelSettingsChanged();
 	void positionChanged();
 	void resolutionChanged();
 	void gridSizeChanged();

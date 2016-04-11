@@ -51,6 +51,8 @@ enum DynamicsMethod { Pressure, Velocity };
 
 enum class Shading{ Smooth, Flat }; // Mesh Shading type
 
+enum VoxelType { Solid, Wireframe };
+
 enum Orientation {XY_PLANE, XZ_PLANE, YZ_PLANE};
 
 enum class VolumeMetric{ Magnitude, Vorticity };
@@ -61,7 +63,7 @@ enum Modification
 	Position           = 0x1,
 	Scaling            = 0x2,
 	Rotation           = 0x4,
-	Visibility         = 0x8, // disabled/renderVoxel
+	Visibility         = 0x8, // disabled/enabled
 	Voxelization       = 0x10, // voxelize
 	Shading            = 0x20,
 	Name               = 0x40,
@@ -76,6 +78,7 @@ enum Modification
 	SmokeSettings      = 0x8000,
 	LineSettings       = 0x10000,
 	VolumeSettings     = 0x20000,
+	VoxelSettings      = 0x40000,
 
 	All = UINT_MAX
 };

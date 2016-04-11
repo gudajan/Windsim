@@ -19,8 +19,6 @@ public:
 	static ID3D11InputLayout* getInputLayout() { return s_inputLayout; };
 
 	Mesh3D(const std::string& path, DX11Renderer* renderer);
-	Mesh3D(Mesh3D&& other);
-	~Mesh3D();
 
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime) override;
 

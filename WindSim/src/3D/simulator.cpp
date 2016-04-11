@@ -47,7 +47,8 @@ QJsonObject Simulator::getSmokeSettingsDefault()
 
 QJsonObject Simulator::getLineSettingsDefault()
 {
-	return QJsonObject{ { "enabled", false }, { "orientation", "Z" }, { "type", "Streakline" }, { "position", 0.5 } };
+	QJsonObject tmp{ { "X", 0.125 }, { "Y", 0.5 }, { "Z", 0.5 } };
+	return QJsonObject{ { "enabled", false }, { "orientation", "Z" }, { "type", "Streakline" }, { "position", tmp } };
 }
 
 Simulator::Simulator(const QString& settingsFile, const XMUINT3& resolution, const XMFLOAT3& voxelSize, DX11Renderer* renderer, QObject* parent)
@@ -166,7 +167,7 @@ void Simulator::updateGrid()
 	if (!checkContinue()) return;
 
 	m_windTunnel.updateGrid(m_cellTypes);
-	OutputDebugStringA("UPDATE EXECUTED!\n");
+	OutputDebugStringA("INFO: Updated celltypes in WindTunnel!\n");
 	emit simUpdated();
 }
 
@@ -229,12 +230,11 @@ void Simulator::changeLineSettings(const QJsonObject& settings)
 
 	m_simLines = settings["enabled"].toBool();
 	m_windTunnel.lineSim(m_simLines ? Line::Enabled : Line::Disabled);
-	QString tmp = settings["orientation"].toString();
-	m_windTunnel.setLineOrientation(tmp == "X" ? Line::X : (tmp == "Y" ? Line::Y : Line::Z));
-	tmp = settings["type"].toString();
-	m_windTunnel.setLineType(tmp == "Streamline" ? Line::StreamLine : Line::StreakLine);
-	m_windTunnel.setLinePosition(static_cast<float>(settings["position"].toDouble()));
-
+	QString ori = settings["orientation"].toString();
+	m_windTunnel.setLineOrientation(ori == "X" ? Line::X : (ori == "Y" ? Line::Y : Line::Z));
+	QString type = settings["type"].toString();
+	m_windTunnel.setLineType(type == "Streamline" ? Line::StreamLine : Line::StreakLine);
+	m_windTunnel.setLinePosition(static_cast<float>(settings["position"].toObject()[ori].toDouble()));
 }
 
 void Simulator::step()
@@ -255,7 +255,7 @@ void Simulator::step()
 
 	timer.start();
 	m_windTunnel.step(static_cast<double>(elapsedTime) * 1.0e-9 ); // nanosec to sec
-	OutputDebugStringA(("Sim step lasted " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+	OutputDebugStringA(("INFO: Simulation step lasted " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 
 	// Wait until the simulation results of last step were processed
 	m_simMutex.lock();
@@ -265,7 +265,7 @@ void Simulator::step()
 
 		timer.restart();
 		m_waitCond.wait(&m_simMutex);
-		OutputDebugStringA(("Sim waited " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		OutputDebugStringA(("INFO: Simulation waited for " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 		m_isWaiting = false;
 	}
 	else

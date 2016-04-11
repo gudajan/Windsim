@@ -13,8 +13,8 @@
   <property name="windowTitle">
    <string>Voxel Grid Properties:</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
+  <layout class="QGridLayout" name="gridLayout_7">
+   <item row="0" column="0">
     <widget class="QFrame" name="fName">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -74,7 +74,7 @@
      </layout>
     </widget>
    </item>
-   <item>
+   <item row="1" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
       <number>0</number>
@@ -85,13 +85,29 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
-        <widget class="QCheckBox" name="cbShowVoxel">
-         <property name="text">
-          <string>Show Voxel</string>
+        <widget class="QGroupBox" name="gbVoxel">
+         <property name="title">
+          <string>Voxel</string>
          </property>
-         <property name="checked">
+         <property name="checkable">
           <bool>true</bool>
          </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="QRadioButton" name="rbSolid">
+            <property name="text">
+             <string>Solid</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="rbWireframe">
+            <property name="text">
+             <string>Wireframe</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>
@@ -1185,7 +1201,7 @@
      </widget>
     </widget>
    </item>
-   <item>
+   <item row="2" column="0">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>

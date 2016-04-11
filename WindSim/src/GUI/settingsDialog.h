@@ -4,7 +4,7 @@
 #include <QDialog>
 #include "ui_settings.h"
 
-#include <WindTunnelLib/WindTunnel.h>
+#include <WindTunnel.h>
 
 class SettingsDialog : public QDialog
 {

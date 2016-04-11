@@ -118,6 +118,16 @@ uint getValue(in float3 posVS, out bool posInGrid)
 	return getVoxelValue(val, n);
 }
 
+uint3 coordFromIndex(uint index)
+{
+	uint3 coord;
+	coord.z = index / (g_vResolution.x * g_vResolution.y);
+	coord.y = (index - coord.z * g_vResolution.x * g_vResolution.y) / g_vResolution.x;
+	coord.x = index - g_vResolution.x * (coord.y + coord.z * g_vResolution.y);
+
+	return coord;
+}
+
 // =============================================================================
 // COMPUTE SHADER
 // =============================================================================
@@ -435,10 +445,7 @@ void gsSolidCube(point uint input[1] : VertexID, inout TriangleStream<PSCubeIn> 
 {
 	uint index = input[0];
 
-	uint3 gridPos;
-	gridPos.z = index / (g_vResolution.x * g_vResolution.y);
-	gridPos.y = (index - gridPos.z * g_vResolution.x * g_vResolution.y) / g_vResolution.x;
-	gridPos.x = index - g_vResolution.x * (gridPos.y + gridPos.z * g_vResolution.y);
+	uint3 gridPos = coordFromIndex(index);
 
 	uint3 cellId = uint3(gridPos.x / 4, gridPos.yz);
 	uint n = gridPos.x - cellId.x * 4;
@@ -471,6 +478,43 @@ void gsSolidCube(point uint input[1] : VertexID, inout TriangleStream<PSCubeIn> 
 		stream.Append(v);
 		v.pos = pos[tri.z];
 		v.posView = posView[tri.z];
+		stream.Append(v);
+
+		stream.RestartStrip();
+	}
+}
+
+[maxvertexcount(24)]
+void gsWireframeCube(point uint input[1] : VertexID, inout LineStream<PSColIn> stream)
+{
+	uint index = input[0];
+
+	uint3 gridPos = coordFromIndex(index);
+
+	uint3 cellId = uint3(gridPos.x / 4, gridPos.yz);
+		uint n = gridPos.x - cellId.x * 4;
+
+	uint voxel = getVoxelValue(g_gridAllSRV[cellId], n);
+
+	if (voxel != CELL_TYPE_SOLID_BOUNDARY)
+		return;
+
+	float4 pos[8];
+	for (int i = 0; i < 8; ++i)
+	{
+		pos[i] = mul(float4 ((gridPos + boxPos[i]), 1.0f), g_mVoxelWorldViewProj);
+	}
+
+	PSColIn v = (PSColIn)0;
+	v.col = float3(0.2, 0.2, 0.2);
+
+	for (int j = 0; j < 12; ++j)
+	{
+		int2 li = boxLines[j];
+
+		v.pos = pos[li.x];
+		stream.Append(v);
+		v.pos = pos[li.y];
 		stream.Append(v);
 
 		stream.RestartStrip();
@@ -538,7 +582,7 @@ float4 psSolidCube(PSCubeIn frag) : SV_Target
 	float3 n = normalize(cross(ddx_coarse(frag.posView), ddy_coarse(frag.posView)));
 
 	if (frag.type == CELL_TYPE_SOLID_BOUNDARY)
-		col = float3(0.99f, 0.2f, 0.0f);
+		col = float3(0.8f, 0.1f, 0.0f);
 
 	return BlinnPhongIllumination(n, -normalize(frag.posView), col, 0.3f, 0.6f, 0.1f, 4);
 }
@@ -580,12 +624,22 @@ technique11 Voxel
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
 
-	pass RenderVoxel
+	pass SolidVoxel
 	{
 		SetVertexShader(CompileShader(vs_5_0, vsPassId()));
 		SetGeometryShader(CompileShader(gs_5_0, gsSolidCube()));
 		SetPixelShader(CompileShader(ps_5_0, psSolidCube()));
 		SetRasterizerState(CullBack);
+		SetDepthStencilState(DepthDefault, 0);
+		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+
+	pass WireframeVoxel
+	{
+		SetVertexShader(CompileShader(vs_5_0, vsPassId()));
+		SetGeometryShader(CompileShader(gs_5_0, gsWireframeCube()));
+		SetPixelShader(CompileShader(ps_5_0, psCol()));
+		SetRasterizerState(CullNone);
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
