@@ -126,7 +126,9 @@ static void storeFile(const std::string& path, const std::string& data)
 	{
 		out.write(data.data(), data.size());
 		out.close();
+		return;
 	}
+
 	throw std::runtime_error("Failed to open the file '" + path + "' for writing");
 }
 

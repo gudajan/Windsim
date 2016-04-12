@@ -3,8 +3,9 @@
 
 #include <string>
 
-#include "libini.hpp"
 #include "common.h"
+
+#include "libini.hpp"
 
 struct Settings
 {
@@ -33,6 +34,7 @@ struct Settings
 		int device;
 		int platform;
 		bool showInfo;
+		bool printInfo;
 	} opencl;
 
 	struct Mesh
@@ -49,6 +51,12 @@ struct Settings
 			int g;
 			int b;
 		} hc;
+		struct SelectionColor
+		{
+			int r;
+			int g;
+			int b;
+		} sc;
 	} mesh;
 
 	struct Grid
@@ -58,19 +66,13 @@ struct Settings
 		float col; // grey color [0.0, 1.0]
 	} grid;
 
-	struct General
+	struct Transformation
 	{
-		struct SelectionColor
-		{
-			int r;
-			int g;
-			int b;
-		} sc;
 		// Step size when transforming in the 3D view with steps
 		float translationStep;
 		float scalingStep;
 		float rotationStep;
-	} gen;
+	} trans;
 
 	struct Dynamics
 	{
@@ -84,6 +86,7 @@ struct Settings
 
 extern Settings conf;
 extern void loadIni(const std::string& path);
+extern void storeIni(const std::string& path);
 extern const std::string& getIniVal(libini::ini_model& map, const std::string& category, const std::string& value, const std::string& default);
 
 #endif

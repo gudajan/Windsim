@@ -95,7 +95,7 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 		if (m_hovered)
 			m_mesh.setShaderVariables(m_flatShading, PackedVector::XMCOLOR(conf.mesh.hc.r / 255.0f, conf.mesh.hc.g / 255.0f, conf.mesh.hc.b / 255.0f, 1.0f));
 		else if (m_selected)
-			m_mesh.setShaderVariables(m_flatShading, PackedVector::XMCOLOR(conf.gen.sc.r / 255.0f, conf.gen.sc.g / 255.0f, conf.gen.sc.b / 255.0f, 1.0f));
+			m_mesh.setShaderVariables(m_flatShading, PackedVector::XMCOLOR(conf.mesh.sc.r / 255.0f, conf.mesh.sc.g / 255.0f, conf.mesh.sc.b / 255.0f, 1.0f));
 		else
 			m_mesh.setShaderVariables(m_flatShading, m_color);
 

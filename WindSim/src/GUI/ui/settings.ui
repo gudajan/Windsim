@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>307</width>
-    <height>313</height>
+    <width>301</width>
+    <height>339</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -93,9 +93,6 @@
       <string>OpenCL</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="2" column="1">
-       <widget class="QComboBox" name="cmbCLPlatform"/>
-      </item>
       <item row="2" column="0">
        <widget class="QLabel" name="lPlatform">
         <property name="text">
@@ -113,6 +110,16 @@
         </property>
        </widget>
       </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="cmbCLPlatform"/>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="pbInfo">
+        <property name="text">
+         <string>Show system info</string>
+        </property>
+       </widget>
+      </item>
       <item row="4" column="0">
        <widget class="QLabel" name="lDevice">
         <property name="text">
@@ -127,10 +134,13 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QPushButton" name="pbInfo">
+      <item row="6" column="0" colspan="2">
+       <widget class="QCheckBox" name="cbPrintCLInfo">
+        <property name="toolTip">
+         <string>The message log is stored on disk when the application is closed</string>
+        </property>
         <property name="text">
-         <string>Show system info</string>
+         <string>Print OpenCL performance info to message log</string>
         </property>
        </widget>
       </item>

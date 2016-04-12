@@ -407,8 +407,8 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 
 	if (mods == Qt::ControlModifier)
 	{
-		float stepInv = 1.0f / conf.gen.translationStep;
-		float step = conf.gen.translationStep;
+		float stepInv = 1.0f / conf.trans.translationStep;
+		float step = conf.trans.translationStep;
 		moveVec = XMVectorMultiply(moveVec, XMVectorSet(stepInv, stepInv, stepInv, stepInv));
 		moveVec = XMVectorRound(moveVec);
 		moveVec = XMVectorMultiply(moveVec, XMVectorSet(step, step, step, step));
@@ -436,8 +436,8 @@ void TransformMachine::scale(QPoint currentMousePos, Qt::KeyboardModifiers mods)
 
 	if (mods == Qt::ControlModifier)
 	{
-		float stepInv = 1.0f / conf.gen.scalingStep;
-		float step = conf.gen.scalingStep;
+		float stepInv = 1.0f / conf.trans.scalingStep;
+		float step = conf.trans.scalingStep;
 		scaleFactor *= stepInv;
 		scaleFactor = std::roundf(scaleFactor);
 		scaleFactor *= step;
@@ -508,8 +508,8 @@ void TransformMachine::rotate(QPoint currentMousePos, Qt::KeyboardModifiers mods
 
 	if (mods == Qt::ControlModifier)
 	{
-		float stepInv = 1.0f / conf.gen.rotationStep;
-		float step = conf.gen.rotationStep;
+		float stepInv = 1.0f / conf.trans.rotationStep;
+		float step = conf.trans.rotationStep;
 		angle *= stepInv;
 		angle = std::roundf(angle);
 		angle *= step;

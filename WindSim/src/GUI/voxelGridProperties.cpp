@@ -4,7 +4,7 @@
 #include <QMessageBox>
 
 VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent)
-	: QDialog(parent),
+	: QDialog(parent, Qt::WindowTitleHint | Qt::WindowCloseButtonHint),
 	m_properties(properties)
 {
 	ui.setupUi(this);
@@ -139,10 +139,23 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		const QJsonObject& gs = properties.find("glyphs")->toObject();
 		ui.gbGlyph->setChecked(gs["enabled"].toBool());
 		Orientation o = static_cast<Orientation>(gs["orientation"].toInt());
-		if (o == XY_PLANE) ui.rbOriZ->setChecked(true);
-		else if (o == XZ_PLANE) ui.rbOriY->setChecked(true);
-		else ui.rbOriX->setChecked(true);
-		setSliderValue(ui.hsPos, gs["position"].toDouble());
+		QString key = "";
+		if (o == XY_PLANE)
+		{
+			ui.rbOriZ->setChecked(true);
+			key = "XY";
+		}
+		else if (o == XZ_PLANE)
+		{
+			ui.rbOriY->setChecked(true);
+			key = "XZ";
+		}
+		else
+		{
+			ui.rbOriX->setChecked(true);
+			key = "YZ";
+		}
+		setSliderValue(ui.hsPos, gs["position"].toObject()[key].toDouble());
 		const QJsonObject& quant = gs["quantity"].toObject();
 		ui.sbOriX->setValue(quant["x"].toInt());
 		ui.sbOriY->setValue(quant["y"].toInt());
@@ -268,12 +281,28 @@ void VoxelGridProperties::gridSizeChanged()
 
 void VoxelGridProperties::glyphSettingsChanged()
 {
+	QJsonObject old = m_properties["glyphs"].toObject();
+	QJsonObject position = old["position"].toObject();
+	Orientation oldOri = Orientation(old["orientation"].toInt());
+	Orientation newOri = ui.rbOriX->isChecked() ? YZ_PLANE : ui.rbOriY->isChecked() ? XZ_PLANE : XY_PLANE;
+	QString oriKey = ui.rbOriX->isChecked() ? "YZ" : ui.rbOriY->isChecked() ? "XZ" : "XY";
+	if (oldOri != newOri) // Change position to one of new orientation
+	{
+		ui.hsPos->blockSignals(true);
+		setSliderValue(ui.hsPos, position[oriKey].toDouble());
+		ui.hsPos->blockSignals(false);
+	}
+	else // Update position for current orientation
+	{
+		position[oriKey] = sliderFloatValue(ui.hsPos);
+	}
+
 	QJsonObject quantity{ { "x", ui.sbOriX->value() }, { "y", ui.sbOriY->value() } };
 	QJsonObject gs
 	{
 		{ "enabled", ui.gbGlyph->isChecked() },
 		{ "orientation", ui.rbOriX->isChecked() ? YZ_PLANE : ui.rbOriY->isChecked() ? XZ_PLANE : XY_PLANE },
-		{ "position", sliderFloatValue(ui.hsPos) }, // Assume minimum slider value is zero -> transform to [0 - 1]
+		{ "position", position },
 		{ "quantity", quantity }
 	};
 	m_properties["glyphs"] = gs;
@@ -339,7 +368,9 @@ void VoxelGridProperties::lineSettingsChanged()
 	QString ori = old["orientation"].toString();
 	if (ui.cbLineOri->currentText() != ori)
 	{
+		ui.hsLinePos->blockSignals(true);
 		setSliderValue(ui.hsLinePos, position[ui.cbLineOri->currentText()].toDouble());
+		ui.hsLinePos->blockSignals(false);
 	}
 	else
 	{

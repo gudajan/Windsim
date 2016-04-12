@@ -153,8 +153,12 @@ void ObjectContainer::modifyCmd(const QJsonObject& data, Modifications mod)
 {
 	ObjectItem* item = getItem(data["id"].toInt());
 
-	QUndoCommand* cmd = new ModifyObjectCmd(item->data().toJsonObject(), data, item, mod);
-	g_undoStack.push(cmd);
+	QJsonObject oldData = item->data().toJsonObject();
+	if (oldData != data)
+	{
+		QUndoCommand* cmd = new ModifyObjectCmd(oldData, data, item, mod);
+		g_undoStack.push(cmd);
+	}
 }
 
 void ObjectContainer::rendererModification(std::vector<QJsonObject> data)

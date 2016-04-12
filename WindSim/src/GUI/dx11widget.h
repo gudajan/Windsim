@@ -62,10 +62,15 @@ signals:
 	void reloadShadersTriggered();
 	void settingsChanged();
 
+private slots:
+	void enableInfoPrint() { m_printInfo = true; };
+
 private:
 	QThread m_renderThread;
 	QPointer<DX11Renderer> m_renderer;
 	TextOverlay* m_overlay;
+
+	bool m_printInfo;
 
 };
 

@@ -180,7 +180,8 @@ QJsonObject VoxelGrid::getVoxelSettingsDefault()
 QJsonObject VoxelGrid::getGlyphSettingsDefault(XMUINT3 resolution)
 {
 	QJsonObject tmp{ { "x", static_cast<int>(resolution.x) }, { "y", static_cast<int>(resolution.y) } };
-	return QJsonObject{ { "enabled", false }, { "orientation", XY_PLANE }, { "position", 0.5 }, { "quantity", tmp } };
+	QJsonObject pos{ { "XY", 0.5 }, { "XZ", 0.5 }, { "YZ", 0.5 } };
+	return QJsonObject{ { "enabled", false }, { "orientation", XY_PLANE }, { "position", pos }, { "quantity", tmp } };
 }
 
 HRESULT VoxelGrid::create(ID3D11Device* device, bool clearClientBuffers)
@@ -296,8 +297,8 @@ void VoxelGrid::release()
 
 void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& world, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, double elapsedTime)
 {
-	QElapsedTimer timer;
-	timer.start();
+	//QElapsedTimer timer;
+	//timer.start();
 
 	// Process simulation results
 	if (m_simAvailable && m_processSimResults && m_dynamicsCounter == -1)
@@ -369,7 +370,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	if (m_renderGlyphs)
 		renderGlyphs(device, context, world, view, projection);
 
-	OutputDebugStringA(("INFO: VoxelGrid render lasted " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+	//OutputDebugStringA(("INFO: VoxelGrid render lasted " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 }
 
 void VoxelGrid::renderVolume(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, double elapsedTime)
@@ -431,7 +432,8 @@ void VoxelGrid::setGlyphSettings(const QJsonObject& settings)
 {
 	m_renderGlyphs = settings["enabled"].toBool();
 	m_glyphOrientation = Orientation(settings["orientation"].toInt());
-	m_glyphPosition = settings["position"].toDouble();
+	QString key = m_glyphOrientation == XY_PLANE ? "XY" : m_glyphOrientation == XZ_PLANE ? "XZ" : "YZ";
+	m_glyphPosition = settings["position"].toObject()[key].toDouble();
 	QJsonObject json = settings["quantity"].toObject();
 	m_glyphQuantity = XMUINT2(json["x"].toInt(), json["y"].toInt());
 }

@@ -6,7 +6,7 @@
 #include <QMessageBox>
 
 VoxelGridInputDialog::VoxelGridInputDialog(QWidget* parent)
-	: QDialog(parent),
+	: QDialog(parent, Qt::WindowTitleHint | Qt::WindowCloseButtonHint),
 	ui()
 {
 	ui.setupUi(this);

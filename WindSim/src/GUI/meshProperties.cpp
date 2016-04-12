@@ -4,7 +4,7 @@
 #include <QColorDialog>
 
 MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
-	: QDialog(parent),
+	: QDialog(parent, Qt::WindowTitleHint | Qt::WindowCloseButtonHint),
 	m_properties(properties)
 {
 	ui.setupUi(this);

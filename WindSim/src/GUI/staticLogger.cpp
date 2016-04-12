@@ -87,3 +87,10 @@ void StaticLogger::logit(const QString& msg)
 	m_log->appendPlainText(msg);
 	m_log->repaint();
 }
+
+void StaticLogger::store(const QString& path)
+{
+	QFile file(path);
+	file.open(QFile::WriteOnly);
+	file.write(m_log->toPlainText().toUtf8());
+}

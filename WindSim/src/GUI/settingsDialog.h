@@ -25,6 +25,7 @@ private slots:
 	void plaformChanged();
 	void deviceChanged();
 	void displayCLInfoToggled(bool b);
+	void printCLInfoToggled(bool b);
 
 	void showOpenCLInfo();
 

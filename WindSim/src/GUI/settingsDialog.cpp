@@ -8,7 +8,7 @@
 #include <sstream>
 
 SettingsDialog::SettingsDialog(QWidget* parent)
-	: QDialog(parent)
+	: QDialog(parent, Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 	, m_openCLInfo(wtl::getOpenCLInfo())
 {
 	ui.setupUi(this);
@@ -28,6 +28,7 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 	connect(ui.cmbCLDevice, SIGNAL(currentIndexChanged(int)), this, SLOT(deviceChanged()));
 	connect(ui.pbInfo, SIGNAL(clicked()), this, SLOT(showOpenCLInfo()));
 	connect(ui.cbDisplayCLInfo, SIGNAL(toggled(bool)), this, SLOT(displayCLInfoToggled(bool)));
+	connect(ui.cbPrintCLInfo, SIGNAL(toggled(bool)), this, SLOT(printCLInfoToggled(bool)));
 
 	connect(ui.buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(buttonClicked(QAbstractButton*)));
 
@@ -53,11 +54,15 @@ void SettingsDialog::updateSettings()
 		ui.rbFirstPerson->setChecked(true);
 
 	ui.cbShowDynTrans->setChecked(conf.dyn.showDynDuringMod);
+	ui.cmbCalcMethod->setCurrentIndex(conf.dyn.method);
 
 	fillOpenCLPlatforms();
 	ui.cmbCLPlatform->setCurrentIndex(conf.opencl.platform);
 	fillOpenCLDevices();
 	ui.cmbCLDevice->setCurrentIndex(conf.opencl.device);
+
+	ui.cbDisplayCLInfo->setChecked(conf.opencl.showInfo);
+	ui.cbPrintCLInfo->setChecked(conf.opencl.printInfo);
 }
 
 void SettingsDialog::cameraTypeToggled(bool b)
@@ -66,14 +71,12 @@ void SettingsDialog::cameraTypeToggled(bool b)
 
 	conf.cam.type = ui.rbModelView->isChecked() ? ModelView : FirstPerson;
 
-	emit settingsChanged();
+	emit settingsChanged(); // Change camera type immediately
 }
 
 void SettingsDialog::showDynTransToggled(bool b)
 {
 	conf.dyn.showDynDuringMod = b;
-
-	emit settingsChanged();
 }
 
 void SettingsDialog::dynCalcMethodChanged(const QString& text)
@@ -81,8 +84,6 @@ void SettingsDialog::dynCalcMethodChanged(const QString& text)
 	DynamicsMethod method = text == "Pressure" ? Pressure : Velocity;
 
 	conf.dyn.method = method;
-
-	emit settingsChanged();
 }
 
 void SettingsDialog::plaformChanged()
@@ -103,7 +104,12 @@ void SettingsDialog::displayCLInfoToggled(bool b)
 {
 	conf.opencl.showInfo = b;
 
-	emit settingsChanged();
+	emit settingsChanged(); // Enable text overlay
+}
+
+void SettingsDialog::printCLInfoToggled(bool b)
+{
+	conf.opencl.printInfo = b;
 }
 
 void SettingsDialog::showOpenCLInfo()
@@ -154,7 +160,9 @@ void SettingsDialog::buttonClicked(QAbstractButton* button)
 
 void SettingsDialog::fillOpenCLPlatforms()
 {
+	ui.cmbCLPlatform->blockSignals(true);
 	ui.cmbCLPlatform->clear();
+	ui.cmbCLPlatform->blockSignals(false);
 	int i = 0;
 	for (const auto& platform : m_openCLInfo)
 	{

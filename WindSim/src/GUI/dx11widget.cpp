@@ -12,8 +12,10 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	: QWidget(parent, flags),
 	m_renderThread(),
 	m_renderer(nullptr),
-	m_overlay(new TextOverlay(this))
+	m_overlay(new TextOverlay(this)),
+	m_printInfo(false)
 {
+	m_overlay->showText(conf.opencl.showInfo);
 	m_overlay->show();
 
 	// Create DirectX Renderer on our widget
@@ -61,6 +63,10 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	setFocus();
 	setMouseTracking(true);
 
+	QTimer* timer = new QTimer(this);
+	connect(timer, SIGNAL(timeout()), this, SLOT(enableInfoPrint()));
+	timer->start(1000);
+
 	m_renderThread.start();
 }
 
@@ -104,6 +110,13 @@ void DX11Widget::drawText(const QString& str)
 	{
 		m_overlay->setText(str);
 		m_overlay->repaint();
+	}
+	if (conf.opencl.printInfo && m_printInfo)
+	{
+		QStringList s = str.split("\n");
+		s.removeFirst();
+		StaticLogger::logit(s.join("\n"));
+		m_printInfo = false;
 	}
 }
 

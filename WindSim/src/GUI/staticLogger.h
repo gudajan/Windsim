@@ -25,6 +25,8 @@ public:
 	static void logging(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 	static void logit(const QString& msg);
 
+	static void store(const QString& path);
+
 private:
 	static QPointer<MessageLog> m_log;
 

@@ -101,6 +101,21 @@ void WindSim::closeEvent(QCloseEvent* event)
 {
 	if (maybeSave())
 	{
+		bool iniFileStored = true;
+		try
+		{
+			storeIni(m_iniFilePath.toStdString());
+		}
+		catch (std::runtime_error& e)
+		{
+			StaticLogger::logit(QString::fromStdString("WARNING: Settings not stored in ini-file '" + m_iniFilePath.toStdString() + "'. " + e.what()));
+			iniFileStored = false;
+		}
+		if (iniFileStored)
+			StaticLogger::logit("INFO: Settings stored in ini-file '" + m_iniFilePath + "'.");
+
+		StaticLogger::store(QDir(QCoreApplication::applicationDirPath()).filePath("messages.log"));
+
 		ui.dx11Viewer->cleanUp();
 		g_undoStack.clear();
 		event->accept();
@@ -117,10 +132,12 @@ void WindSim::keyPressEvent(QKeyEvent* event)
 	{
 		reloadIni();
 	}
+#ifdef _DEBUG
 	else if (event->key() == Qt::Key_F4)
 	{
 		ui.dx11Viewer->reloadShaders();
 	}
+#endif
 	return QMainWindow::keyPressEvent(event);
 }
 
