@@ -555,7 +555,7 @@
      </widget>
      <widget class="QWidget" name="tabWindTunnel">
       <attribute name="title">
-       <string>Visualization</string>
+       <string>Flow visualization</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>

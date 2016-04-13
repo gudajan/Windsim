@@ -13,20 +13,21 @@ using namespace DirectX;
 using namespace wtl;
 
 QMutex Simulator::m_openCLMutex;
-int Simulator::m_clDevice = -1;
-int Simulator::m_clPlatform = -1;
+int Simulator::m_clDevice = -2;
+int Simulator::m_clPlatform = -2;
 
 bool Simulator::initOpenCLNecessary()
 {
 	return (conf.opencl.device != m_clDevice || conf.opencl.platform != m_clPlatform);
 }
 
-void Simulator::initOpenCL()
+bool Simulator::initOpenCL()
 {
 	m_clDevice = conf.opencl.device;
 	m_clPlatform = conf.opencl.platform;
 	WindTunnel::shutdownOpenCL();
 	WindTunnel::initOpenCL(m_clDevice, m_clPlatform);
+	return true;
 }
 
 void Simulator::shutdownOpenCL()

@@ -1,11 +1,15 @@
 #include "dx11widget.h"
 #include "staticLogger.h"
 #include "settings.h"
+#include "../3D/simulator.h"
+
+#include "settingsDialog.h"
 
 #include <QResizeEvent>
 #include <QApplication>
 #include <QMessageBox>
 #include <QPainter>
+#include <QInputDialog>
 
 
 DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
@@ -17,6 +21,42 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 {
 	m_overlay->showText(conf.opencl.showInfo);
 	m_overlay->show();
+
+	if (Simulator::initOpenCLNecessary())
+	{
+		static auto info = wtl::getOpenCLInfo();
+		if (info.size() == 0 || std::accumulate(info.begin(), info.end(), 0, [](size_t v, const std::pair<wtl::description, std::vector<wtl::description>>& e) { return v + e.second.size(); }) == 0)
+		{
+			QMessageBox::critical(parent, "OpenCL Error", "No OpenCL platforms and devices available! Install the necessary SDK's by Intel or AMD!");
+			throw std::runtime_error("ERROR: Failed to initialize OpenCL!");
+		}
+		if (conf.opencl.device < 0 || conf.opencl.platform < 0)
+		{
+			QMessageBox::information(parent, "OpenCL Information", "Please enter an OpenCL platform and device in the next dialogs!");
+			QStringList platforms;
+			for (const auto& p : info)
+				platforms << QString::fromStdString(p.first.at("name"));
+			bool ok;
+			QString platform = QInputDialog::getItem(parent, "Please choose a OpenCL platform", "OpenCL Platform:", platforms, 0, false, &ok);
+			if (!ok)
+				throw std::runtime_error("ERROR: Failed to initialize OpenCL!");
+
+			int pid = std::distance(platforms.begin(), std::find(platforms.begin(), platforms.end(), platform));
+			QStringList devices;
+			for (const auto& d : info[pid].second)
+				devices << QString::fromStdString(d.at("name") + " " + d.at("vendor"));
+			QString device = QInputDialog::getItem(parent, "Please choose a OpenCL device", "OpenCL Device:", devices, 0, false, &ok);
+			if (!ok)
+				throw std::runtime_error("ERROR: Failed to initialize OpenCL!");
+
+			int did = std::distance(devices.begin(), std::find(devices.begin(), devices.end(), device));
+
+			conf.opencl.platform = pid;
+			conf.opencl.device = did;
+		}
+		Simulator::initOpenCL();
+	}
+
 
 	// Create DirectX Renderer on our widget
 	// Parent MUST NOT be 'this', because we want to move this object to another thread, which is not possible for child objects

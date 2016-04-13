@@ -23,7 +23,7 @@ class Simulator : public QObject
 	Q_OBJECT
 public:
 	static bool initOpenCLNecessary();
-	static void initOpenCL();
+	static bool initOpenCL();
 	static void shutdownOpenCL();
 	static QMutex& mutex();
 

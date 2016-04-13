@@ -70,9 +70,6 @@ DX11Renderer::~DX11Renderer()
 
 bool DX11Renderer::init()
 {
-	if (Simulator::initOpenCLNecessary())
-		Simulator::initOpenCL();
-
 	unsigned int createDeviceFlags = 0;
 
 #ifndef NDEBUG

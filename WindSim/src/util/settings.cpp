@@ -11,8 +11,8 @@ Settings conf = {
 	},
 	// OpenCL
 	{
-		0, // device
-		0, // platform
+		-1, // device
+		-1, // platform
 		false, // showInfo
 		false // printInfo
 	},
