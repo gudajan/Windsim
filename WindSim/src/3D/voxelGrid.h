@@ -146,6 +146,7 @@ private:
 	bool m_updateGrid; // Indicates that the simulation should be updated after next voxelization
 	bool m_processSimResults; // Indicate that we may copy the data from the local simulation vectors to the GPU
 	bool m_simAvailable;
+	bool m_simRunning;
 	int m_dynamicsCounter;
 	int m_voxelizationCounter;
 

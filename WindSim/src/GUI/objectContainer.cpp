@@ -237,8 +237,8 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		object.insert("id", s_id);
 		m_ids.insert(s_id++);
 	}
-	if (!object.contains("disabled"))
-		object["disabled"] = Qt::Unchecked;
+	if (!object.contains("enabled"))
+		object["enabled"] = true;
 
 	if (type == ObjectType::Mesh)
 	{
@@ -250,26 +250,26 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		}
 
 		// Insert all non-existent keys for meshes with default values
-		if (!object.contains("Position"))
-			object["Position"] = QJsonObject{ { "x", 0.0 }, { "y", 0.0 }, { "z", 0.0 } };
-		if (!object.contains("Scaling"))
-			object["Scaling"] = QJsonObject{ { "x", 1.0 }, { "y", 1.0 }, { "z", 1.0 } };
-		if (!object.contains("Rotation"))
-			object["Rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
-		if (!object.contains("Shading"))
-			object["Shading"] = "Flat";
-		if (!object.contains("Color"))
-			object["Color"] = QJsonObject{ { "r", conf.mesh.dc.r }, { "g", conf.mesh.dc.g }, { "b", conf.mesh.dc.b } };
+		if (!object.contains("position"))
+			object["position"] = QJsonObject{ { "x", 0.0 }, { "y", 0.0 }, { "z", 0.0 } };
+		if (!object.contains("scaling"))
+			object["scaling"] = QJsonObject{ { "x", 1.0 }, { "y", 1.0 }, { "z", 1.0 } };
+		if (!object.contains("rotation"))
+			object["rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
+		if (!object.contains("shading"))
+			object["shading"] = "Flat";
+		if (!object.contains("color"))
+			object["color"] = QJsonObject{ { "r", conf.mesh.dc.r }, { "g", conf.mesh.dc.g }, { "b", conf.mesh.dc.b } };
 		if (!object.contains("voxelize"))
-			object["voxelize"] = Qt::Checked;
+			object["voxelize"] = true;
 		if (!object.contains("dynamics"))
-			object["dynamics"] = Qt::Checked;
+			object["dynamics"] = true;
 		if (!object.contains("density"))
 			object["density"] = 2712.0; // Density of aluminium, Iron: 7850, Steel: 7850, Brass 60/40: 8520
 		if (!object.contains("localRotAxis"))
-			object["localRotAxis"] = QJsonObject{ { "enabled", Qt::Unchecked }, { "x", 0.0f }, { "y", 0.0f }, { "z", 0.0f } };
+			object["localRotAxis"] = QJsonObject{ { "enabled", false }, { "x", 0.0f }, { "y", 0.0f }, { "z", 0.0f } };
 		if (!object.contains("showAccelArrow"))
-			object["showAccelArrow"] = Qt::Unchecked;
+			object["showAccelArrow"] = false;
 	}
 	if (type == ObjectType::VoxelGrid)
 	{
@@ -286,12 +286,12 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		}
 
 		// Insert all non-existent keys for voxel grids with default values
-		if (!object.contains("Position"))
-			object["Position"] = QJsonObject{ { "x", 0.0 }, { "y", 0.0 }, { "z", 0.0 } };
-		if (!object.contains("Scaling"))
-			object["Scaling"] = QJsonObject{ { "x", 1.0 }, { "y", 1.0 }, { "z", 1.0 } };
-		if (!object.contains("Rotation"))
-			object["Rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
+		if (!object.contains("position"))
+			object["position"] = QJsonObject{ { "x", 0.0 }, { "y", 0.0 }, { "z", 0.0 } };
+		if (!object.contains("scaling"))
+			object["saling"] = QJsonObject{ { "x", 1.0 }, { "y", 1.0 }, { "z", 1.0 } };
+		if (!object.contains("rotation"))
+			object["rotation"] = QJsonObject{ { "ax", 0.0 }, { "ay", 1.0 }, { "az", 0.0 }, { "angle", 0.0 } };
 		if (!object.contains("voxel"))
 			object["voxel"] = VoxelGrid::getVoxelSettingsDefault();
 		if (!object.contains("glyphs"))
@@ -309,7 +309,7 @@ bool ObjectContainer::verifyData(QJsonObject& object)
 		if (!object.contains("windTunnelSettings"))
 			object["windTunnelSettings"] = ""; // Simulation uses default values
 		if (!object.contains("runSimulation"))
-			object["runSimulation"] = Qt::Unchecked;
+			object["runSimulation"] = false;
 		if (!object.contains("smoke"))
 		{
 			object["smoke"] = Simulator::getSmokeSettingsDefault();

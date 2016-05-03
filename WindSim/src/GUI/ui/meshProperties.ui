@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>382</width>
-    <height>498</height>
+    <height>521</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -92,12 +92,15 @@
        <number>9</number>
       </property>
       <item>
-       <widget class="QCheckBox" name="cbDisabled">
+       <widget class="QCheckBox" name="cbEnabled">
         <property name="layoutDirection">
          <enum>Qt::LeftToRight</enum>
         </property>
         <property name="text">
-         <string>Disabled</string>
+         <string>Enabled</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

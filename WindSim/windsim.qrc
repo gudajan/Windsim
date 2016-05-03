@@ -1,5 +1,15 @@
 <RCC>
   <qresource prefix="WindSim">
-    <file>link.svg</file>
+    <file>icons/settings_alternative.svg</file>
+    <file>icons/closeProject.ico</file>
+    <file>icons/newProject.ico</file>
+    <file>icons/openProject.ico</file>
+    <file>icons/saveProject.svg</file>
+    <file>icons/settings.svg</file>
+    <file>icons/removeObject.svg</file>
+    <file>icons/createVoxelGrid.svg</file>
+    <file>icons/createSky.svg</file>
+    <file>icons/createMesh.svg</file>
+    <file>icons/createAxes.svg</file>
   </qresource>
 </RCC>

@@ -21,7 +21,7 @@ public slots:
 
 private slots:
 	void nameChanged(const QString & text);
-	void disabledChanged(int state);
+	void enabledChanged(int state);
 	void voxelizeChanged(int state);
 	void dynamicsChanged(int state);
 	void positionChanged();

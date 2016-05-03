@@ -3,7 +3,7 @@
 using namespace DirectX;
 
 AxesActor::AxesActor(Axes& axes, int id)
-	: Actor(ObjectType::Axes, id),
+	: Actor(ObjectType::CoordinateAxes, id),
 	m_axes(axes)
 {
 }

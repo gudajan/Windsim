@@ -65,7 +65,7 @@ private:
 	QString getName(const QString& title, const QString& label, const QString& defaultName);
 
 	void projectActionsEnable(bool newAct, bool open, bool close, bool save, bool saveAs);
-	void createActionEnable(bool mesh, bool grid);
+	void createActionEnable(bool enabled);
 	void removeActionEnable(bool enabled);
 
 	Ui::WindSimClass ui;

@@ -48,11 +48,6 @@ struct VSMeshIn
 	float3 normal : NORMAL;
 };
 
-struct PSGridBoxIn
-{
-	float4 pos : SV_Position;
-};
-
 struct PSVoxelIn
 {
 	float4 pos : SV_Position;
@@ -93,11 +88,13 @@ bool inCellGrid(in int3 pos)
 	return all(pos >= int3(0, 0, 0)) && all(pos < int3(g_vResolution.x / 4, g_vResolution.yz));
 }
 
+// Get voxel value from cell value cell
 uint getVoxelValue(in uint cell, in uint index)
 {
 	return (cell >> (8 * index)) & 0xff; // shift n-th voxel to front byte
 }
 
+// Set voxel value within cell value cell
 uint setVoxelValue(in uint cell, in uint voxel, in uint index)
 {
 	uint temp = 0xff << 8 * index;
@@ -278,10 +275,11 @@ void csCellTypeSolidBoundary(uint3 threadID : SV_DispatchThreadID)
 // =============================================================================
 // VERTEX SHADER
 // =============================================================================
-PSGridBoxIn vsGridBox(VSGridIn vsIn)
+PSColIn vsGridBox(VSGridIn vsIn)
 {
-	PSGridBoxIn vsOut;
+	PSColIn vsOut;
 	vsOut.pos = mul(float4(vsIn.pos, 1.0f), g_mWorldViewProj);
+	vsOut.col = float3(0.0f, 0.0f, 0.0f);
 	return vsOut;
 }
 
@@ -524,11 +522,6 @@ void gsWireframeCube(point uint input[1] : VertexID, inout LineStream<PSColIn> s
 // =============================================================================
 // PIXEL SHADER
 // =============================================================================
-float4 psGridBox(PSGridBoxIn psIn) : SV_Target
-{
-	return float4(0.0f, 0.0f, 0.0f, 1.0f);
-}
-
 void psVoxelize(PSVoxelIn psIn)
 {
 	// Voxelization performed along x-axis
@@ -618,7 +611,7 @@ technique11 Voxel
 	{
 		SetVertexShader(CompileShader(vs_5_0, vsGridBox()));
 		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0, psGridBox()));
+		SetPixelShader(CompileShader(ps_5_0, psCol()));
 		SetRasterizerState(CullNone);
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);

@@ -36,23 +36,15 @@ bool Project::open(ObjectContainer& container, const QString& path)
 	QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
 	f.close();
 
-	// JsonObject with 'objects' array
-	QJsonObject json = doc.object();
-	auto it = json.find("objects");
-	if (it == json.end())
-	{
-		StaticLogger::logit("ERROR: No objects present within the project file '" + path + "'!");
-		return false;
-	}
-
-	if (!it->isArray())
+	if (!doc.isArray())
 	{
 		StaticLogger::logit("ERROR: Objects not saved as Json-Array within the project file '" + path + "'!");
 		return false;
 	}
+	QJsonArray json = doc.array();
 
 	// Iterate all objects in array
-	for (auto i : it->toArray())
+	for (auto i : json)
 	{
 		QJsonObject obj = i.toObject();
 		if (obj.contains("obj-file"))
@@ -97,7 +89,7 @@ bool Project::saveAs(ObjectContainer& container, const QString& path)
 			json["windTunnelSettings"] = relativePath(path, json["windTunnelSettings"].toString());
 		objects.append(json);
 	}
-	QJsonDocument doc(QJsonObject{ { "objects", objects } });
+	QJsonDocument doc(objects);
 
 	QFile f(path);
 	if (!f.open(QIODevice::WriteOnly)) return false;

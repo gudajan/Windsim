@@ -20,7 +20,7 @@ public:
 
 private slots:
 	void nameChanged(const QString & text);
-	void disabledChanged(int state);
+	void enabledChanged(int state);
 
 	// Voxel Grid Properties
 	void voxelSettingsChanged();

@@ -297,7 +297,7 @@ void TransformMachine::finish()
 		QJsonObject pos = { { "x", p.x }, { "y", p.y }, { "z", p.z } };
 		QJsonObject scale = { { "x", s.x }, { "y", s.y }, { "z", s.z } };
 		QJsonObject rot = { { "ax", XMVectorGetX(axis) }, { "ay", XMVectorGetY(axis) }, { "az", XMVectorGetZ(axis) }, { "angle", radToDeg(angle) } };
-		m_transformation.push_back({ { "id", id }, { "Position", pos }, { "Scaling", scale }, { "Rotation", rot } });
+		m_transformation.push_back({ { "id", id }, { "position", pos }, { "scaling", scale }, { "rotation", rot } });
 
 		if (act->getType() == ObjectType::Mesh)
 			std::dynamic_pointer_cast<MeshActor>(act)->setModified(false);

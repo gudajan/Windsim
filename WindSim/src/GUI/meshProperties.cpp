@@ -14,8 +14,8 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	// Name
 	connect(ui.nameEdit, SIGNAL(textChanged(const QString &)), this, SLOT(nameChanged(const QString &)));
 
-	// Disabled
-	connect(ui.cbDisabled, SIGNAL(stateChanged(int)), this, SLOT(disabledChanged(int)));
+	// Enabled
+	connect(ui.cbEnabled, SIGNAL(stateChanged(int)), this, SLOT(enabledChanged(int)));
 
 	// Voxelize
 	connect(ui.cbVoxelize, SIGNAL(stateChanged(int)), this, SLOT(voxelizeChanged(int)));
@@ -24,19 +24,19 @@ MeshProperties::MeshProperties(QJsonObject properties, QWidget* parent)
 	connect(ui.cbDynamics, SIGNAL(stateChanged(int)), this, SLOT(dynamicsChanged(int)));
 
 	// Position
-	connect(ui.xP, SIGNAL(editingFinished()), this, SLOT(positionChanged()));
-	connect(ui.yP, SIGNAL(editingFinished()), this, SLOT(positionChanged()));
-	connect(ui.zP, SIGNAL(editingFinished()), this, SLOT(positionChanged()));
+	connect(ui.xP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
+	connect(ui.yP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
+	connect(ui.zP, SIGNAL(valueChanged(double)), this, SLOT(positionChanged()));
 
 	// Scaling
-	connect(ui.xS, SIGNAL(editingFinished()), this, SLOT(scalingChanged()));
-	connect(ui.yS, SIGNAL(editingFinished()), this, SLOT(scalingChanged()));
-	connect(ui.zS, SIGNAL(editingFinished()), this, SLOT(scalingChanged()));
+	connect(ui.xS, SIGNAL(valueChanged(double)), this, SLOT(scalingChanged()));
+	connect(ui.yS, SIGNAL(valueChanged(double)), this, SLOT(scalingChanged()));
+	connect(ui.zS, SIGNAL(valueChanged(double)), this, SLOT(scalingChanged()));
 
 	// Rotation
-	connect(ui.ax, SIGNAL(editingFinished()), this, SLOT(rotationChanged()));
-	connect(ui.ay, SIGNAL(editingFinished()), this, SLOT(rotationChanged()));
-	connect(ui.az, SIGNAL(editingFinished()), this, SLOT(rotationChanged()));
+	connect(ui.ax, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
+	connect(ui.ay, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
+	connect(ui.az, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
 	connect(ui.angle, SIGNAL(valueChanged(double)), this, SLOT(rotationChanged()));
 
 	// Shading
@@ -79,37 +79,37 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 		setWindowTitle("Mesh Properties: " + ui.nameEdit->text());
 
 		// Visibility
-		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
-		ui.cbVoxelize->setChecked(properties["voxelize"].toInt() == Qt::Checked);
-		ui.cbDynamics->setChecked(properties["dynamics"].toInt() == Qt::Checked);
+		ui.cbEnabled->setChecked(properties["enabled"].toBool());
+		ui.cbVoxelize->setChecked(properties["voxelize"].toBool());
+		ui.cbDynamics->setChecked(properties["dynamics"].toBool());
 
 		// Position
-		const QJsonObject& pos = properties.find("Position")->toObject();
+		const QJsonObject& pos = properties.find("position")->toObject();
 		ui.xP->setValue(pos.find("x")->toDouble()); // right: x in DX1
 		ui.yP->setValue(pos.find("y")->toDouble()); // up: y in DX11
 		ui.zP->setValue(pos.find("z")->toDouble()); // forward: z in DX11
 
 		// Scaling
-		const QJsonObject& scale = properties.find("Scaling")->toObject();
+		const QJsonObject& scale = properties.find("scaling")->toObject();
 		ui.xS->setValue(scale.find("x")->toDouble());
 		ui.yS->setValue(scale.find("y")->toDouble());
 		ui.zS->setValue(scale.find("z")->toDouble());
 
 		// Rotation
-		const QJsonObject& rot = properties.find("Rotation")->toObject();
+		const QJsonObject& rot = properties.find("rotation")->toObject();
 		ui.ax->setValue(rot.find("ax")->toDouble());
 		ui.ay->setValue(rot.find("ay")->toDouble());
 		ui.az->setValue(rot.find("az")->toDouble());
 		ui.angle->setValue(rot.find("angle")->toDouble());
 
 		// Shading
-		if (properties.find("Shading")->toString() == "Smooth")
+		if (properties.find("shading")->toString() == "Smooth")
 			ui.rbSmooth->setChecked(true);
 		else // Flat is default
 			ui.rbFlat->setChecked(true);
 
 		// Color
-		const QJsonObject& col = properties.find("Color")->toObject();
+		const QJsonObject& col = properties.find("color")->toObject();
 		setColorButton(col.find("r")->toInt(), col.find("g")->toInt(), col.find("b")->toInt());
 
 		// Dynamics
@@ -120,7 +120,7 @@ void MeshProperties::updateProperties(const QJsonObject& properties)
 		ui.dynAxisZ->setValue(dynamics.find("z")->toDouble());
 		ui.gbDynAxis->setChecked(dynamics.find("enabled")->toBool());
 		int d = properties.find("showAccelArrow")->toInt();
-		ui.cbShowAccel->setChecked(properties.find("showAccelArrow")->toInt() == Qt::Checked);
+		ui.cbShowAccel->setChecked(properties.find("showAccelArrow")->toBool());
 
 		m_properties = properties; // Copy properties
 	}
@@ -136,22 +136,22 @@ void MeshProperties::nameChanged(const QString& text)
 	emit propertiesChanged(m_properties, Name);
 }
 
-void MeshProperties::disabledChanged(int state)
+void MeshProperties::enabledChanged(int state)
 {
-	m_properties["disabled"] = state;
+	m_properties["enabled"] = state == Qt::Checked ? true : false;
 	emit propertiesChanged(m_properties, Visibility);
 }
 
 void MeshProperties::voxelizeChanged(int state)
 {
-	m_properties["voxelize"] = state;
+	m_properties["voxelize"] = state == Qt::Checked ? true : false;
 	emit propertiesChanged(m_properties, Voxelization);
 }
 
 
 void MeshProperties::dynamicsChanged(int state)
 {
-	m_properties["dynamics"] = state;
+	m_properties["dynamics"] = state == Qt::Checked ? true : false;
 	emit propertiesChanged(m_properties, DynamicsSettings);
 }
 
@@ -164,7 +164,7 @@ void MeshProperties::positionChanged()
 		{ "y", ui.yP->value() },
 		{ "z", ui.zP->value() }
 	};
-	m_properties["Position"] = pos;
+	m_properties["position"] = pos;
 	emit propertiesChanged(m_properties, Position);
 }
 
@@ -176,11 +176,9 @@ void MeshProperties::scalingChanged()
 		{ "y", ui.yS->value() },
 		{ "z", ui.zS->value() }
 	};
-	m_properties["Scaling"] = scale;
+	m_properties["scaling"] = scale;
 
 	Modifications mod = Scaling;
-	if (ui.cbDynamics->checkState() == Qt::Checked)
-		mod |= DynamicsSettings;
 
 	emit propertiesChanged(m_properties, mod);
 }
@@ -195,7 +193,7 @@ void MeshProperties::rotationChanged()
 		{ "angle", ui.angle->value() }
 	};
 
-	m_properties["Rotation"] = rot;
+	m_properties["rotation"] = rot;
 	emit propertiesChanged(m_properties, Rotation);
 }
 
@@ -203,19 +201,22 @@ void MeshProperties::shadingToggled(bool b)
 {
 	if (!b) return;
 
-	m_properties["Shading"] = ui.rbSmooth->isChecked() ? "Smooth" : "Flat";
+	m_properties["shading"] = ui.rbSmooth->isChecked() ? "Smooth" : "Flat";
 	emit propertiesChanged(m_properties, Shading);
 }
 
 void MeshProperties::pickColor()
 {
-	QJsonObject json = m_properties["Color"].toObject();
+	QJsonObject json = m_properties["color"].toObject();
 	QColor col = QColorDialog::getColor(QColor(json["r"].toInt(), json["g"].toInt(), json["b"].toInt()), this);
+	if (!col.isValid()) // Color dialog canceled
+		return;
+
 	json["r"] = col.red();
 	json["g"] = col.green();
 	json["b"] = col.blue();
 
-	m_properties["Color"] = json;
+	m_properties["color"] = json;
 
 	setColorButton(col.red(), col.green(), col.blue());
 
@@ -242,7 +243,7 @@ void MeshProperties::localRotAxisChanged()
 
 void MeshProperties::showAccelArrowChanged(int state)
 {
-	m_properties["showAccelArrow"] = state;
+	m_properties["showAccelArrow"] = state == Qt::Checked ? true : false;
 	emit propertiesChanged(m_properties, ShowAccelArrow);
 }
 
@@ -261,7 +262,7 @@ void MeshProperties::blockSignals(bool b)
 	ui.nameEdit->blockSignals(b);
 
 	// Visibility
-	ui.cbDisabled->blockSignals(b);
+	ui.cbEnabled->blockSignals(b);
 	ui.cbVoxelize->blockSignals(b);
 	ui.cbDynamics->blockSignals(b);
 

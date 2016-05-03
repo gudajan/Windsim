@@ -62,6 +62,8 @@ WindSim::WindSim(QWidget *parent)
 	// Create-actions
 	connect(ui.actionCreateMesh, SIGNAL(triggered()), this, SLOT(actionCreateMeshTriggered()));
 	connect(ui.actionCreateVoxelGrid, SIGNAL(triggered()), this, SLOT(actionCreateVoxelGridTriggered()));
+	connect(ui.actionCreateAxes, SIGNAL(triggered()), this, SLOT(actionCreateAxesTriggered()));
+	connect(ui.actionCreateSky, SIGNAL(triggered()), this, SLOT(actionCreateSkyTriggered()));
 
 	// Remove
 	connect(ui.actionRemove, SIGNAL(triggered()), this, SLOT(actionRemoveTriggered()));
@@ -155,13 +157,13 @@ bool WindSim::actionNewTriggered()
 
 	// Disable, enable actions
 	projectActionsEnable(false, false, true, true, true);
-	createActionEnable(true, true);
+	createActionEnable(true);
 
 	StaticLogger::logit("INFO: Initialized new project.");
 
 	// Create default sky object
 	actionCreateSkyTriggered("Sky");
-	actionCreateAxesTriggered("Axes");
+	actionCreateAxesTriggered("Coordinate Axes");
 
 	g_undoStack.clear();
 
@@ -193,7 +195,7 @@ bool WindSim::actionOpenTriggered()
 
 	// Disable, enable actions
 	projectActionsEnable(false, false, true, true, true);
-	createActionEnable(true, true);
+	createActionEnable(true);
 
 	g_undoStack.clear();
 	StaticLogger::logit("INFO: Opened project from '" + filename + "'.");
@@ -213,7 +215,7 @@ void WindSim::actionCloseTriggered()
 
 	// Disable, enable actions
 	projectActionsEnable(true, true, false, false, false);
-	createActionEnable(false, false);
+	createActionEnable(false);
 
 	g_undoStack.clear();
 	StaticLogger::logit("INFO: Closed project.");
@@ -353,7 +355,7 @@ bool WindSim::actionCreateAxesTriggered(QString name)
 {
 	if (name.isEmpty())
 	{
-		name = getName("New Axes", "Axes name:", "Axes");
+		name = getName("New Coordinate Axes", "Coordinate Axes name:", "Coordinate Axes");
 		if (name.isEmpty())
 			return false;
 	}
@@ -361,7 +363,7 @@ bool WindSim::actionCreateAxesTriggered(QString name)
 	QJsonObject json
 	{
 		{ "name", name },
-		{ "type", QString::fromStdString(objectTypeToString(ObjectType::Axes)) }
+		{ "type", QString::fromStdString(objectTypeToString(ObjectType::CoordinateAxes)) }
 	};
 	m_container.addCmd(json);
 
@@ -486,10 +488,12 @@ void WindSim::projectActionsEnable(bool newAct, bool open, bool close, bool save
 	ui.actionSaveAs->setEnabled(saveAs);
 }
 
-void WindSim::createActionEnable(bool mesh, bool grid)
+void WindSim::createActionEnable(bool enabled)
 {
-	ui.actionCreateMesh->setEnabled(mesh);
-	ui.actionCreateVoxelGrid->setEnabled(grid);
+	ui.actionCreateSky->setEnabled(enabled);
+	ui.actionCreateAxes->setEnabled(enabled);
+	ui.actionCreateMesh->setEnabled(enabled);
+	ui.actionCreateVoxelGrid->setEnabled(enabled);
 }
 
 void WindSim::removeActionEnable(bool enabled)

@@ -37,7 +37,7 @@ QVariant ObjectItem::data(int role) const
 {
 	if (role == Qt::ForegroundRole)
 	{
-		if (QStandardItem::data().toJsonObject()["disabled"].toInt() != Qt::Unchecked)
+		if (!QStandardItem::data().toJsonObject()["enabled"].toBool())
 		{
 			return QVariant(QApplication::palette().color(QPalette::Disabled, QPalette::Foreground));
 		}

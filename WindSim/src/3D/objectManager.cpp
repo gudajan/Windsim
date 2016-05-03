@@ -59,7 +59,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 
 			obj->create(device, true);
 		}
-		else if (type == ObjectType::Axes)
+		else if (type == ObjectType::CoordinateAxes)
 		{
 			Axes* obj = new Axes(m_renderer);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
@@ -155,20 +155,20 @@ void ObjectManager::modify(const QJsonObject& data)
 		mod = Modifications(data["modifications"].toInt());
 
 	// Modify general data
-	bool render = data["disabled"].toInt() == Qt::Unchecked;
+	bool render = data["enabled"].toBool();
 	bool oldRender = it->second->getRender();
 	it->second->setRender(render);
 
 	// Modify object specific data
 	if (type == ObjectType::Mesh)
 	{
-		QJsonObject jPos = data["Position"].toObject();
+		QJsonObject jPos = data["position"].toObject();
 		XMFLOAT3 pos(jPos["x"].toDouble(), jPos["y"].toDouble(), jPos["z"].toDouble());
 
-		QJsonObject jScale = data["Scaling"].toObject();
+		QJsonObject jScale = data["scaling"].toObject();
 		XMFLOAT3 scale(jScale["x"].toDouble(), jScale["y"].toDouble(), jScale["z"].toDouble());
 
-		QJsonObject jRot = data["Rotation"].toObject();
+		QJsonObject jRot = data["rotation"].toObject();
 		XMFLOAT4 rot;
 		XMVECTOR axis = XMVectorSet(jRot["ax"].toDouble(), jRot["ay"].toDouble(), jRot["az"].toDouble(), 0.0);
 		if (XMVector3Equal(axis, XMVectorZero()))
@@ -176,9 +176,9 @@ void ObjectManager::modify(const QJsonObject& data)
 		else
 			XMStoreFloat4(&rot, XMQuaternionRotationAxis(axis, degToRad(jRot["angle"].toDouble())));
 
-		bool flatShading = data["Shading"].toString() == "Smooth" ? false : true;
+		bool flatShading = data["shading"].toString() == "Smooth" ? false : true;
 
-		QJsonObject jCol = data["Color"].toObject();
+		QJsonObject jCol = data["color"].toObject();
 		PackedVector::XMCOLOR col(jCol["r"].toInt() / 255.0f, jCol["g"].toInt() / 255.0f, jCol["b"].toInt() / 255.0f, 1.0f);
 
 		QJsonObject jAxis = data["localRotAxis"].toObject();
@@ -195,19 +195,20 @@ void ObjectManager::modify(const QJsonObject& data)
 		act->computeWorld();
 		act->setFlatShading(flatShading);
 		act->setColor(col);
-		act->setVoxelize(data["voxelize"].toInt() == Qt::Checked);
-
+		act->setVoxelize(data["voxelize"].toBool());
 
 		if (mod.testFlag(DynamicsSettings))
 		{
-			act->setDynamics(data["dynamics"].toInt() == Qt::Checked);
+			act->setDynamics(data["dynamics"].toBool());
 			act->setDensity(data["density"].toDouble());
 			act->setLocalRotationAxis(localRotationAxis);
-			act->updateInertiaTensor();
 		}
 
+		if (mod.testFlag(Scaling) || mod.testFlag(DynamicsSettings))
+			act->updateInertiaTensor();
+
 		if (mod.testFlag(ShowAccelArrow))
-			act->setShowAccelArrow(data["showAccelArrow"].toInt() == Qt::Checked);
+			act->setShowAccelArrow(data["showAccelArrow"].toBool());
 
 		if (render != oldRender && !render)
 		{
@@ -220,7 +221,7 @@ void ObjectManager::modify(const QJsonObject& data)
 	{
 		std::shared_ptr<VoxelGridActor> act = std::dynamic_pointer_cast<VoxelGridActor>(it->second);
 
-		QJsonObject jPos = data["Position"].toObject();
+		QJsonObject jPos = data["position"].toObject();
 		XMFLOAT3 pos(jPos["x"].toDouble(), jPos["y"].toDouble(), jPos["z"].toDouble());
 
 		QJsonObject jRes = data["resolution"].toObject();
@@ -245,7 +246,7 @@ void ObjectManager::modify(const QJsonObject& data)
 		if (mod.testFlag(LineSettings))
 			act->getObject()->changeLineSettings(data["lines"].toObject());
 		if (mod.testFlag(RunSimulation))
-			act->getObject()->runSimulation(data["runSimulation"].toInt() == Qt::Checked);
+			act->getObject()->runSimulation(data["runSimulation"].toBool());
 	}
 }
 

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1098</width>
-    <height>797</height>
+    <height>796</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -246,6 +246,8 @@
      <property name="title">
       <string>Create</string>
      </property>
+     <addaction name="actionCreateSky"/>
+     <addaction name="actionCreateAxes"/>
      <addaction name="actionCreateMesh"/>
      <addaction name="actionCreateVoxelGrid"/>
     </widget>
@@ -266,6 +268,13 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="actionNew"/>
+   <addaction name="actionOpen"/>
+   <addaction name="actionSave"/>
+   <addaction name="actionClose"/>
+   <addaction name="separator"/>
+   <addaction name="actionCreateSky"/>
+   <addaction name="actionCreateAxes"/>
    <addaction name="actionCreateMesh"/>
    <addaction name="actionCreateVoxelGrid"/>
    <addaction name="separator"/>
@@ -275,16 +284,27 @@
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionNew">
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/newProject.ico</normaloff>:/WindSim/icons/newProject.ico</iconset>
+   </property>
    <property name="text">
-    <string>New</string>
+    <string>New Project</string>
+   </property>
+   <property name="toolTip">
+    <string>New Project</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
    </property>
   </action>
   <action name="actionOpen">
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/openProject.ico</normaloff>:/WindSim/icons/openProject.ico</iconset>
+   </property>
    <property name="text">
-    <string>Open</string>
+    <string>Open Project</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -295,15 +315,28 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Save as</string>
+    <string>Save Project as</string>
+   </property>
+   <property name="toolTip">
+    <string>Save Project as</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
    </property>
   </action>
   <action name="actionSave">
    <property name="enabled">
     <bool>false</bool>
    </property>
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/saveProject.svg</normaloff>:/WindSim/icons/saveProject.svg</iconset>
+   </property>
    <property name="text">
-    <string>Save</string>
+    <string>Save Project</string>
+   </property>
+   <property name="toolTip">
+    <string>Save Project</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -313,11 +346,22 @@
    <property name="enabled">
     <bool>false</bool>
    </property>
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/closeProject.ico</normaloff>:/WindSim/icons/closeProject.ico</iconset>
+   </property>
    <property name="text">
-    <string>Close</string>
+    <string>Close Project</string>
+   </property>
+   <property name="toolTip">
+    <string>Close Project</string>
    </property>
   </action>
   <action name="actionSettings">
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/settings.svg</normaloff>:/WindSim/icons/settings.svg</iconset>
+   </property>
    <property name="text">
     <string>Settings</string>
    </property>
@@ -328,6 +372,10 @@
   <action name="actionCreateMesh">
    <property name="enabled">
     <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/createMesh.svg</normaloff>:/WindSim/icons/createMesh.svg</iconset>
    </property>
    <property name="text">
     <string>Create Mesh</string>
@@ -347,6 +395,10 @@
    <property name="enabled">
     <bool>false</bool>
    </property>
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/createVoxelGrid.svg</normaloff>:/WindSim/icons/createVoxelGrid.svg</iconset>
+   </property>
    <property name="text">
     <string>Create Voxel Grid</string>
    </property>
@@ -354,6 +406,10 @@
   <action name="actionRemove">
    <property name="enabled">
     <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/removeObject.svg</normaloff>:/WindSim/icons/removeObject.svg</iconset>
    </property>
    <property name="text">
     <string>Remove Object</string>
@@ -363,6 +419,36 @@
    </property>
    <property name="shortcut">
     <string>Del</string>
+   </property>
+  </action>
+  <action name="actionCreateAxes">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/createAxes.svg</normaloff>:/WindSim/icons/createAxes.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Create Coordinate Axes</string>
+   </property>
+   <property name="toolTip">
+    <string>Create Coordinate Axes</string>
+   </property>
+  </action>
+  <action name="actionCreateSky">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../windsim.qrc">
+     <normaloff>:/WindSim/icons/createSky.svg</normaloff>:/WindSim/icons/createSky.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Create Sky</string>
+   </property>
+   <property name="toolTip">
+    <string>Create Sky</string>
    </property>
   </action>
  </widget>

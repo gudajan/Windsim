@@ -18,8 +18,8 @@ VoxelGridProperties::VoxelGridProperties(QJsonObject properties, QWidget* parent
 	// Name
 	connect(ui.nameEdit, SIGNAL(textChanged(const QString &)), this, SLOT(nameChanged(const QString &)));
 
-	// Disabled
-	connect(ui.cbDisabled, SIGNAL(stateChanged(int)), this, SLOT(disabledChanged(int)));
+	// Enabled
+	connect(ui.cbEnabled, SIGNAL(stateChanged(int)), this, SLOT(enabledChanged(int)));
 
 	// Simulator
 	connect(ui.leSim, SIGNAL(textChanged(const QString &)), this, SLOT(simulatorSettingsChanged()));
@@ -108,7 +108,7 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		setWindowTitle("Voxel Grid Properties: " + ui.nameEdit->text());
 
 		// Visibility
-		ui.cbDisabled->setChecked(properties["disabled"].toInt() != Qt::Unchecked);
+		ui.cbEnabled->setChecked(properties["enabled"].toBool());
 
 		// Voxel settings
 		const QJsonObject& voxel = properties.find("voxel")->toObject();
@@ -118,7 +118,7 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		else ui.rbWireframe->setChecked(true);
 
 		// Position
-		const QJsonObject& pos = properties.find("Position")->toObject();
+		const QJsonObject& pos = properties.find("position")->toObject();
 		ui.xP->setValue(pos.find("x")->toDouble()); // right: x in DX1
 		ui.yP->setValue(pos.find("y")->toDouble()); // up: y in DX11
 		ui.zP->setValue(pos.find("z")->toDouble()); // forward: z in DX11
@@ -177,7 +177,7 @@ void VoxelGridProperties::updateProperties(const QJsonObject& properties)
 		// WindTunnel Settings
 
 		// Run Simulation
-		ui.cbRunSim->setChecked(properties["runSimulation"].toInt() == Qt::Checked);
+		ui.cbRunSim->setChecked(properties["runSimulation"].toBool());
 
 		// Simulator
 		ui.leSim->setText(properties["windTunnelSettings"].toString());
@@ -209,9 +209,9 @@ void VoxelGridProperties::nameChanged(const QString& text)
 	emit propertiesChanged(m_properties, Name);
 }
 
-void VoxelGridProperties::disabledChanged(int state)
+void VoxelGridProperties::enabledChanged(int state)
 {
-	m_properties["disabled"] = state;
+	m_properties["enabled"] = state == Qt::Checked ? true : false;
 	emit propertiesChanged(m_properties, Visibility);
 }
 
@@ -252,7 +252,7 @@ void VoxelGridProperties::positionChanged()
 		{ "y", ui.yP->value() },
 		{ "z", ui.zP->value() }
 	};
-	m_properties["Position"] = pos;
+	m_properties["position"] = pos;
 	emit propertiesChanged(m_properties, Position);
 }
 
@@ -338,7 +338,7 @@ void VoxelGridProperties::switchVolumeMetric(const QString& metric)
 
 void VoxelGridProperties::runSimulationChanged(int state)
 {
-	m_properties["runSimulation"] = state;
+	m_properties["runSimulation"] = state == Qt::Checked ? true : false;
 	emit propertiesChanged(m_properties, RunSimulation);
 }
 
@@ -410,7 +410,7 @@ void VoxelGridProperties::blockSignals(bool b)
 	ui.nameEdit->blockSignals(b);
 
 	// Visibility
-	ui.cbDisabled->blockSignals(b);
+	ui.cbEnabled->blockSignals(b);
 
 	// Voxel settings
 	ui.gbVoxel->blockSignals(b);

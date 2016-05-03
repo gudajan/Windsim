@@ -62,12 +62,15 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="cbDisabled">
+       <widget class="QCheckBox" name="cbEnabled">
         <property name="layoutDirection">
          <enum>Qt::LeftToRight</enum>
         </property>
         <property name="text">
-         <string>Disabled</string>
+         <string>Enabled</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -476,7 +479,7 @@
        <item>
         <widget class="QGroupBox" name="gbWindTunnel">
          <property name="title">
-          <string>WindTunnel</string>
+          <string>Wind tunnel</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_4">
           <item row="1" column="1">

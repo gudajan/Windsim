@@ -47,7 +47,7 @@ float4 psBlinnPhong(PSIn inFragment) : SV_Target
 	}
 	else
 	{
-		n = -normalize(inFragment.normalView);
+		n = normalize(inFragment.normalView);
 	}
 
 	return BlinnPhongIllumination(n, -normalize(inFragment.posView), g_vColor.xyz, ka, kd, ks, s);

@@ -33,6 +33,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, 
 	m_updateGrid(true),
 	m_processSimResults(false),
 	m_simAvailable(true),
+	m_simRunning(false),
 	m_dynamicsCounter(-1),
 	m_voxelizationCounter(-1),
 	m_cubeIndices(0),
@@ -330,7 +331,7 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	if (m_voxelize)
 	{
 		// Only copy to staging if last copy to CPU is finished and grid update possible
-		if (m_simAvailable && m_updateGrid && m_voxelizationCounter == -1)
+		if (m_simAvailable && m_simRunning &&  m_updateGrid && m_voxelizationCounter == -1)
 		{
 			voxelize(device, context, world, true);
 			m_voxelizationCounter = 0;
@@ -472,6 +473,7 @@ void VoxelGrid::runSimulation(bool enabled)
 	if (enabled)
 	{
 		emit startSimulation();
+		m_simRunning = true;
 		for (auto& it: m_manager->getActors())
 		{
 			if (it.second->getType() == ObjectType::Mesh)
@@ -481,6 +483,7 @@ void VoxelGrid::runSimulation(bool enabled)
 	else
 	{
 		emit pauseSimulation();
+		m_simRunning = false;
 		for (auto& it : m_manager->getActors())
 		{
 			if (it.second->getType() == ObjectType::Mesh)
@@ -521,11 +524,14 @@ void VoxelGrid::runSimulationSync(bool enabled)
 	if (enabled)
 	{
 		emit startSimulation();
+		m_simRunning = true;
 	}
 	else
 	{
 		emit pauseSimulation();
 		m_simulator.continueSim(true);
+
+		m_simRunning = false;
 
 		m_processSimResults = false;
 		m_updateGrid = false;
