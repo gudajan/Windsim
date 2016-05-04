@@ -302,26 +302,30 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	//timer.start();
 
 	// Process simulation results
+	static float timestep = 0.0;
 	if (m_simAvailable && m_processSimResults && m_dynamicsCounter == -1)
 	{
-		QElapsedTimer t2;
-		t2.start();
+		m_simTimeStep = m_simulator.getTimeStep();
+		timestep += m_simTimeStep;
+		OutputDebugStringA(("INFO: OVERALL SIMULATION TIME: " + std::to_string(timestep) + "\n").c_str());
+		QElapsedTimer t;
+		t.start();
 		updateVelocityPressure(context);
-		OutputDebugStringA(("INFO: Update velocity lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
-		t2.restart();
+		OutputDebugStringA(("INFO: Update velocity lasted " + std::to_string(t.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		t.restart();
 		m_wtRenderer.updateDensity(context, m_simulator.getDensity(), m_simulator.getDensitySum());
-		OutputDebugStringA(("INFO: Update density lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
-		t2.restart();
+		OutputDebugStringA(("INFO: Update density lasted " + std::to_string(t.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		t.restart();
 		m_wtRenderer.updateLines(context, m_simulator.getLines(), m_simulator.getReseedCounter(), m_simulator.getNumLines());
 		m_processSimResults = false;
-		OutputDebugStringA(("INFO: Update lines lasted " + std::to_string(t2.nsecsElapsed() * 1e-6) + "msec\n").c_str());
+		OutputDebugStringA(("INFO: Update lines lasted " + std::to_string(t.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 		m_simulator.continueSim();
 		m_dynamicsCounter = 0;
 	}
 	// Calculates dynamics motion of meshes, depending on the current velocity field (wait 2 frames until the staging texture is copied to the GPU)
 	if (m_dynamicsCounter >= 2)
 	{
-		calculateDynamics(device, context, world, elapsedTime);
+		calculateDynamics(device, context, world, m_simTimeStep);
 		m_dynamicsCounter = -1;
 	}
 	if (m_dynamicsCounter > -1)

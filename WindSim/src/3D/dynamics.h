@@ -36,6 +36,7 @@ public:
 	HRESULT create(ID3D11Device* device);
 	void release();
 
+	void setMass(const float mass) { m_mass = mass; };
 	void setInertia(const DirectX::XMFLOAT3X3& inertia) { m_inertiaTensor = inertia; };
 	void setCenterOfMass(const DirectX::XMFLOAT3& centerOfMass) { m_centerOfMass = centerOfMass; };
 	void setRotationAxis(const DirectX::XMFLOAT3& axis) { DirectX::XMStoreFloat3(&m_rotationAxis, DirectX::XMVector3Normalize(DirectX::XMLoadFloat3(&axis))); };
@@ -75,6 +76,7 @@ private:
 
 	Mesh3D& m_mesh;
 
+	float m_mass;
 	DirectX::XMFLOAT3X3 m_inertiaTensor;
 	DirectX::XMFLOAT3 m_centerOfMass;
 	DirectX::XMFLOAT3 m_rotationAxis;

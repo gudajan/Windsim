@@ -77,7 +77,7 @@ void gsArrow(point uint input[1] : VertexID, inout TriangleStream<PSLineIn> stre
 {
 	PSLineIn psIn;
 
-	float scale = 1.0f;
+	float scale = 0.1f;
 	float arrowHeadSize = 0.3f;
 	float width = 0.1f;
 

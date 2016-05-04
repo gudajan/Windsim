@@ -183,7 +183,9 @@ void MeshActor::updateInertiaTensor()
 {
 	XMFLOAT3X3 inertia;
 	XMFLOAT3 com;
-	m_mesh.calcMassProps(m_density, m_scale, inertia, com);
+	float mass;
+	m_mesh.calcMassProps(m_density, m_scale, inertia, com, &mass);
+	m_dynamics.setMass(mass);
 	m_dynamics.setInertia(inertia);
 	m_dynamics.setCenterOfMass(com);
 	m_dynamics.reset();

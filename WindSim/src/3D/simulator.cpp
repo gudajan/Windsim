@@ -66,11 +66,11 @@ Simulator::Simulator(const QString& settingsFile, const XMUINT3& resolution, con
 	, m_lines()
 	, m_reseedCounter(0)
 	, m_numLines(0)
+	, m_timeStep(0.0)
 	, m_resolution(resolution)
 	, m_voxelSize(voxelSize)
 	, m_simSmoke(true)
 	, m_simLines(false)
-	, m_elapsedTimer()
 	, m_simTimer(this)
 	, m_simMutex(QMutex::NonRecursive)
 	, m_waitCond()
@@ -116,7 +116,6 @@ void Simulator::reinitWindTunnel()
 void Simulator::start()
 {
 	m_simTimer.start(1);
-	m_elapsedTimer.start();
 	{
 		QMutexLocker lock(&m_simMutex);
 		m_skipSteps = false;
@@ -136,7 +135,6 @@ void Simulator::stop()
 void Simulator::pause()
 {
 	m_simTimer.stop();
-	m_elapsedTimer.invalidate();
 	m_skipSteps = true; // make sure, no waiting step events are "processed"
 	if (m_simulatorLock.owns_lock())
 		m_simulatorLock.unlock();
@@ -249,13 +247,11 @@ void Simulator::step()
 			return;
 	}
 
-	qint64 elapsedTime = m_elapsedTimer.nsecsElapsed();
-	m_elapsedTimer.restart();
 
 	QElapsedTimer timer;
 
 	timer.start();
-	m_windTunnel.step(static_cast<double>(elapsedTime) * 1.0e-9 ); // nanosec to sec
+	m_timeStep = m_windTunnel.step(); // nanosec to sec
 	OutputDebugStringA(("INFO: Simulation step lasted " + std::to_string(timer.nsecsElapsed() * 1e-6) + "msec\n").c_str());
 
 	// Wait until the simulation results of last step were processed

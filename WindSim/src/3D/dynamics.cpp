@@ -100,6 +100,7 @@ Dynamics::Dynamics(Mesh3D& mesh)
 	, m_torqueTexStaging(nullptr)
 	, m_torqueUAV(nullptr)
 	, m_mesh(mesh)
+	, m_mass(0.0)
 	, m_inertiaTensor()
 	, m_centerOfMass(0.0f, 0.0f, 0.0f)
 	, m_rotationAxis(0.0f, 0.0f, 0.0f)
@@ -113,6 +114,25 @@ Dynamics::Dynamics(Mesh3D& mesh)
 
 void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& objectToWorld, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* field, double elapsedTime)
 {
+	// Calculate new dynamic rotation from current angular velocity and rotation in previous frame and elapsed time
+	XMVECTOR dynRot = XMLoadFloat4(&m_renderRot);
+	XMVECTOR angMotion = XMVectorSet(m_angVel.x, m_angVel.y, m_angVel.z, 0) * elapsedTime;
+	if (!XMVector3Equal(angMotion, XMVectorZero()))
+	{
+		// Note: that angular motion already given in left-handed system
+		XMVECTOR newRot = XMQuaternionRotationAxis(angMotion, XMVectorGetX(XMVector3Length(angMotion))); // Angular motion vector describes axis and its magnitude the angle
+		XMStoreFloat4(&m_renderRot, XMQuaternionNormalize(XMQuaternionMultiply(newRot, dynRot))); // Perform rotation and store; Order is important ("first" rotation on the right, "second" on the left)
+	}
+
+	// Update current dynamic acceleration by applying current angular acceleration to the current angular velocity
+	float frictionFactor = conf.dyn.frictionCoefficient; // after one second, x% of the original velocity remains if acceleration would be zero
+
+	XMVECTOR oldAngVel = XMLoadFloat3(&m_angVel);
+	XMVECTOR angAcc = XMLoadFloat3(&m_angAcc);
+	//XMVECTOR newAngVel = oldAngVel * std::pow(frictionFactor, elapsedTime) + angAcc * elapsedTime;
+	XMVECTOR newAngVel = oldAngVel + angAcc * elapsedTime;
+	XMStoreFloat3(&m_angVel, newAngVel);
+
 	// #############################
 	// Copy calculated torque from last frame to CPU
 	// #############################
@@ -137,6 +157,11 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 		torque = { 0.0f, 0.0f, 0.0f };
 	}
 
+	if (torque[0] <= 0.00001)
+	{
+		int x = 0;
+	}
+
 	// Transform torque to Body Inertial frame
 	XMVECTOR trq = XMVectorSet(torque[0], torque[1], torque[2], 0);
 	XMVECTOR rot;
@@ -145,6 +170,14 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	XMMatrixDecompose(&scale, &rot, &trans, XMLoadFloat4x4(&objectToWorld));
 	XMStoreFloat3(&m_debugTrq, trq);
 	trq = XMVector3Rotate(trq, XMQuaternionNormalize(rot));
+
+	//// Torque because of friction
+	//// Friction torque = Fn * f * d/2; see http://www.roymech.co.uk/Useful_Tables/Tribology/Bearing%20Friction.html
+	float f = 0.0015; // single roll ball bearing friction coefficient
+	float d = 0.5; // Diameter of the bone of the bearing / diameter of shaft
+	float Fn = m_mass * 9.81; // Normal force on earth
+
+	trq += Fn * f * 0.5 * d * XMVectorNegate(XMVector3Normalize(newAngVel)); // Friction torque in opposite direction of current velocity
 
 	// Calculate torque arround local rotation axis
 	XMVECTOR localRotationAxis = XMLoadFloat3(&m_rotationAxis);
@@ -272,37 +305,13 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 void Dynamics::render(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4& objRot, const XMFLOAT3& objTrans, const XMFLOAT4X4& view, const XMFLOAT4X4& projection, float elapsedTime, bool showAccelArrow)
 {
-	// Calculate new dynamic rotation from current angular velocity and rotation in previous frame and elapsed time
-	XMVECTOR dynRot = XMLoadFloat4(&m_renderRot);
-	XMVECTOR angMotion = XMVectorSet(m_angVel.x, m_angVel.y, m_angVel.z, 0) * elapsedTime;
-	if (!XMVector3Equal(angMotion, XMVectorZero()))
-	{
-		// DirectXMath function produces exactly the opposite rotation direction than the physical standard suggests for angular motion -> flip rotation axis
-		XMVECTOR newRot = XMQuaternionRotationAxis(-angMotion, XMVectorGetX(XMVector3Length(angMotion))); // Angular motion vector describes axis and its magnitude the angle
-		XMStoreFloat4(&m_renderRot, XMQuaternionNormalize(XMQuaternionMultiply(newRot, dynRot))); // Perform rotation and store; Order is important ("first" rotation on the right, "second" on the left)
-	}
-
-	// Update current dynamic acceleration by applying current angular acceleration to the current angular velocity
-
-	// Negative acceleration because of friction
-	// Fr = cr * Fn; In our case: Fn = m * g; Fv = m * a; Fv = Fr; -> cr * FN = m * a -> cr * m * g = m * a -> a = cr * g;
-	//float g = 9.81; // gravity
-	//float cr = 0.0225; // Rolling resistance cooefficient for rolling bearing
-	//float acc = cr * g;
-
-	float frictionFactor = conf.dyn.frictionCoefficient; // after one second, x% of the original velocity remains if acceleration would be zero
-
-	XMVECTOR oldAngVel = XMLoadFloat3(&m_angVel);
-	XMVECTOR newAngVel = oldAngVel * std::pow(frictionFactor, elapsedTime) + XMLoadFloat3(&m_angAcc) * elapsedTime;
-	//XMVECTOR newAngVel = oldAngVel + (angAcc - (acc * XMVector3Normalize(oldAngVel))) * elapsedTime;
-	XMStoreFloat3(&m_angVel, newAngVel);
-
 	if (showAccelArrow)
 	{
 		XMVECTOR rot = XMLoadFloat4(&objRot);
 		XMVECTOR trans = XMLoadFloat3(&objTrans);
-		// Transform angular velocity to world space
-		s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(XMVector3Rotate(XMLoadFloat3(&m_angAcc), rot).m128_f32));
+		// Transform angular acceleration to world space
+		// Display the angular acceleration like in a right handed coordinate system -> flip direction
+		s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(XMVector3Rotate(XMVectorNegate(XMLoadFloat3(&m_angAcc)), rot).m128_f32));
 		//s_shaderVariables.angVel->SetFloatVector(reinterpret_cast<float*>(&m_debugTrq));
 		s_shaderVariables.viewProj->SetMatrix(reinterpret_cast<float*>((XMLoadFloat4x4(&view) * XMLoadFloat4x4(&projection)).r));
 		// Transform center of mass to world space

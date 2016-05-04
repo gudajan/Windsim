@@ -101,7 +101,7 @@ void Mesh3D::setShaderVariables(bool flatShading, PackedVector::XMCOLOR col)
 	s_shaderVariables.color->SetFloatVector(PackedVector::XMLoadColor(&col).m128_f32); // XMLoadColor normalizes color [0-255] -> [0.0-1.0]
 }
 
-void Mesh3D::calcMassProps(const float density, const XMFLOAT3& scale, XMFLOAT3X3& inertiaTensor, XMFLOAT3& centerOfMass) const
+void Mesh3D::calcMassProps(const float density, const XMFLOAT3& scale, XMFLOAT3X3& inertiaTensor, XMFLOAT3& centerOfMass, float* mass) const
 {
 	std::vector<float> inertia;
 	std::vector<float> com; // center of mass
@@ -109,7 +109,7 @@ void Mesh3D::calcMassProps(const float density, const XMFLOAT3& scale, XMFLOAT3X
 
 	QElapsedTimer timer;
 	timer.start();
-	VolInt::calcMassProps(m_indexData, m_vertexData, scaling, density, inertia, com, nullptr, nullptr);
+	VolInt::calcMassProps(m_indexData, m_vertexData, scaling, density, inertia, com, mass, nullptr);
 	OutputDebugStringA(("Elapsed Volume Integration: " + std::to_string(timer.nsecsElapsed() * 0.000001) + "msec\n").c_str());
 
 	inertiaTensor = XMFLOAT3X3(inertia.data());

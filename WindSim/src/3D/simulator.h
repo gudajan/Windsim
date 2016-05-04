@@ -47,6 +47,7 @@ public:
 	const std::vector<char>& getLines() const { return m_lines; };
 	const int getReseedCounter() const { return m_reseedCounter; };
 	const int getNumLines() const { return m_numLines; };
+	const float getTimeStep() const { return m_timeStep; };
 
 signals:
 	void stepDone(); // One simulation thread done, local output vectors filled
@@ -97,6 +98,7 @@ private:
 	std::vector<char> m_lines;
 	int m_reseedCounter;
 	int m_numLines;
+	float m_timeStep; // in seconds
 
 	// Grid variables
 	DirectX::XMUINT3 m_resolution;
@@ -107,7 +109,6 @@ private:
 	bool m_simLines;
 
 	// Thread synchronization
-	QElapsedTimer m_elapsedTimer;
 	QTimer m_simTimer;
 	QMutex m_simMutex;
 	QWaitCondition m_waitCond;

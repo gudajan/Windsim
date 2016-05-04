@@ -24,7 +24,7 @@ public:
 
 	void setShaderVariables(bool flatShading, DirectX::PackedVector::XMCOLOR col);
 
-	void calcMassProps(const float density, const DirectX::XMFLOAT3& scale, DirectX::XMFLOAT3X3& inertiaTensor, DirectX::XMFLOAT3& centerOfMass) const;
+	void calcMassProps(const float density, const DirectX::XMFLOAT3& scale, DirectX::XMFLOAT3X3& inertiaTensor, DirectX::XMFLOAT3& centerOfMass, float* mass = nullptr) const;
 
 	DX11Renderer* getRenderer() { return m_renderer; };
 

@@ -120,7 +120,7 @@ macros
 		{
 			p->verts[i][X] = vertexBuffer[i * 6 + X] * scaling[X];
 			p->verts[i][Y] = vertexBuffer[i * 6 + Y] * scaling[Y];
-			p->verts[i][Z] = vertexBuffer[i * 6 + Z] * scaling[Z];
+			p->verts[i][Z] = -vertexBuffer[i * 6 + Z] * scaling[Z]; // DirectX uses lef-handed system
 		}
 
 		p->numFaces = indexBuffer.size() / 3;

@@ -108,9 +108,6 @@
     <ClCompile Include="src\util\pipe.cpp">
       <Filter>util</Filter>
     </ClCompile>
-    <ClCompile Include="src\3D\volInt.h">
-      <Filter>3D</Filter>
-    </ClCompile>
     <ClCompile Include="src\3D\camera.cpp">
       <Filter>3D</Filter>
     </ClCompile>
@@ -409,6 +406,9 @@
     </ClInclude>
     <ClInclude Include="src\util\transferFunction.h">
       <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\volInt.h">
+      <Filter>3D</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
