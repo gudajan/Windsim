@@ -1224,6 +1224,52 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>nameEdit</tabstop>
+  <tabstop>cbEnabled</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>gbVoxel</tabstop>
+  <tabstop>rbSolid</tabstop>
+  <tabstop>rbWireframe</tabstop>
+  <tabstop>xP</tabstop>
+  <tabstop>yP</tabstop>
+  <tabstop>zP</tabstop>
+  <tabstop>spResX</tabstop>
+  <tabstop>spResY</tabstop>
+  <tabstop>spResZ</tabstop>
+  <tabstop>dspSizeX</tabstop>
+  <tabstop>dspSizeY</tabstop>
+  <tabstop>dspSizeZ</tabstop>
+  <tabstop>cbRunSim</tabstop>
+  <tabstop>pbReinit</tabstop>
+  <tabstop>leSim</tabstop>
+  <tabstop>pbSim</tabstop>
+  <tabstop>gbSmoke</tabstop>
+  <tabstop>hsRadius</tabstop>
+  <tabstop>hsSmokePosX</tabstop>
+  <tabstop>hsSmokePosY</tabstop>
+  <tabstop>hsSmokePosZ</tabstop>
+  <tabstop>gbLines</tabstop>
+  <tabstop>cbLineOri</tabstop>
+  <tabstop>cbLineType</tabstop>
+  <tabstop>hsLinePos</tabstop>
+  <tabstop>gbGlyph</tabstop>
+  <tabstop>rbOriX</tabstop>
+  <tabstop>rbOriY</tabstop>
+  <tabstop>rbOriZ</tabstop>
+  <tabstop>sbOriX</tabstop>
+  <tabstop>sbOriY</tabstop>
+  <tabstop>hsPos</tabstop>
+  <tabstop>gbVolume</tabstop>
+  <tabstop>cmbMetric</tabstop>
+  <tabstop>hsStepSize</tabstop>
+  <tabstop>dspRangeMin</tabstop>
+  <tabstop>dspRangeMax</tabstop>
+  <tabstop>spR</tabstop>
+  <tabstop>spG</tabstop>
+  <tabstop>spB</tabstop>
+  <tabstop>spA</tabstop>
+ </tabstops>
  <resources>
   <include location="../../../windsim.qrc"/>
  </resources>

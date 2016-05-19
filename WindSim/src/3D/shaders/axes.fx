@@ -173,7 +173,7 @@ technique11 Simple
 		SetGeometryShader(CompileShader(gs_5_0, gsAxes()));
 		SetPixelShader(CompileShader(ps_5_0, psColOnTop()));
 		SetRasterizerState(CullNone);
-		SetDepthStencilState(DepthDisable, 0);
+		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
 }

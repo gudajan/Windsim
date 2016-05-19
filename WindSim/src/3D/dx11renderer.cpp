@@ -201,8 +201,8 @@ void DX11Renderer::issueVoxelization()
 void DX11Renderer::execute()
 {
 	m_elapsedTimer.start();
-	m_renderTimer.start(17);
-	m_voxelizationTimer.start(250); // Voxelization happens every x milliseconds
+	m_renderTimer.start(8);
+	m_voxelizationTimer.start(125); // Voxelization happens every x milliseconds
 }
 
 void DX11Renderer::stop()
@@ -683,6 +683,7 @@ void DX11Renderer::render(double elapsedTime)
 {
 	FLOAT color[] = { 240.0f / 255.0f, 240.0f / 255.0f, 240.0f / 255.0f, 1.0f }; // Qt pale gray
 	m_context->ClearRenderTargetView(m_renderTargetView, color);
+	//m_context->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::White);
 	m_context->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH , 1.0f, 0);
 
 	if (!m_renderingPaused)

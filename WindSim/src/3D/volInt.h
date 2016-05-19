@@ -120,7 +120,7 @@ macros
 		{
 			p->verts[i][X] = vertexBuffer[i * 6 + X] * scaling[X];
 			p->verts[i][Y] = vertexBuffer[i * 6 + Y] * scaling[Y];
-			p->verts[i][Z] = -vertexBuffer[i * 6 + Z] * scaling[Z]; // DirectX uses lef-handed system
+			p->verts[i][Z] = -vertexBuffer[i * 6 + Z] * scaling[Z]; // DirectX uses left-handed system
 		}
 
 		p->numFaces = indexBuffer.size() / 3;
@@ -359,6 +359,12 @@ macros
 		J[X * 3 + Y] = J[Y * 3 + X] += m * r[X] * r[Y];
 		J[Y * 3 + Z] = J[Z * 3 + Y] += m * r[Y] * r[Z];
 		J[Z * 3 + X] = J[X * 3 + Z] += m * r[Z] * r[X];
+
+		// DirectX use left-handed coordinate system: com and inertia tensor are now in right-handed system -> flip Z
+		r[Z] = -r[Z];
+		J[X * 3 + Z] = -J[X * 3 + Z];
+		J[Y * 3 + Z] = -J[Y * 3 + Z];
+		J[Z * 3 + Z] = -J[Z * 3 + Z];
 
 		printf("center of mass:  (%+12.6f,%+12.6f,%+12.6f)\n\n", r[X], r[Y], r[Z]);
 

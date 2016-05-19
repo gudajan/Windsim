@@ -242,9 +242,9 @@ void TransformMachine::start(QPoint currentMousePos)
 	m_oldObjWindowPos = m_renderer->getCamera()->worldToWindow(objPos);
 
 	// Calculate intersections with xz, xy and yz plane
-	XMVECTOR xzPlane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-	XMVECTOR xyPlane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f));
-	XMVECTOR yzPlane = XMPlaneFromPointNormal(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f));
+	XMVECTOR xzPlane = XMPlaneFromPointNormal(groupPos, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+	XMVECTOR xyPlane = XMPlaneFromPointNormal(groupPos, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f));
+	XMVECTOR yzPlane = XMPlaneFromPointNormal(groupPos, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f));
 	XMVECTOR camPos = XMLoadFloat3(&m_renderer->getCamera()->getCamPos());
 	XMVECTOR cursorDir = XMLoadFloat3(&m_oldCursorDir);
 
@@ -344,7 +344,7 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		if (m_state == TranslateX)
 		{
 			axis = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
+			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)))))
 			{
 				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)); // XY plane
 				oldInt = XMLoadFloat3(&m_oldXYInt);
@@ -373,7 +373,7 @@ void TransformMachine::translate(QPoint currentCursorPos, Qt::KeyboardModifiers 
 		else if (m_state == TranslateZ)
 		{
 			axis = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
+			if (XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)))) > XMVectorGetX(XMVectorAbs(XMVector3Dot(ocd, XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)))))
 			{
 				plane = XMPlaneFromPointNormal(XMLoadFloat3(&m_oldObjWorldPos), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // XZ plane
 				oldInt = XMLoadFloat3(&m_oldXZInt);
@@ -565,9 +565,8 @@ void TransformMachine::rotate(QPoint currentMousePos, Qt::KeyboardModifiers mods
 			XMVECTOR scale = XMLoadFloat3(&act.second->getScale());
 
 			// Build new world matrix
-			XMMATRIX newWorld = XMMatrixScalingFromVector(scale); // Local scaling (from oldWorld)
-			newWorld *= XMMatrixRotationQuaternion(rot); // Local rotation (from oldWorld)
-			newWorld *= XMMatrixTranslationFromVector((pos - objPos)); // Move transformation center to averaged object position (includes oldWorld translation)
+			XMMATRIX newWorld = XMLoadFloat4x4(&act.second->getWorld()); // Local transformation
+			newWorld *= XMMatrixTranslationFromVector(-objPos); // Move transformation center to averaged object position
 			newWorld *= XMMatrixRotationNormal(axis, angle); // Perform rotation, dependent on mouse movement (rotation axis runs from camera position through averaged object position (located at the origin))
 			newWorld *= XMMatrixTranslationFromVector(objPos); // Move object to its final world position (as objPos is currently at origin -> move about objPos to get to world position)
 

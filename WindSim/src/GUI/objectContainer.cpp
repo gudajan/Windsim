@@ -41,6 +41,11 @@ void ObjectContainer::clear()
 	m_ids.clear();
 	m_voxelGridAdded = false;
 	emit removeAllObject3DTriggered(); // Remove objects in renderer
+
+	if (m_meshProperties)
+		m_meshProperties->hide();
+	if (m_voxelGridProperties)
+		m_voxelGridProperties->hide();
 }
 
 
@@ -49,7 +54,7 @@ QJsonObject ObjectContainer::getData(int id)
 	ObjectItem* item = getItem(id);
 	if (!item)
 	{
-		StaticLogger::logit("WARNING: Object not found! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
+		StaticLogger::logit("WARNING: Object not found! The object with id '" + QString::number(id) + "' does not exist.");
 		return QJsonObject();
 	}
 
@@ -62,6 +67,7 @@ ObjectItem* ObjectContainer::getItem(int id)
 	// count may be 0 or 1 for sets
 	if (!m_ids.count(id))
 	{
+		OutputDebugStringA(("ID:" + std::to_string(id) + " not found in id list!").c_str());
 		return nullptr;
 	}
 	//Iterate all items in list
@@ -153,6 +159,9 @@ void ObjectContainer::modifyCmd(const QJsonObject& data, Modifications mod)
 {
 	ObjectItem* item = getItem(data["id"].toInt());
 
+	if (!item)
+		return;
+
 	QJsonObject oldData = item->data().toJsonObject();
 	if (oldData != data)
 	{
@@ -169,6 +178,8 @@ void ObjectContainer::rendererModification(std::vector<QJsonObject> data)
 	for (const auto& json : data)
 	{
 		ObjectItem* item = getItem(json["id"].toInt());
+		if (!item)
+			continue;
 		new ModifyObjectCmd(item->data().toJsonObject(), json, item, Position | Scaling | Rotation, transformation); // Add command to command group
 	}
 
@@ -339,7 +350,7 @@ bool ObjectContainer::remove(int id)
 	ObjectItem* item = getItem(id);
 	if (!item)
 	{
-		StaticLogger::logit("WARNING: Object not removed! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
+		StaticLogger::logit("WARNING: Object not removed! The object with id '" + QString::number(id) + "' does not exist.");
 		return false;
 	}
 
@@ -357,7 +368,7 @@ bool ObjectContainer::modify(QJsonObject& data)
 	ObjectItem * item = getItem(data["id"].toInt());
 	if (!item)
 	{
-		StaticLogger::logit("WARNING: Object not modified! The object '" + item->data().toJsonObject()["name"].toString() + "' does not exist.");
+		StaticLogger::logit("WARNING: Object not modified! The object with id '" + QString::number(data["id"].toInt()) + "' does not exist.");
 		return false;
 	}
 	item->setData(data["name"].toString(), Qt::DisplayRole); // Modify name in gui

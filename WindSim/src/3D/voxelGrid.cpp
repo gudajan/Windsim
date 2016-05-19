@@ -88,7 +88,7 @@ VoxelGrid::VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, 
 	connect(&m_simulator, &Simulator::simUpdated, this, &VoxelGrid::enableGridUpdate);
 	connect(&m_simulator, &Simulator::simulatorReady, this, &VoxelGrid::simulatorReady);
 
-	m_simulationThread.start();
+	m_simulationThread.start(QThread::TimeCriticalPriority);
 }
 
 VoxelGrid::~VoxelGrid()

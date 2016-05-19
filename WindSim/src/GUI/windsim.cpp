@@ -254,6 +254,9 @@ bool WindSim::actionSaveAsTriggered()
 
 	g_undoStack.setClean();
 	StaticLogger::logit("INFO: Saved project to '" + filename + "'.");
+
+	setWindowTitle("WindSim - " + filename);
+
 	return true;
 }
 
