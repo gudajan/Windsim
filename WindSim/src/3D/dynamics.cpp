@@ -246,7 +246,7 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	// The mesh is rendered from all three main directions: for X,Y,Z direction: 1. Set Viewport 2. Create and bind ViewProjection matrix 3. Render
 
-	float factor = 8.0f; // The higher, the more accurate is the force calculation
+	float factor = 1.0f;
 	D3D11_VIEWPORT vp;
 	vp.TopLeftX = 10.0f;
 	vp.TopLeftY = 10.0f;

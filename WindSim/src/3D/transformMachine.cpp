@@ -42,7 +42,7 @@ void TransformMachine::initDX11(ID3D11Device* device)
 {
 	// Create transformation marker
 	Marker* m = new Marker(m_renderer);
-	m_marker = std::shared_ptr<MarkerActor>(new MarkerActor(*m, 0)); // ID is not necessary
+	m_marker = std::shared_ptr<MarkerActor>(new MarkerActor(*m, 0, "transformMarker")); // ID is not necessary
 
 	m_marker->setRender(false);
 	m_marker->setXAxisRendered(false);

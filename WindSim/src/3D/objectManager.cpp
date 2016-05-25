@@ -44,7 +44,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 			}
 			Mesh3D* obj = new Mesh3D(objIt->toString().toStdString(), m_renderer);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
-			MeshActor* act = new MeshActor(*obj, id);
+			MeshActor* act = new MeshActor(*obj, id, name);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, false);
@@ -54,7 +54,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 		{
 			Sky* obj = new Sky(m_renderer);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
-			SkyActor* act = new SkyActor(*obj, id);
+			SkyActor* act = new SkyActor(*obj, id, name);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, true);
@@ -63,7 +63,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 		{
 			Axes* obj = new Axes(m_renderer);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
-			AxesActor* act = new AxesActor(*obj, id);
+			AxesActor* act = new AxesActor(*obj, id, name);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, true);
@@ -81,7 +81,7 @@ void ObjectManager::add(ID3D11Device* device, const QJsonObject& data)
 
 			VoxelGrid* obj = new VoxelGrid(this, data["windTunnelSettings"].toString(), res, vs, m_renderer);
 			m_objects.emplace(id, std::shared_ptr<Object3D>(obj));
-			VoxelGridActor* act = new VoxelGridActor(*obj, id);
+			VoxelGridActor* act = new VoxelGridActor(*obj, id, name);
 			m_actors.emplace(id, std::shared_ptr<Actor>(act));
 
 			obj->create(device, false);

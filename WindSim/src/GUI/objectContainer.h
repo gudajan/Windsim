@@ -29,6 +29,10 @@ public:
 	ObjectContainer(QWidget* parent = nullptr);
 	~ObjectContainer();
 
+	ObjectContainer(const ObjectContainer& other) = delete;
+	ObjectContainer& operator=(const ObjectContainer& other) = delete;
+	ObjectContainer(ObjectContainer&& other) = delete;
+	ObjectContainer& operator=(ObjectContainer&& other) = delete;
 
 	void clear();
 

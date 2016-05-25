@@ -3,8 +3,8 @@
 
 using namespace DirectX;
 
-MarkerActor::MarkerActor(Marker& marker, int id)
-	: Actor(ObjectType::Marker, id),
+MarkerActor::MarkerActor(Marker& marker, int id, const std::string& name)
+	: Actor(ObjectType::Marker, id, name),
 	m_marker(marker),
 	m_renderX(true),
 	m_renderY(true),

@@ -140,7 +140,7 @@ void psPressureTorque(PSTexIn psIn, bool isFrontFace : SV_IsFrontFace)
 	float p = g_pressureSRV.SampleLevel(SamLinear, psIn.posTS + 0.5 * normalTS, 0.0);
 
 	// Perpendicular fragment surface area, dependent on the voxel sizes
-	float a[3] = { g_vVoxelSize.z * g_vVoxelSize.y, g_vVoxelSize.x * g_vVoxelSize.z, g_vVoxelSize.x * g_vVoxelSize.y };
+	float a[3] = { g_vVoxelSize.z * g_vVoxelSize.y, g_vVoxelSize.x * g_vVoxelSize.z , g_vVoxelSize.x * g_vVoxelSize.y };
 
 	float w = abs(dot(float3(0.0f, 0.0f, 1.0f), normalize(mul(float4(normalTS, 0.0f), g_mTexToProj).xyz))); // Weight for this fragment (equivalent to the angle between normal and view ray)
 

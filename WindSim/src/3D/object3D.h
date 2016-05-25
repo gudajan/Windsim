@@ -39,9 +39,9 @@ public:
 	virtual ID3D11Buffer* getIndexBuffer() { return m_indexBuffer; };
 	virtual uint32_t getNumIndices() const { return m_numIndices; };
 
-protected:
 	virtual void log(const std::string& msg);
 
+protected:
 	ID3D11Buffer* m_vertexBuffer;
 	ID3D11Buffer* m_indexBuffer;
 	uint32_t m_numIndices;

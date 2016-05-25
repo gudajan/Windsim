@@ -2,14 +2,15 @@
 
 using namespace DirectX;
 
-Actor::Actor(ObjectType type, int id)
+Actor::Actor(ObjectType type, int id, const std::string& name)
 	: m_pos({ 0.0, 0.0, 0.0 }),
 	m_rot({ 0.0, 0.0, 0.0, 1.0 }),
 	m_scale({ 1.0, 1.0, 1.0 }),
 	m_world(),
 	m_render(true),
 	m_type(type),
-	m_id(id)
+	m_id(id),
+	m_name(name)
 {
 	computeWorld();
 }

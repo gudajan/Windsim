@@ -5,8 +5,8 @@
 
 using namespace DirectX;
 
-MeshActor::MeshActor(Mesh3D& mesh, int id)
-	: Actor(ObjectType::Mesh, id),
+MeshActor::MeshActor(Mesh3D& mesh, int id, const std::string& name)
+	: Actor(ObjectType::Mesh, id, name),
 	m_marker(mesh.getRenderer()),
 	m_mesh(mesh),
 	m_dynamics(mesh),
@@ -19,6 +19,7 @@ MeshActor::MeshActor(Mesh3D& mesh, int id)
 	m_calcDynamics(false),
 	m_simRunning(true),
 	m_showAccelArrow(false),
+	m_density(-1.0),
 	m_hovered(false),
 	m_selected(false),
 	m_modified(false)
@@ -184,7 +185,11 @@ void MeshActor::updateInertiaTensor()
 	XMFLOAT3X3 inertia;
 	XMFLOAT3 com;
 	float mass;
+	if (m_density <= 0)
+		return;
+
 	m_mesh.calcMassProps(m_density, m_scale, inertia, com, &mass);
+	m_mesh.log("VERBOSE: Calculated mass " + std::to_string(mass) + "kg for mesh '" + m_name + "'");
 	m_dynamics.setMass(mass);
 	m_dynamics.setInertia(inertia);
 	m_dynamics.setCenterOfMass(com);

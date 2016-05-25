@@ -120,6 +120,7 @@ void WindSim::closeEvent(QCloseEvent* event)
 
 		ui.dx11Viewer->cleanUp();
 		g_undoStack.clear();
+		m_container.clear();
 		event->accept();
 	}
 	else

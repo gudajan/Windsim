@@ -2,8 +2,8 @@
 
 using namespace DirectX;
 
-SkyActor::SkyActor(Sky& sky, int id)
-	: Actor(ObjectType::Sky, id),
+SkyActor::SkyActor(Sky& sky, int id, const std::string& name)
+	: Actor(ObjectType::Sky, id, name),
 	m_sky(sky)
 {
 }

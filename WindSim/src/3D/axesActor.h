@@ -7,7 +7,7 @@
 class AxesActor : public Actor
 {
 public:
-	AxesActor(Axes& axes, int id);
+	AxesActor(Axes& axes, int id, const std::string& name);
 
 	AxesActor* clone() override;
 

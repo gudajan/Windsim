@@ -13,7 +13,7 @@ struct ID3D11ShaderResourceView;
 class MeshActor : public Actor
 {
 public:
-	MeshActor(Mesh3D& mesh, int id);
+	MeshActor(Mesh3D& mesh, int id, const std::string& name);
 
 	MeshActor* clone() override;
 

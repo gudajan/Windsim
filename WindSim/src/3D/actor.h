@@ -13,7 +13,7 @@ class Object3D;
 class Actor
 {
 public:
-	Actor(ObjectType type, int id);
+	Actor(ObjectType type, int id, const std::string& name);
 	virtual ~Actor() = default;
 
 	virtual Actor* clone() = 0;
@@ -49,6 +49,7 @@ protected:
 	bool m_render;
 	ObjectType m_type;
 	int m_id;
+	std::string m_name;
 };
 
 #endif

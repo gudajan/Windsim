@@ -20,6 +20,9 @@
 
 using namespace DirectX;
 
+static float s_t = 0.1;
+static float s_time = 0.0;
+
 VoxelGrid::VoxelGrid(ObjectManager* manager, const QString& windTunnelSettings, XMUINT3 resolution, XMFLOAT3 voxelSize, DX11Renderer* renderer, QObject* parent)
 	: QObject(parent),
 	Object3D(renderer),
@@ -302,12 +305,16 @@ void VoxelGrid::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 	//timer.start();
 
 	// Process simulation results
-	static float timestep = 0.0;
 	if (m_simAvailable && m_processSimResults && m_dynamicsCounter == -1)
 	{
 		m_simTimeStep = m_simulator.getTimeStep();
-		timestep += m_simTimeStep;
-		OutputDebugStringA(("INFO: OVERALL SIMULATION TIME: " + std::to_string(timestep) + "\n").c_str());
+		s_time += m_simTimeStep;
+
+		if (s_time > s_t)
+		{
+			log("VERBOSE: Simulation time: " + std::to_string(s_time));
+			s_t += 0.1f;
+		}
 		QElapsedTimer t;
 		t.start();
 		updateVelocityPressure(context);
@@ -521,6 +528,8 @@ void VoxelGrid::restartSimulation()
 	{
 		emit resetSimulation();
 	}
+	s_t = 0.1f;
+	s_time = 0.0f;
 }
 
 void VoxelGrid::runSimulationSync(bool enabled)
@@ -720,7 +729,7 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	context->OMGetRenderTargets(1, &tempRTV, &tempDSV);
 	// Disable old renderTarget to enable arbitrary viewport sizes (i.e. voxel grid sizes)
 	// Otherwise the viewport size is clamped to the resolution of the current render target
-	context->OMSetRenderTargets(0, nullptr, nullptr);
+	 context->OMSetRenderTargets(0, nullptr, nullptr);
 
 	// Save old viewport
 	D3D11_VIEWPORT tempVP[1];

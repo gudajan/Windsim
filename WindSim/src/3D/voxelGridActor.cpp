@@ -3,8 +3,8 @@
 
 using namespace DirectX;
 
-VoxelGridActor::VoxelGridActor(VoxelGrid& grid, int id)
-	: Actor(ObjectType::VoxelGrid, id),
+VoxelGridActor::VoxelGridActor(VoxelGrid& grid, int id, const std::string& name)
+	: Actor(ObjectType::VoxelGrid, id, name),
 	m_grid(grid)
 {
 	//reCenter(); // Center the grid initially

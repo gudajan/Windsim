@@ -33,7 +33,10 @@ ObjectContainer::ObjectContainer(QWidget* parent)
 
 ObjectContainer::~ObjectContainer()
 {
+	delete m_meshProperties;
+	delete m_voxelGridProperties;
 }
+
 
 void ObjectContainer::clear()
 {
@@ -109,7 +112,7 @@ void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
 
 		if (!m_meshProperties)
 		{
-			m_meshProperties = new MeshProperties(data, static_cast<QWidget*>(parent())); // Save as we know our parent is a QWidget
+			m_meshProperties = new MeshProperties(data); // Save as we know our parent is a QWidget
 			m_meshProperties->setup(this);
 		}
 		m_meshProperties->updateProperties(data);
@@ -120,7 +123,7 @@ void ObjectContainer::showPropertiesDialog(const QModelIndex& index)
 	{
 		if (!m_voxelGridProperties)
 		{
-			m_voxelGridProperties = new VoxelGridProperties(data, static_cast<QWidget*>(parent()));
+			m_voxelGridProperties = new VoxelGridProperties(data);
 			m_voxelGridProperties->setup(this);
 		}
 		m_voxelGridProperties->updateProperties(data);
