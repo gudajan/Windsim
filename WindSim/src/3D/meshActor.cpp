@@ -116,7 +116,7 @@ void MeshActor::render(ID3D11Device* device, ID3D11DeviceContext* context, const
 void MeshActor::calculateDynamics(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* field, double elapsedTime)
 {
 	if (m_calcDynamics)
-		m_dynamics.calculate(device, context, m_dynCalcWorld, worldToVoxelTex, texResolution, voxelSize, field, elapsedTime);
+		m_dynamics.calculate(device, context, m_dynCalcWorld, m_rot, worldToVoxelTex, texResolution, voxelSize, field, elapsedTime);
 }
 
 const XMFLOAT3 MeshActor::getAngularVelocity() const

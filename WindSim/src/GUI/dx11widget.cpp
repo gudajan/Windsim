@@ -25,7 +25,7 @@ DX11Widget::DX11Widget(QWidget* parent, Qt::WindowFlags flags)
 	if (Simulator::initOpenCLNecessary())
 	{
 		static auto info = wtl::getOpenCLInfo();
-		if (info.size() == 0 || std::accumulate(info.begin(), info.end(), 0, [](size_t v, const std::pair<wtl::description, std::vector<wtl::description>>& e) { return v + e.second.size(); }) == 0)
+		if (info.size() == 0 || std::accumulate(info.begin(), info.end(), 0, [](int v, const std::pair<wtl::description, std::vector<wtl::description>>& e) { return v + static_cast<int>(e.second.size()); }) == 0)
 		{
 			QMessageBox::critical(parent, "OpenCL Error", "No OpenCL platforms and devices available! Install the necessary SDK's by Intel or AMD!");
 			throw std::runtime_error("ERROR: Failed to initialize OpenCL!");

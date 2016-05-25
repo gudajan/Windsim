@@ -51,7 +51,6 @@ struct VSMeshIn
 struct PSVoxelIn
 {
 	float4 pos : SV_Position;
-	float4 projPos : POSITION;
 	float3 voxelPos : INDEX;
 };
 
@@ -286,17 +285,12 @@ PSColIn vsGridBox(VSGridIn vsIn)
 PSVoxelIn vsVoxelize(VSMeshIn vsIn)
 {
 	PSVoxelIn vsOut;
-	vsOut.voxelPos = mul(mul(float4(vsIn.pos, 1.0f), g_mObjToWorld), g_mWorldToVoxel).xyz; // Transform from mesh object space -> World Space -> grid object space -> grid voxel space
-	vsOut.pos = mul(mul(mul(float4(vsIn.pos, 1.0f), g_mObjToWorld), g_mWorldToVoxel), g_mVoxelProj);
+	float4 voxelPos = mul(mul(float4(vsIn.pos, 1.0f), g_mObjToWorld), g_mWorldToVoxel); // Transform from mesh object space -> World Space -> grid object space -> grid voxel space
+	voxelPos.x = clamp(voxelPos.x, 0, g_vResolution.x); // Clamp mesh to grid extents
 
-	// Shift z coordinate about half a voxel so the voxel position appears to be in its center instead of the lower, left, front corner
-	vsOut.voxelPos.z += 0.5;
+	vsOut.voxelPos = voxelPos.xyz;
+	vsOut.pos = mul(voxelPos, g_mVoxelProj); // Rotate voxelgrid and apply projection to voxelize along x-axis
 
-	// Clamp z coordinate to grid
-	// This way, a fragment is generated although it lies outside the grid
-	// As the voxelization algorithm depends on the odd number of fragments (entering and leaving the object) it is important to also generate the leaving fragment if it lies outside the grid
-	vsOut.pos.z = clamp(vsOut.pos.z, - 1.0f, 1.0f);
-	vsOut.projPos = vsOut.pos;
 	return vsOut;
 }
 
@@ -305,7 +299,6 @@ PSVoxelIn vsVolume(VSGridIn vsIn)
 	PSVoxelIn vsOut;
 	vsOut.voxelPos = mul(float4(vsIn.pos, 1.0f), g_mGridToVoxel).xyz; // Transfrom from grid object space -> grid voxel space (aka texture space)
 	vsOut.pos = mul(float4(vsIn.pos, 1.0f), g_mWorldViewProj);
-	vsOut.projPos = vsOut.pos;
 	return vsOut;
 }
 
@@ -483,7 +476,7 @@ void gsSolidCube(point uint input[1] : VertexID, inout TriangleStream<PSCubeIn> 
 }
 
 [maxvertexcount(24)]
-void gsWireframeCube(point uint input[1] : VertexID, inout LineStream<PSColIn> stream)
+void gsWireCube(point uint input[1] : VertexID, inout LineStream<PSCubeIn> stream)
 {
 	uint index = input[0];
 
@@ -503,8 +496,8 @@ void gsWireframeCube(point uint input[1] : VertexID, inout LineStream<PSColIn> s
 		pos[i] = mul(float4 ((gridPos + boxPos[i]), 1.0f), g_mVoxelWorldViewProj);
 	}
 
-	PSColIn v = (PSColIn)0;
-	v.col = float3(0.2, 0.2, 0.2);
+	PSCubeIn v = (PSCubeIn)0;
+	v.type = voxel;
 
 	for (int j = 0; j < 12; ++j)
 	{
@@ -528,44 +521,46 @@ void psVoxelize(PSVoxelIn psIn)
 	// -> Switch x and z on grid access
 
 	uint3 index = uint3(psIn.voxelPos);
-	uint zRun = g_vResolution.x;
-	if (psIn.voxelPos.z < 0)
-		zRun = 0;
-	if (inGrid(float3(psIn.voxelPos.zyx)))
-		zRun = index.z;
+	uint xRun = g_vResolution.x;
+	if (psIn.voxelPos.x < 0)
+		xRun = 0;
+	else if (psIn.voxelPos.x < g_vResolution.x - 1)
+		xRun = index.x;
 
 	// Calculate real index of current cell, which voxel index of current fragment falls into (one cell is 1 * 1 * 4 as one int contains 4 voxels/chars -> one cell contains 4 voxel in z direction)
-	uint currentCell = zRun / 4; // Integer division without rest
-	uint n = zRun - currentCell * 4; // = zRun % 4 Voxel index within the current cell
+	uint currentCell = xRun / 4; // Integer division without rest
+	uint n = xRun - currentCell * 4; // = xRun % 4 Voxel index within the current cell
 
 	// Completely xor the cells in front of the fragment
-	for (uint z = 0; z < currentCell; ++z)
+	for (uint x = 0; x < currentCell; ++x)
 	{
 		// XOR all 4 voxel with CELL_TYPE_SOLID_NO_SLIP = 0x04
-		InterlockedXor(g_gridUAV[uint3(z, index.yx)], 0x04040404);
+		InterlockedXor(g_gridUAV[uint3(x, index.yz)], 0x04040404);
 	}
 
 	if (n > 0)
 	{
 		// Set all voxels in current cell up to index of current fragment to CELL_TYPE_SOLID_NO_SLIP
 		uint xorVal = 0x04040404 >> (8 * (4 - n));
-		InterlockedXor(g_gridUAV[uint3(currentCell, index.yx)], xorVal);
+		InterlockedXor(g_gridUAV[uint3(currentCell, index.yz)], xorVal);
 	}
+
+	//return float4(float(xRun.x) / g_vResolution.x, 0, 0, 1);
 }
 
 void psConservative(PSVoxelIn psIn)
 {
-	if (!inGrid(float3(psIn.voxelPos.zyx)))
+	if (!inGrid(psIn.voxelPos))
 		return;
 
-	uint3 index = uint3(psIn.voxelPos - float3(0, 0, 0.5)); // Adjust for the half voxel shift
+	uint3 index = uint3(psIn.voxelPos); // Adjust for the half voxel shift
 
-	uint cellId = index.z / 4;
-	uint n = index.z - cellId * 4;
+	uint cellId = index.x / 4;
+	uint n = index.x - cellId * 4;
 
 	// Set voxel with index n within cell to CELL_TYPE_SOLID_NO_SLIP
 	uint orVal = 0x04 << 8 * n;
-	InterlockedOr(g_gridUAV[uint3(cellId, index.yx)], orVal);
+	InterlockedOr(g_gridUAV[uint3(cellId, index.yz)], orVal);
 }
 
 float4 psSolidCube(PSCubeIn frag) : SV_Target
@@ -578,11 +573,22 @@ float4 psSolidCube(PSCubeIn frag) : SV_Target
 		col = float3(0.8f, 0.1f, 0.0f);
 
 	return BlinnPhongIllumination(n, -normalize(frag.posView), col, 0.3f, 0.6f, 0.1f, 4);
+	//return BlinnPhongIllumination(n, normalize(float3(1, 1, -1)), col, 0.3f, 0.6f, 0.1f, 4);
 }
 
 float4 psCol(PSColIn frag) : SV_Target
 {
 	return float4(frag.col, 1.0f);
+}
+
+float4 psWireCube(PSCubeIn frag) : SV_Target
+{
+	float3 col = float3(0.8f, 0.2f, 0.2f);
+
+	if (frag.type == CELL_TYPE_SOLID_BOUNDARY)
+		col = float3(0.2f, 0.2f, 0.2f);
+
+	return float4(col, 1.0f);
 }
 
 technique11 Voxel
@@ -630,8 +636,8 @@ technique11 Voxel
 	pass WireframeVoxel
 	{
 		SetVertexShader(CompileShader(vs_5_0, vsPassId()));
-		SetGeometryShader(CompileShader(gs_5_0, gsWireframeCube()));
-		SetPixelShader(CompileShader(ps_5_0, psCol()));
+		SetGeometryShader(CompileShader(gs_5_0, gsWireCube()));
+		SetPixelShader(CompileShader(ps_5_0, psWireCube()));
 		SetRasterizerState(CullNone);
 		SetDepthStencilState(DepthDefault, 0);
 		SetBlendState(BlendDisable, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);

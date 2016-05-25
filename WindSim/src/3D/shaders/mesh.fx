@@ -36,8 +36,8 @@ float4 psBlinnPhong(PSIn inFragment) : SV_Target
 {
 	const float ka = 0.2f; // ambient
 	const float kd = 0.6f; // diffuse
-	const float ks = 0.2f; // specular
-	const float s = 30.0f; // shininess (alpha)
+	const float ks = 0.8f; // specular
+	const float s = 130.0f; // shininess (alpha)
 
 	float3 n;
 	if (g_bEnableFlatShading)
@@ -51,6 +51,7 @@ float4 psBlinnPhong(PSIn inFragment) : SV_Target
 	}
 
 	return BlinnPhongIllumination(n, -normalize(inFragment.posView), g_vColor.xyz, ka, kd, ks, s);
+	//return BlinnPhongIllumination(n, normalize(float3(1, 1, -1)), g_vColor.xyz, ka, kd, ks, s);
 }
 
 

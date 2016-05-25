@@ -112,7 +112,7 @@ Dynamics::Dynamics(Mesh3D& mesh)
 	reset();
 }
 
-void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& objectToWorld, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* field, double elapsedTime)
+void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, const XMFLOAT4X4& objectToWorld, const XMFLOAT4& objRot, const XMFLOAT4X4& worldToVoxelTex, const XMUINT3& texResolution, const XMFLOAT3& voxelSize, ID3D11ShaderResourceView* field, double elapsedTime)
 {
 	// Calculate new dynamic rotation from current angular velocity and rotation in previous frame and elapsed time
 	XMVECTOR dynRot = XMLoadFloat4(&m_renderRot);
@@ -164,12 +164,12 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	// Transform torque to Body Inertial frame
 	XMVECTOR trq = XMVectorSet(torque[0], torque[1], torque[2], 0);
-	XMVECTOR rot;
-	XMVECTOR scale;
-	XMVECTOR trans;
-	XMMatrixDecompose(&scale, &rot, &trans, XMLoadFloat4x4(&objectToWorld));
+	XMVECTOR oRot = XMLoadFloat4(&objRot);
+	XMVECTOR axis;
+	float angle;
+	XMQuaternionToAxisAngle(&axis, &angle, oRot);
 	XMStoreFloat3(&m_debugTrq, trq);
-	trq = XMVector3Rotate(trq, XMQuaternionNormalize(rot));
+	trq = XMVector3Rotate(trq, XMQuaternionInverse(oRot));
 
 	//// Torque because of friction
 	//// Friction torque = Fn * f * d/2; see http://www.roymech.co.uk/Useful_Tables/Tribology/Bearing%20Friction.html
@@ -221,6 +221,10 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 	s_shaderVariables.torqueUAV->SetUnorderedAccessView(m_torqueUAV);
 
 	// Prepare binding of the rest of fixed shader variables via effects framework
+	XMVECTOR trans;
+	XMVECTOR scale;
+	XMVECTOR rot;
+	XMMatrixDecompose(&scale, &rot, &trans, XMLoadFloat4x4(&objectToWorld));
 	s_shaderVariables.objectToWorld->SetMatrix(reinterpret_cast<const float*>(objectToWorld.m));
 	s_shaderVariables.worldToVoxelTex->SetMatrix(reinterpret_cast<const float*>(worldToVoxelTex.m));
 	s_shaderVariables.position->SetFloatVector((XMVector3Rotate(XMLoadFloat3(&m_centerOfMass), rot) + trans).m128_f32); // Center of mass already scaled

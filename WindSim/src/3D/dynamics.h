@@ -30,7 +30,7 @@ public:
 
 	Dynamics(Mesh3D& mesh);
 
-	void calculate(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& objectToWorld, const DirectX::XMFLOAT4X4& worldToVoxelTex, const DirectX::XMUINT3& texResolution, const DirectX::XMFLOAT3& voxelSize, ID3D11ShaderResourceView* field, double elapsedTime);
+	void calculate(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4X4& objectToWorld, const DirectX::XMFLOAT4& objRot, const DirectX::XMFLOAT4X4& worldToVoxelTex, const DirectX::XMUINT3& texResolution, const DirectX::XMFLOAT3& voxelSize, ID3D11ShaderResourceView* field, double elapsedTime);
 	void render(ID3D11Device* device, ID3D11DeviceContext* context, const DirectX::XMFLOAT4& objRot, const DirectX::XMFLOAT3& objTrans, const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, float elapsedTime, bool showAccelArrow);
 
 	HRESULT create(ID3D11Device* device);

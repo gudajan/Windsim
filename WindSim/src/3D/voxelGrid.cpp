@@ -732,51 +732,62 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	// If we increase the resolution, the voxelization is gets more conservative (more (barely) touched voxels are set) as more rays are casted per voxel row
 	float factor = 1.0f;
 	D3D11_VIEWPORT vpSolid; // Used for the solid voxelization
-	vpSolid.TopLeftX = 0.0f;
-	vpSolid.TopLeftY = 0.0f;
+	vpSolid.TopLeftX = 10.0f;
+	vpSolid.TopLeftY = 10.0f;
 	vpSolid.Width = static_cast<float>(m_resolution.z * factor);
 	vpSolid.Height = static_cast<float>(m_resolution.y * factor);
 	vpSolid.MinDepth = 0.0f;
 	vpSolid.MaxDepth = 1.0f;
 
+	// Viewports for conservative voxelization
 	factor = 32.0f; // The higher, the more conservative
-	D3D11_VIEWPORT vpCons; // Used for conservative voxelization
-	vpCons.TopLeftX = 0.0f;
-	vpCons.TopLeftY = 0.0f;
-	vpCons.Width = static_cast<float>(m_resolution.z * factor);
-	vpCons.Height = static_cast<float>(m_resolution.y * factor);
-	vpCons.MinDepth = 0.0f;
-	vpCons.MaxDepth = 1.0f;
 
+	// Along x-axis
+	D3D11_VIEWPORT vpConsX;
+	vpConsX.TopLeftX = 0.0f;
+	vpConsX.TopLeftY = 0.0f;
+	vpConsX.Width = static_cast<float>(m_resolution.z * factor);
+	vpConsX.Height = static_cast<float>(m_resolution.y * factor);
+	vpConsX.MinDepth = 0.0f;
+	vpConsX.MaxDepth = 1.0f;
 
-	// Clear combined grid UAV once each voxelization
-	const UINT iniVals[] = { 0, 0, 0, 0 };
-	context->ClearUnorderedAccessViewUint(m_gridAllUAV, iniVals);
+	// Along y-axis
+	D3D11_VIEWPORT vpConsY = vpConsX;
+	vpConsY.Width = static_cast<float>(m_resolution.x * factor);
+	vpConsY.Height = static_cast<float>(m_resolution.z * factor);
 
+	// Along z-axis
+	D3D11_VIEWPORT vpConsZ = vpConsX;
+	vpConsZ.Width = static_cast<float>(m_resolution.x * factor);
+	vpConsZ.Height = static_cast<float>(m_resolution.y * factor);
+
+	// Transformations for looking along x-,y- and z-axis
 	// Passed projection and view transformations of current camera are ignored
+
+	// Perform rotation and mirroring to enforce looking along x-instead of z-axis
+	XMMATRIX viewX = XMMatrixRotationNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), degToRad(-90)) * XMMatrixTranslation(m_resolution.z, 0.0f, 0.0f);
+	// Create orthogonal projection aligned with voxel grid looking along x-axis
+	XMMATRIX projX = XMMatrixOrthographicOffCenterLH(0, m_resolution.z, 0, m_resolution.y, 0, m_resolution.x);
+
+	// Perform rotation and mirroring to enforce voxelization along y-instead of z-axis
+	XMMATRIX viewY = XMMatrixRotationNormal(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), degToRad(90)) * XMMatrixTranslation(0.0f, m_resolution.z, 0.0f);
+	// Create orthogonal projection aligned with voxel grid looking along y-axis
+	XMMATRIX projY = XMMatrixOrthographicOffCenterLH(0, m_resolution.x, 0, m_resolution.z, 0, m_resolution.y);
+
+	// Already looking along z-axis -> no transformation necessary
+	XMMATRIX viewZ = XMMatrixIdentity();
+	// Create orthogonal projection aligned with voxel grid looking along x-axis
+	XMMATRIX projZ = XMMatrixOrthographicOffCenterLH(0, m_resolution.x, 0, m_resolution.y, 0, m_resolution.z);
+
+	std::tuple<D3D11_VIEWPORT*, XMMATRIX> axes[3] = { std::make_tuple(&vpConsX, viewX * projX), std::make_tuple(&vpConsY, viewY * projY), std::make_tuple(&vpConsZ, viewZ * projZ) };
+
 	// Transform mesh into "Voxel Space" (coordinates should be in range [0, resolution] so we can use floor(position) in pixel shader for accessing the grid)
 	// World to Grid Object Space:
 	XMMATRIX worldToGrid = XMMatrixInverse(nullptr, XMLoadFloat4x4(&world));
 	// Grid Object Space to Voxel Space
 	XMMATRIX gridToVoxel = XMMatrixScalingFromVector(XMVectorReciprocal(XMLoadFloat3(&m_voxelSize))); // Scale with 1 / voxelSize so position is index into grid
-	// Perform rotation and mirroring to enforce voxelization along x-instead of z-axis
-	XMMATRIX voxelizeX = XMMatrixRotationNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), degToRad(90)) * XMMatrixScaling(1.0f, 1.0f, -1.0f);
 
-	// Create orthogonal projection aligned with voxel grid looking along x-axis
-	XMMATRIX proj = XMMatrixOrthographicOffCenterLH(0, m_resolution.z, 0, m_resolution.y, 0, m_resolution.x);
-
-	// Compute dispatch numbers for compute shader
-	// yz values are devided by 16 because of the numthreads attribute in the compute shader, x value is devided by 16 because 4 voxels are encoded in one cell and 4 threads are dispatched
-	XMUINT3 dispatch(std::ceil(m_resolution.x / 16.0f), std::ceil(m_resolution.y / 16.0f), std::ceil((m_resolution.z / 16.0f)));
-
-	// Decompose voxel grid world matrix
-	XMVECTOR trans;
-	XMVECTOR rot;
-	XMVECTOR scale;
-	XMMatrixDecompose(&scale, &rot, &trans, XMLoadFloat4x4(&world));
-
-	s_shaderVariables.worldToVoxel->SetMatrix(reinterpret_cast<float*>((worldToGrid * gridToVoxel * voxelizeX).r));
-	s_shaderVariables.voxelProj->SetMatrix(reinterpret_cast<float*>(proj.r));
+	s_shaderVariables.worldToVoxel->SetMatrix(reinterpret_cast<float*>((worldToGrid * gridToVoxel).r));
 	s_shaderVariables.resolution->SetIntVector(reinterpret_cast<int*>(&m_resolution));
 	s_shaderVariables.voxelSize->SetFloatVector(reinterpret_cast<float*>(&m_voxelSize));
 
@@ -784,6 +795,14 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 	const unsigned int offsets[] = { 0 };
 	context->IASetInputLayout(s_meshInputLayout);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	// Clear combined grid UAV once each voxelization
+	const UINT iniVals[] = { 0, 0, 0, 0 };
+	context->ClearUnorderedAccessViewUint(m_gridAllUAV, iniVals);
+
+	// Compute dispatch numbers for compute shader
+	// yz values are devided by 16 because of the numthreads attribute in the compute shader, x value is devided by 16 because 4 voxels are encoded in one cell and 4 threads are dispatched
+	XMUINT3 dispatch(std::ceil(m_resolution.x / 16.0f), std::ceil(m_resolution.y / 16.0f), std::ceil((m_resolution.z / 16.0f)));
 
 	for (const auto& act : m_manager->getActors())
 	{
@@ -806,6 +825,8 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 			XMMATRIX objToWorld = XMLoadFloat4x4(&ma->getDynWorld());
 			s_shaderVariables.objToWorld->SetMatrix(reinterpret_cast<float*>(objToWorld.r));
 
+			s_shaderVariables.voxelProj->SetMatrix(reinterpret_cast<float*>((viewX * projX).r)); // Solid voxelization always along x-axis
+
 			s_shaderVariables.gridUAV->SetUnorderedAccessView(m_gridUAV);
 			s_effect->GetTechniqueByIndex(0)->GetPassByName("Voxelize")->Apply(0, context);
 
@@ -821,12 +842,16 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 			if (m_conservative)
 			{
+				// Perfrom conservative voxelization for all 3 global axes
 				s_shaderVariables.gridUAV->SetUnorderedAccessView(m_gridUAV);
-				s_effect->GetTechniqueByIndex(0)->GetPassByName("Conservative")->Apply(0, context);
+				for (int i = 0; i < 3; ++i)
+				{
+					s_shaderVariables.voxelProj->SetMatrix(reinterpret_cast<float*>(std::get<1>(axes[i]).r));
+					s_effect->GetTechniqueByIndex(0)->GetPassByName("Conservative")->Apply(0, context);
 
-				context->RSSetViewports(1, &vpCons);
-				context->DrawIndexed(ma->getMesh().getNumIndices(), 0, 0);
-
+					context->RSSetViewports(1, std::get<0>(axes[i]));
+					context->DrawIndexed(ma->getMesh().getNumIndices(), 0, 0);
+				}
 				s_shaderVariables.gridUAV->SetUnorderedAccessView(nullptr);
 				s_effect->GetTechniqueByIndex(0)->GetPassByName("Conservative")->Apply(0, context);
 			}

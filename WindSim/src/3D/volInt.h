@@ -331,6 +331,11 @@ macros
 		printf("Tyz =  %+20.6f\n", TP[Y]);
 		printf("Tzx =  %+20.6f\n\n", TP[Z]);
 
+		// DirectX use left-handed coordinate system (Z forward): volume integrals are now in right-handed system (-Z forward) -> flip integrals if single z involved:
+		T1[Z] = -T1[Z];
+		TP[Y] = -TP[Y];
+		TP[Z] = -TP[Z];
+
 		m = density * T0;
 
 		if (mass)
@@ -359,12 +364,6 @@ macros
 		J[X * 3 + Y] = J[Y * 3 + X] += m * r[X] * r[Y];
 		J[Y * 3 + Z] = J[Z * 3 + Y] += m * r[Y] * r[Z];
 		J[Z * 3 + X] = J[X * 3 + Z] += m * r[Z] * r[X];
-
-		// DirectX use left-handed coordinate system: com and inertia tensor are now in right-handed system -> flip Z
-		r[Z] = -r[Z];
-		J[X * 3 + Z] = -J[X * 3 + Z];
-		J[Y * 3 + Z] = -J[Y * 3 + Z];
-		J[Z * 3 + Z] = -J[Z * 3 + Z];
 
 		printf("center of mass:  (%+12.6f,%+12.6f,%+12.6f)\n\n", r[X], r[Y], r[Z]);
 
