@@ -443,7 +443,7 @@ void gsSolidCube(point uint input[1] : VertexID, inout TriangleStream<PSCubeIn> 
 
 	uint voxel = getVoxelValue(g_gridAllSRV[cellId], n);
 
-	if (voxel != CELL_TYPE_SOLID_BOUNDARY)
+	if (voxel != CELL_TYPE_SOLID_NO_SLIP)
 		return;
 
 	float4 pos[8];
@@ -487,7 +487,7 @@ void gsWireCube(point uint input[1] : VertexID, inout LineStream<PSCubeIn> strea
 
 	uint voxel = getVoxelValue(g_gridAllSRV[cellId], n);
 
-	if (voxel != CELL_TYPE_SOLID_BOUNDARY)
+	if (voxel != CELL_TYPE_SOLID_NO_SLIP)
 		return;
 
 	float4 pos[8];
@@ -583,10 +583,10 @@ float4 psCol(PSColIn frag) : SV_Target
 
 float4 psWireCube(PSCubeIn frag) : SV_Target
 {
-	float3 col = float3(0.8f, 0.2f, 0.2f);
+	float3 col = float3(0.2f, 0.2f, 0.2f);
 
 	if (frag.type == CELL_TYPE_SOLID_BOUNDARY)
-		col = float3(0.2f, 0.2f, 0.2f);
+		col = float3(0.4f, 0.4f, 0.4f);
 
 	return float4(col, 1.0f);
 }

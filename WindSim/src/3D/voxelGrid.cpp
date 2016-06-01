@@ -884,25 +884,25 @@ void VoxelGrid::voxelize(ID3D11Device* device, ID3D11DeviceContext* context, con
 		}
 	}
 
-	// ###################################
-	// CELLTYPES
-	// ###################################
-	// Use compute shader to compute the specific cell types for each voxel
-	s_shaderVariables.gridAllUAV->SetUnorderedAccessView(m_gridAllUAV);
-	s_effect->GetTechniqueByIndex(0)->GetPassByName("CellTypeGridBoundary")->Apply(0, context);
+	//// ###################################
+	//// CELLTYPES
+	//// ###################################
+	//// Use compute shader to compute the specific cell types for each voxel
+	//s_shaderVariables.gridAllUAV->SetUnorderedAccessView(m_gridAllUAV);
+	//s_effect->GetTechniqueByIndex(0)->GetPassByName("CellTypeGridBoundary")->Apply(0, context);
 
-	context->Dispatch(dispatch.x, dispatch.y, dispatch.z);
+	//context->Dispatch(dispatch.x, dispatch.y, dispatch.z);
 
-	s_shaderVariables.gridAllUAV->SetUnorderedAccessView(nullptr);
-	s_effect->GetTechniqueByIndex(0)->GetPassByName("CellTypeGridBoundary")->Apply(0, context);
+	//s_shaderVariables.gridAllUAV->SetUnorderedAccessView(nullptr);
+	//s_effect->GetTechniqueByIndex(0)->GetPassByName("CellTypeGridBoundary")->Apply(0, context);
 
-	s_shaderVariables.gridAllUAV->SetUnorderedAccessView(m_gridAllUAV);
-	s_effect->GetTechniqueByIndex(0)->GetPassByName("CellTypeSolidBoundary")->Apply(0, context);
+	//s_shaderVariables.gridAllUAV->SetUnorderedAccessView(m_gridAllUAV);
+	//s_effect->GetTechniqueByIndex(0)->GetPassByName("CellTypeSolidBoundary")->Apply(0, context);
 
-	context->Dispatch(dispatch.x, dispatch.y, dispatch.z);
+	//context->Dispatch(dispatch.x, dispatch.y, dispatch.z);
 
-	s_shaderVariables.gridAllUAV->SetUnorderedAccessView(nullptr);
-	s_effect->GetTechniqueByIndex(0)->GetPassByName("CellTypeSolidBoundary")->Apply(0, context);
+	//s_shaderVariables.gridAllUAV->SetUnorderedAccessView(nullptr);
+	//s_effect->GetTechniqueByIndex(0)->GetPassByName("CellTypeSolidBoundary")->Apply(0, context);
 
 	// Copy texture from GPU memory to system memory where it is accessable by the cpu
 	if (copyStaging)

@@ -129,8 +129,8 @@ void Dynamics::calculate(ID3D11Device* device, ID3D11DeviceContext* context, con
 
 	XMVECTOR oldAngVel = XMLoadFloat3(&m_angVel);
 	XMVECTOR angAcc = XMLoadFloat3(&m_angAcc);
-	//XMVECTOR newAngVel = oldAngVel * std::pow(frictionFactor, elapsedTime) + angAcc * elapsedTime;
-	XMVECTOR newAngVel = oldAngVel + angAcc * elapsedTime;
+	XMVECTOR newAngVel = oldAngVel * std::pow(frictionFactor, elapsedTime) + angAcc * elapsedTime;
+	//XMVECTOR newAngVel = oldAngVel + angAcc * elapsedTime;
 	XMStoreFloat3(&m_angVel, newAngVel);
 
 	// #############################
