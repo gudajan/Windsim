@@ -422,6 +422,9 @@ bool VoxelGrid::resize(XMUINT3 resolution, XMFLOAT3 voxelSize)
 
 	emit gridResized(m_resolution, m_voxelSize);
 
+	s_t = 0.1f;
+	s_time = 0.0f;
+
 	m_updateGrid = false;
 	m_processSimResults = false;
 	m_simAvailable = false;
@@ -466,6 +469,8 @@ bool VoxelGrid::changeSimSettings(const QString& settingsFile)
 	m_lastMod = lastMod;
 
 	emit simSettingsChanged(settingsFile);
+	s_t = 0.1f;
+	s_time = 0.0f;
 
 	m_updateGrid = false;
 	m_processSimResults = false;

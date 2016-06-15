@@ -12,6 +12,9 @@ using namespace DirectX;
 
 using namespace wtl;
 
+const int stepTimesSaved = 20;
+const float stepTimesWeight = 1.0 / stepTimesSaved;
+
 QMutex Simulator::m_openCLMutex;
 int Simulator::m_clDevice = -2;
 int Simulator::m_clPlatform = -2;
@@ -80,7 +83,10 @@ Simulator::Simulator(const QString& settingsFile, const XMUINT3& resolution, con
 	, m_simRunning()
 	, m_simulatorLock(m_simRunning, std::defer_lock)
 	, m_renderer(renderer)
+	, m_stepTimer()
+	, m_totalStepTimes(stepTimesSaved, 0.0)
 {
+
 	connect(&m_simTimer, &QTimer::timeout, this, &Simulator::step);
 
 	createWindTunnel(settingsFile);
@@ -122,6 +128,8 @@ void Simulator::start()
 	}
 	if (!m_simulatorLock.owns_lock())
 		m_simulatorLock.lock();
+
+	m_stepTimer.start();
 }
 
 void Simulator::stop()
@@ -278,7 +286,14 @@ void Simulator::step()
 	if (m_simLines)
 		m_windTunnel.fillLines(m_lines, m_reseedCounter, m_numLines);
 
-	m_renderer->drawInfo(QString::fromStdString(m_windTunnel.getOpenCLStats()));
+	// Calculate average steps per second here, as it depends on the number of times this function is called and not on the elapsed time for calculating the simulation step itself
+	long long et = m_stepTimer.nsecsElapsed();
+	m_stepTimer.restart();
+	m_totalStepTimes.pop_back();
+	m_totalStepTimes.push_front(1.0e9 / et); // 1 sec / elapsedTime nsec = fps
+	float sps = std::accumulate(m_totalStepTimes.begin(), m_totalStepTimes.end(), 0.0, [](float acc, const float& val) {return acc + stepTimesWeight * val; });
+
+	m_renderer->drawInfo(QString::fromStdString(m_windTunnel.getOpenCLStats() + "Avg steps per sec: " + std::to_string(sps)));
 
 	emit stepDone();
 }

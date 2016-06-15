@@ -524,7 +524,7 @@ void psVoxelize(PSVoxelIn psIn)
 	uint xRun = g_vResolution.x;
 	if (psIn.voxelPos.x < 0)
 		xRun = 0;
-	else if (psIn.voxelPos.x < g_vResolution.x - 1)
+	else if (psIn.voxelPos.x < int(g_vResolution.x) - 1)
 		xRun = index.x;
 
 	// Calculate real index of current cell, which voxel index of current fragment falls into (one cell is 1 * 1 * 4 as one int contains 4 voxels/chars -> one cell contains 4 voxel in z direction)

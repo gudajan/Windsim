@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <mutex>
+#include <list>
 
 #include <WindTunnel.h>
 
@@ -120,6 +121,9 @@ private:
 	std::unique_lock<std::mutex> m_simulatorLock;
 
 	DX11Renderer* m_renderer;
+
+	QElapsedTimer m_stepTimer;
+	std::list<float> m_totalStepTimes;
 };
 
 #endif
